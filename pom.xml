@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.aecaykhe.swp</groupId>
     <artifactId>SEAL-Hackathon-BE</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>V.0.1.0</version>
     <name>SEAL-Hackathon-BE</name>
     <description>SEAL-Hackathon-BE</description>
     <url/>
