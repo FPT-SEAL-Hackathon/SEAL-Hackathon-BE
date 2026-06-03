@@ -1,4 +1,4 @@
 package com.fpt.swp.sealhackathonbe.event.service;
 
-public class index {
+public class JudgingService {
 }
