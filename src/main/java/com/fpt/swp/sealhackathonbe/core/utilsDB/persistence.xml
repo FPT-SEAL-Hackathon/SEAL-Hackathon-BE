@@ -32,7 +32,7 @@
             "create": Xoá toàn bộ bảng cũ rồi tạo bảng mới từ đầu
             "create-drop": Tạo bảng khi chạy app, xoá toàn bộ bảng khi app dừng
             "drop": (Hiếm dùng) Xoá toàn bộ bảng khi app khởi động – không tạo lại bảng -->
-            <property name="hibernate.hbm2ddl.auto" value="create"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
 
             <!-- Hiển thị SQL khi chạy (tùy chọn) -->
             <property name="hibernate.show_sql" value="true"/>
