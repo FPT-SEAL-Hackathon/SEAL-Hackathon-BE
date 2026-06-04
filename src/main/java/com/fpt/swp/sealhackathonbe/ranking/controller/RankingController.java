@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.event.controller;
+package com.fpt.swp.sealhackathonbe.ranking.controller;
 
 public class RankingController {
 }
