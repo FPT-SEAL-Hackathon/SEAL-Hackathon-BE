@@ -33,7 +33,7 @@ public class Judging {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SubmissionId", nullable = false))
+    @JoinColumn(name = "SubmissionId", nullable = false)
     private Submission submission;
 
     @ManyToOne(fetch = FetchType.LAZY)
