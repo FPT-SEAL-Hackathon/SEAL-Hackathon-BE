@@ -30,18 +30,19 @@ public class Judging {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "JudgingID")
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SubmissionId", nullable = false)
+    @JoinColumn(name = "SubmissionID", nullable = false)
     private Submission submission;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "judge_user_id", nullable = false)
+    @JoinColumn(name = "JudgeUserid", nullable = false)
     private User judgeUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_criterion_id", nullable = false)
+    @JoinColumn(name = "EventCriterionID", nullable = false)
     private EventCriterion eventCriterion;
 
     @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
@@ -50,14 +51,14 @@ public class Judging {
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "is_calibration")
+    @Column(name = "IsCalibration")
     private Boolean isCalibration = false;
 
     @CreationTimestamp
-    @Column(name = "scored_at", updatable = false)
+    @Column(name = "JudgedAt", updatable = false)
     private LocalDateTime scoredAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "UpdatedAt")
     private LocalDateTime updatedAt;
 }

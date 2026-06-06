@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.judging.service.impl;
 
+import com.fpt.swp.sealhackathonbe.judge_assignment.dto.AssignmentDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
@@ -146,6 +147,12 @@ public class JudgingServiceImpl implements JudgingService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignmentDTO> getJudgeAssignments(UUID judgeUserId){
+
+    }
+
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
@@ -161,4 +168,6 @@ public class JudgingServiceImpl implements JudgingService {
                 .isCalibration(judging.getIsCalibration())
                 .build();
     }
+
+
 }
