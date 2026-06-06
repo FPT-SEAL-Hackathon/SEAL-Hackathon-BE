@@ -1,14 +1,11 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Nationalized;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
