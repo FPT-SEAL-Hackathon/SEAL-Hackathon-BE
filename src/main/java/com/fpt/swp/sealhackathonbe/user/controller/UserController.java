@@ -5,11 +5,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 public class UserController {
-    @GetMapping("/")
+    @GetMapping("/home")
     public String index() {
-        return "home";
+        return "welcome to h1dra";
     }
 
 }
