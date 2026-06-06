@@ -4,31 +4,33 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 public class CreateTeamRequest {
     @NotNull(message = "Event ID is required")
-    private Integer eventID;
+    private UUID eventId;
 
-    @NotNull(message = "Catetory ID is required")
-    private Integer catetoryID;
+    @NotNull(message = "Category ID is required")
+    private UUID categoryId;
 
     @NotBlank(message = "Team name is required")
     @Size(max = 300, message = "Team name must not exceed: 300 characters")
     private String teamName;
 
-    public  Integer getEventID() {
-        return eventID;
+    public UUID getEventId() {
+        return eventId;
     }
 
-    public void setEventID(Integer eventID) {
-        this.eventID = eventID;
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
     }
 
-    public Integer getCatetoryID() {
-        return catetoryID;
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
-    public void setCatetoryID(Integer catetoryID) {
-        this.catetoryID = catetoryID;
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getTeamName() {

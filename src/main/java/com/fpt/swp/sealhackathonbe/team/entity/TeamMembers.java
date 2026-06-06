@@ -2,21 +2,22 @@ package com.fpt.swp.sealhackathonbe.team.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "TeamMembers")
 public class TeamMembers {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamMemberID")
-  private Integer teamMemberId;
+  private UUID teamMemberId;
 
   @Column(name = "TeamID", nullable = false)
-  private Integer teamId;
+  private UUID teamId;
 
   @Column(name = "UserID", nullable = false)
-  private Integer userId;
+  private UUID userId;
 
   @Column(name = "JoinedAt", nullable = false)
   private LocalDateTime joinedAt;
@@ -27,27 +28,27 @@ public class TeamMembers {
   @Column(name = "IsActive", nullable = false)
   private Boolean active;
 
-  public Integer getTeamMemberId() {
+  public UUID getTeamMemberId() {
     return teamMemberId;
   }
 
-  public void setTeamMemberId(Integer teamMemberId) {
+  public void setTeamMemberId(UUID teamMemberId) {
     this.teamMemberId = teamMemberId;
   }
 
-  public Integer getTeamId() {
+  public UUID getTeamId() {
     return teamId;
   }
 
-  public void setTeamId(Integer teamId) {
+  public void setTeamId(UUID teamId) {
     this.teamId = teamId;
   }
 
-  public Integer getUserId() {
+  public UUID getUserId() {
     return userId;
   }
 
-  public void setUserId(Integer userId) {
+  public void setUserId(UUID userId) {
     this.userId = userId;
   }
 

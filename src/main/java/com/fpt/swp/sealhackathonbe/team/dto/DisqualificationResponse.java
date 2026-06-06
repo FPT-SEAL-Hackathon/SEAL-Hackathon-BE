@@ -1,28 +1,29 @@
 package com.fpt.swp.sealhackathonbe.team.dto;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class DisqualificationResponse {
-    private Integer disqualificationId;
-    private Integer teamId;
+    private UUID disqualificationId;
+    private UUID teamId;
     private String reason;
-    private Integer disqualifiedById;
+    private UUID disqualifiedById;
     private LocalDateTime disqualifiedAt;
     private Boolean reversed;
 
-    public Integer getDisqualificationId() {
+    public UUID getDisqualificationId() {
         return disqualificationId;
     }
 
-    public void setDisqualificationId(Integer disqualificationId) {
+    public void setDisqualificationId(UUID disqualificationId) {
         this.disqualificationId = disqualificationId;
     }
 
-    public Integer getTeamId() {
+    public UUID getTeamId() {
         return teamId;
     }
 
-    public void setTeamId(Integer teamId) {
+    public void setTeamId(UUID teamId) {
         this.teamId = teamId;
     }
 
@@ -34,11 +35,11 @@ public class DisqualificationResponse {
         this.reason = reason;
     }
 
-    public Integer getDisqualifiedById() {
+    public UUID getDisqualifiedById() {
         return disqualifiedById;
     }
 
-    public void setDisqualifiedById(Integer disqualifiedById) {
+    public void setDisqualifiedById(UUID disqualifiedById) {
         this.disqualifiedById = disqualifiedById;
     }
 

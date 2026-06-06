@@ -1,26 +1,27 @@
 package com.fpt.swp.sealhackathonbe.team.dto;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class TeamMemberResponse {
-    private Integer teamMemberId;
-    private Integer userId;
+    private UUID teamMemberId;
+    private UUID userId;
     private LocalDateTime joinedAt;
     private Boolean active;
 
-    public Integer getTeamMemberId() {
+    public UUID getTeamMemberId() {
         return teamMemberId;
     }
 
-    public void setTeamMemberId(Integer teamMemberId) {
+    public void setTeamMemberId(UUID teamMemberId) {
         this.teamMemberId = teamMemberId;
     }
 
-    public Integer getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 

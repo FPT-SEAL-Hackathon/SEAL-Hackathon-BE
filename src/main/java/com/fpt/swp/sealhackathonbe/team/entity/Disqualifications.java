@@ -2,27 +2,28 @@ package com.fpt.swp.sealhackathonbe.team.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Disqualifications")
 public class Disqualifications {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "DisqualificationID")
-  private Integer disqualificationId;
+  private UUID disqualificationId;
 
   @Column(name = "TeamID")
-  private Integer teamId;
+  private UUID teamId;
 
   @Column(name = "SubmissionID")
-  private Integer submissionId;
+  private UUID submissionId;
 
   @Column(name = "Reason", nullable = false, columnDefinition = "NVARCHAR(MAX)")
   private String reason;
 
   @Column(name = "DisqualifiedByID", nullable = false)
-  private Integer disqualifiedById;
+  private UUID disqualifiedById;
 
   @Column(name = "DisqualifiedAt", nullable = false)
   private LocalDateTime disqualifiedAt;
@@ -34,32 +35,32 @@ public class Disqualifications {
   private LocalDateTime reversedAt;
 
   @Column(name = "ReversedByID")
-  private Integer reversedById;
+  private UUID reversedById;
 
   @Column(name = "ReversalReason", columnDefinition = "NVARCHAR(MAX)")
   private String reversalReason;
 
-  public Integer getDisqualificationId() {
+  public UUID getDisqualificationId() {
     return disqualificationId;
   }
 
-  public void setDisqualificationId(Integer disqualificationId) {
+  public void setDisqualificationId(UUID disqualificationId) {
     this.disqualificationId = disqualificationId;
   }
 
-  public Integer getTeamId() {
+  public UUID getTeamId() {
     return teamId;
   }
 
-  public void setTeamId(Integer teamId) {
+  public void setTeamId(UUID teamId) {
     this.teamId = teamId;
   }
 
-  public Integer getSubmissionId() {
+  public UUID getSubmissionId() {
     return submissionId;
   }
 
-  public void setSubmissionId(Integer submissionId) {
+  public void setSubmissionId(UUID submissionId) {
     this.submissionId = submissionId;
   }
 
@@ -71,11 +72,11 @@ public class Disqualifications {
     this.reason = reason;
   }
 
-  public Integer getDisqualifiedById() {
+  public UUID getDisqualifiedById() {
     return disqualifiedById;
   }
 
-  public void setDisqualifiedById(Integer disqualifiedById) {
+  public void setDisqualifiedById(UUID disqualifiedById) {
     this.disqualifiedById = disqualifiedById;
   }
 
@@ -103,11 +104,11 @@ public class Disqualifications {
     this.reversedAt = reversedAt;
   }
 
-  public Integer getReversedById() {
+  public UUID getReversedById() {
     return reversedById;
   }
 
-  public void setReversedById(Integer reversedById) {
+  public void setReversedById(UUID reversedById) {
     this.reversedById = reversedById;
   }
 

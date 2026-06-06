@@ -2,30 +2,31 @@ package com.fpt.swp.sealhackathonbe.team.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Teams")
 public class Teams {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamID")
-  private Integer teamId;
+  private UUID teamId;
 
   @Column(name = "EventID", nullable = false)
-  private Integer eventId;
+  private UUID eventId;
 
   @Column(name = "CategoryID", nullable = false)
-  private Integer categoryId;
+  private UUID categoryId;
 
   @Column(name = "TeamName", nullable = false, length = 300)
   private String teamName;
 
   @Column(name = "TeamStatusID", nullable = false)
-  private Short teamStatusId;
+  private UUID teamStatusId;
 
   @Column(name = "LeaderUserID", nullable = false)
-  private Integer leaderUserId;
+  private UUID leaderUserId;
 
   @Column(name = "CreatedAt", nullable = false)
   private LocalDateTime createdAt;
@@ -33,27 +34,27 @@ public class Teams {
   @Column(name = "UpdatedAt", nullable = false)
   private LocalDateTime updatedAt;
 
-  public Integer getTeamId() {
+  public UUID getTeamId() {
     return teamId;
   }
 
-  public void setTeamId(Integer teamId) {
+  public void setTeamId(UUID teamId) {
     this.teamId = teamId;
   }
 
-  public Integer getEventId() {
+  public UUID getEventId() {
     return eventId;
   }
 
-  public void setEventId(Integer eventId) {
+  public void setEventId(UUID eventId) {
     this.eventId = eventId;
   }
 
-  public Integer getCategoryId() {
+  public UUID getCategoryId() {
     return categoryId;
   }
 
-  public void setCategoryId(Integer categoryId) {
+  public void setCategoryId(UUID categoryId) {
     this.categoryId = categoryId;
   }
 
@@ -65,19 +66,19 @@ public class Teams {
     this.teamName = teamName;
   }
 
-  public Short getTeamStatusId() {
+  public UUID getTeamStatusId() {
     return teamStatusId;
   }
 
-  public void setTeamStatusId(Short teamStatusId) {
+  public void setTeamStatusId(UUID teamStatusId) {
     this.teamStatusId = teamStatusId;
   }
 
-  public Integer getLeaderUserId() {
+  public UUID getLeaderUserId() {
     return leaderUserId;
   }
 
-  public void setLeaderUserId(Integer leaderUserId) {
+  public void setLeaderUserId(UUID leaderUserId) {
     this.leaderUserId = leaderUserId;
   }
 

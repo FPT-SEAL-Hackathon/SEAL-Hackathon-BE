@@ -2,21 +2,22 @@ package com.fpt.swp.sealhackathonbe.team.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "TeamJoinRequests")
 public class TeamJoinRequests {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "RequestID")
-  private Integer requestId;
+  private UUID requestId;
 
   @Column(name = "TeamID", nullable = false)
-  private Integer teamId;
+  private UUID teamId;
 
   @Column(name = "UserID", nullable = false)
-  private Integer userId;
+  private UUID userId;
 
   @Column(name = "RequestStatus", nullable = false, length = 20)
   private String requestStatus;
@@ -28,32 +29,32 @@ public class TeamJoinRequests {
   private LocalDateTime respondedAt;
 
   @Column(name = "RespondedByID")
-  private Integer respondedById;
+  private UUID respondedById;
 
   @Column(name = "ResponseNote", length = 500)
   private String responseNote;
 
-  public Integer getRequestId() {
+  public UUID getRequestId() {
     return requestId;
   }
 
-  public void setRequestId(Integer requestId) {
+  public void setRequestId(UUID requestId) {
     this.requestId = requestId;
   }
 
-  public Integer getTeamId() {
+  public UUID getTeamId() {
     return teamId;
   }
 
-  public void setTeamId(Integer teamId) {
+  public void setTeamId(UUID teamId) {
     this.teamId = teamId;
   }
 
-  public Integer getUserId() {
+  public UUID getUserId() {
     return userId;
   }
 
-  public void setUserId(Integer userId) {
+  public void setUserId(UUID userId) {
     this.userId = userId;
   }
 
@@ -81,11 +82,11 @@ public class TeamJoinRequests {
     this.respondedAt = respondedAt;
   }
 
-  public Integer getRespondedById() {
+  public UUID getRespondedById() {
     return respondedById;
   }
 
-  public void setRespondedById(Integer respondedById) {
+  public void setRespondedById(UUID respondedById) {
     this.respondedById = respondedById;
   }
 

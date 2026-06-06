@@ -2,41 +2,42 @@ package com.fpt.swp.sealhackathonbe.team.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public class TeamResponse {
 
-    private String teamID;
-    private Integer eventID;
-    private Integer categoryID;
+    private UUID teamId;
+    private UUID eventId;
+    private UUID categoryId;
     private String teamName;
-    private Short teamStatusId;
-    private Integer leaderUserId;
+    private UUID teamStatusId;
+    private UUID leaderUserId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<TeamMemberResponse> members;
 
-    public String getTeamID() {
-        return teamID;
+    public UUID getTeamId() {
+        return teamId;
     }
 
-    public void setTeamID(String teamID) {
-        this.teamID = teamID;
+    public void setTeamId(UUID teamId) {
+        this.teamId = teamId;
     }
 
-    public Integer getEventID() {
-        return eventID;
+    public UUID getEventId() {
+        return eventId;
     }
 
-    public void setEventID(Integer eventID) {
-        this.eventID = eventID;
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
     }
 
-    public Integer getCategoryID() {
-        return categoryID;
+    public UUID getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategoryID(Integer categoryID) {
-        this.categoryID = categoryID;
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getTeamName() {
@@ -47,19 +48,19 @@ public class TeamResponse {
         this.teamName = teamName;
     }
 
-    public Short getTeamStatusId() {
+    public UUID getTeamStatusId() {
         return teamStatusId;
     }
 
-    public void setTeamStatusId(Short teamStatusId) {
+    public void setTeamStatusId(UUID teamStatusId) {
         this.teamStatusId = teamStatusId;
     }
 
-    public Integer getLeaderUserId() {
+    public UUID getLeaderUserId() {
         return leaderUserId;
     }
 
-    public void setLeaderUserId(Integer leaderUserId) {
+    public void setLeaderUserId(UUID leaderUserId) {
         this.leaderUserId = leaderUserId;
     }
 
