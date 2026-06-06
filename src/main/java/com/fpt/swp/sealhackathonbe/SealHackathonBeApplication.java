@@ -8,6 +8,7 @@ public class SealHackathonBeApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SealHackathonBeApplication.class, args);
+
     }
 
 }
