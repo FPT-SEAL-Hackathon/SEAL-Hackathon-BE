@@ -3,7 +3,9 @@ package com.fpt.swp.sealhackathonbe.team.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
+@Data
 public class HandleJoinRequest {
     @NotBlank(message = "Action is required")
     @Pattern(
@@ -14,20 +16,4 @@ public class HandleJoinRequest {
 
     @Size(max = 500, message = "Response note must not exceed 500 characters")
     private String responseNote;
-
-    public String getAction() {
-        return action;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    public String getResponseNote() {
-        return responseNote;
-    }
-
-    public void setResponseNote(String responseNote) {
-        this.responseNote = responseNote;
-    }
 }

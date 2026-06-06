@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.team.service;
+package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
@@ -8,6 +8,9 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
+import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
@@ -29,16 +33,6 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
-
-    public TeamJoinRequestServiceImpl(
-            TeamsRepository teamsRepository,
-            TeamMembersRepository teamMembersRepository,
-            TeamJoinRequestsRepository teamJoinRequestsRepository
-    ) {
-        this.teamsRepository = teamsRepository;
-        this.teamMembersRepository = teamMembersRepository;
-        this.teamJoinRequestsRepository = teamJoinRequestsRepository;
-    }
 
     @Override
     @Transactional
