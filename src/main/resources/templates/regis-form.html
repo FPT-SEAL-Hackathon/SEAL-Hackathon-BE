@@ -159,7 +159,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Password</label>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Password </label>
+
                     <div class="relative">
                         <input type="password" id="passwordInput" placeholder="••••••••"
                                class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
@@ -179,13 +180,17 @@
                         </button>
                     </div>
                 </div>
-
+                <p id="passwordError" class="text-xs text-red-500 mt-1 hidden">Passwords do not match.</p>
                 <div class="flex items-center gap-2 pt-1">
                     <input type="checkbox" id="terms" class="rounded border-gray-300 text-orange-500 focus:ring-orange-500/50 w-4 h-4 accent-orange-500">
                     <label for="terms" class="text-xs text-gray-500 select-none">I agree to the <a href="#" class="text-orange-500 hover:underline">Terms & Conditions</a></label>
                 </div>
 
-                <button type="submit" class="w-full mt-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 text-sm">
+<!--                <button type="submit" class="w-full mt-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 text-sm">-->
+<!--                    Create Account-->
+<!--                </button>-->
+                <button type="submit" onclick="validatePassword()"
+                        class="w-full mt-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-xl">
                     Create Account
                 </button>
             </form>
@@ -199,7 +204,24 @@
     </section>
 
 </main>
+<script>
+    function validatePassword() {
+        const password = document.getElementById("passwordInput").value;
+        const confirmPassword = document.getElementById("confirmPasswordInput").value;
+        const error = document.getElementById("passwordError");
 
+        if (password !== confirmPassword) {
+            error.classList.remove("hidden");
+            return false;
+        }
+
+        error.classList.add("hidden");
+
+        // Gọi API hoặc submit form ở đây
+        alert("Đăng ký thành công!");
+        return true;
+    }
+</script>
 <script>
     function togglePassword(inputId, iconId) {
         const pwdInput = document.getElementById(inputId);
