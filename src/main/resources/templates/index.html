@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< Updated upstream
     <title>SEAL - Hackathon Platform</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -61,11 +61,13 @@
         <div class="mt-20 lg:mt-0 max-w-2xl">
             <h1 class="text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-tight text-gray-900">
                 The Ultimate <br>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-400">Hackathon</span> <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-400">Hackathon</span>
+                <br>
                 Platform
             </h1>
             <p class="mt-6 text-lg text-gray-600 leading-relaxed max-w-lg">
-                Manage teams, submit projects, score submissions, and track rankings all in one unified, agile workspace.
+                Manage teams, submit projects, score submissions, and track rankings all in one unified, agile
+                workspace.
             </p>
 
             <div class="grid grid-cols-2 gap-4 lg:gap-6 mt-12">
@@ -106,18 +108,25 @@
 
     <section class="w-full lg:w-[40%] p-6 lg:p-12 flex items-center justify-center relative z-20">
 
+
         <div class="w-full max-w-[420px] bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/60 p-8 sm:p-10">
 
             <h2 class="text-2xl font-bold text-gray-900">Welcome back 👋</h2>
             <p class="text-sm text-gray-500 mt-2 mb-8">Sign in to your SEAL Hackathon account</p>
-
+            <!--Sử lý cho login Google GitHub ở đây-->
             <div class="grid grid-cols-2 gap-4 mb-6">
-                <button class="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white p-2.5 rounded-xl font-medium transition-colors">
-                    <i class="fa-brands fa-github text-lg"></i> GitHub
-                </button>
-                <button class="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 p-2.5 rounded-xl font-medium shadow-sm transition-colors">
-                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google" class="w-4 h-4"> Google
-                </button>
+                <a th:href="@{/oauth2/authorization/github}"
+                   class="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white p-2.5 rounded-xl font-medium transition-colors">
+                    <i class="fa-brands fa-github text-lg"></i>
+                    GitHub
+                </a>
+                <a th:href="@{/oauth2/authorization/google}"
+                   class="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 p-2.5 rounded-xl font-medium shadow-sm transition-colors">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                         alt="Google"
+                         class="w-4 h-4">
+                    Google
+                </a>
             </div>
 
             <div class="relative flex items-center py-2 mb-6">
@@ -125,8 +134,7 @@
                 <span class="flex-shrink-0 mx-4 text-xs font-medium text-gray-400 uppercase">or sign in with email</span>
                 <div class="flex-grow border-t border-gray-200"></div>
             </div>
-
-            <form onsubmit="event.preventDefault();" class="space-y-4">
+            <form th:action="@{/login}" method="post" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
                     <input type="email" id="emailInput" value="alex.johnson@fpt.edu.vn"
@@ -140,7 +148,8 @@
                         <input type="password" id="passwordInput" value="password123"
                                class="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                                placeholder="••••••••">
-                        <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <button type="button" onclick="togglePassword()"
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                             <i id="eyeIcon" class="fa-regular fa-eye"></i>
                         </button>
                     </div>
@@ -149,26 +158,45 @@
                 <div class="pt-2">
                     <p class="text-xs text-gray-500 font-medium mb-2">Quick Demo Access:</p>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="fillRole('member')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Member</button>
-                        <button type="button" onclick="fillRole('leader')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Leader</button>
-                        <button type="button" onclick="fillRole('judge')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Judge</button>
-                        <button type="button" onclick="fillRole('mentor')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Mentor</button>
-                        <button type="button" onclick="fillRole('admin')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Admin</button>
-                        <button type="button" onclick="fillRole('research')" class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">Research</button>
+                        <button type="button" onclick="fillRole('member')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Member
+                        </button>
+                        <button type="button" onclick="fillRole('leader')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Leader
+                        </button>
+                        <button type="button" onclick="fillRole('judge')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Judge
+                        </button>
+                        <button type="button" onclick="fillRole('mentor')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Mentor
+                        </button>
+                        <button type="button" onclick="fillRole('admin')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Admin
+                        </button>
+                        <button type="button" onclick="fillRole('research')"
+                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors">
+                            Research
+                        </button>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300">
+                <button type="submit"
+                        class="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300">
                     Sign In
                 </button>
             </form>
-
             <p class="text-center text-sm text-gray-500 mt-8">
                 Don't have an account?
-                <a href="#" class="font-medium text-orange-500 hover:text-orange-600 hover:underline transition-all">Register</a>
+                <a th:href="@{/register}" class="font-medium text-orange-500 hover:text-orange-600 hover:underline transition-all">Register</a>
             </p>
 
         </div>
+
     </section>
 
 </main>
@@ -201,146 +229,5 @@
         }, 300);
     }
 </script>
-=======
-    <title>SEAL Hackathon Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #fcebdf 0%, #fbf5ee 40%, #e6f0e4 100%);
-            min-height: 100vh;
-        }
-        .text-highlight {
-            background-color: #3b82f6; /* Màu xanh nền */
-            color: white;
-            padding: 0 8px;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center p-4 lg:p-12">
-
-<main class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
-
-    <div class="space-y-10">
-        <div class="flex items-center gap-3">
-            <div class="bg-orange-500 text-white p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-            <div>
-                <h1 class="text-xl font-bold leading-tight">SEAL</h1>
-                <p class="text-xs text-gray-500">Software Engineering Agile League</p>
-            </div>
-        </div>
-
-        <div>
-            <h2 class="text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
-                The Ultimate <br>
-                <span class="text-orange-500">Hackathon<span class="text-blue-500">|</span></span><br>
-                <span class="bg-blue-600 text-white px-2 py-1 rounded-lg inline-block mt-2">Platform</span>
-            </h2>
-            <p class="mt-6 text-gray-600 max-w-md leading-relaxed">
-                <span class="bg-blue-600 text-white px-1 rounded text-sm">Manage teams, submit projects, score submissions,</span><br>
-                and track rankings — all in one modern platform built for FPT University.
-            </p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/50">
-                <div class="text-xl mb-2">🚀</div>
-                <div class="text-3xl font-bold text-gray-900">127</div>
-                <div class="text-xs text-gray-500 mt-1">Active Teams</div>
-            </div>
-            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/50">
-                <div class="text-xl mb-2">📦</div>
-                <div class="text-3xl font-bold text-gray-900">89</div>
-                <div class="text-xs text-gray-500 mt-1">Submissions</div>
-            </div>
-            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/50">
-                <div class="text-xl mb-2">⭐</div>
-                <div class="text-3xl font-bold text-gray-900">24</div>
-                <div class="text-xs text-gray-500 mt-1">Judges</div>
-            </div>
-            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/50">
-                <div class="text-xl mb-2">🏆</div>
-                <div class="text-3xl font-bold text-gray-900">$10K</div>
-                <div class="text-xs text-gray-500 mt-1">Prize Pool</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-amber-50/50 p-2 rounded-[2.5rem]">
-        <div class="bg-white p-8 lg:p-10 rounded-[2rem] shadow-xl w-full max-w-md mx-auto">
-            <h3 class="text-2xl font-bold text-gray-900">Welcome back 👋</h3>
-            <p class="text-sm text-gray-500 mt-2 mb-8">Sign in to your SEAL Hackathon account</p>
-
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <button class="flex items-center justify-center gap-2 bg-gray-900 text-white p-3 rounded-xl font-medium text-sm hover:bg-gray-800 transition">
-                    GitHub
-                </button>
-                <button class="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 p-3 rounded-xl font-medium text-sm hover:bg-gray-50 transition shadow-sm">
-                    Google
-                </button>
-            </div>
-
-            <div class="relative flex py-5 items-center">
-                <div class="flex-grow border-t border-gray-200"></div>
-                <span class="flex-shrink-0 mx-4 text-gray-400 text-xs">or continue with email</span>
-                <div class="flex-grow border-t border-gray-200"></div>
-            </div>
-
-            <form class="space-y-5">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-2 tracking-wide uppercase">Email Address</label>
-                    <div class="relative">
-                        <input type="email" value="alex.johnson@fpt.edu.vn" class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm">
-                        <div class="absolute left-3 top-3.5 text-gray-400">
-                            ✉️
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-2 tracking-wide uppercase">Password</label>
-                    <div class="relative">
-                        <input type="password" value="........" class="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm text-gray-700 tracking-widest">
-                        <div class="absolute left-3 top-3.5 text-gray-400">
-                            🔒
-                        </div>
-                        <div class="absolute right-3 top-3.5 text-gray-400 cursor-pointer">
-                            👁️
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-3 tracking-wide uppercase">Quick Demo Access</label>
-                    <div class="flex flex-wrap gap-2">
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-orange-50 text-orange-600 border border-orange-100 cursor-pointer">Member</span>
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-100 cursor-pointer">Leader</span>
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 cursor-pointer">Judge</span>
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100 cursor-pointer">Mentor</span>
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-100 cursor-pointer">Admin</span>
-                        <span class="px-4 py-1.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-100 cursor-pointer">Research</span>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-orange-500 text-white font-semibold py-3.5 rounded-xl hover:bg-orange-600 transition flex justify-center items-center gap-2 shadow-lg shadow-orange-500/30 mt-6">
-                    Sign In &rarr;
-                </button>
-            </form>
-
-            <p class="text-center text-sm text-gray-500 mt-6">
-                Don't have an account? <a href="#" class="text-orange-500 font-semibold hover:underline">Register</a>
-            </p>
-        </div>
-    </div>
-
-</main>
-
->>>>>>> Stashed changes
 </body>
 </html>
