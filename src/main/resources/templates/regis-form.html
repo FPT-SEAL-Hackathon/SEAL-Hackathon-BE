@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEAL - Hackathon Platform Registration</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        orange: {
+                            500: '#f97316',
+                            600: '#ea580c',
+                        }
+                    },
+                    animation: {
+                        'gradient-xy': 'gradient-xy 15s ease infinite',
+                    },
+                    keyframes: {
+                        'gradient-xy': {
+                            '0%, 100%': {
+                                'background-size': '400% 400%',
+                                'background-position': 'left center'
+                            },
+                            '50%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'right center'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans antialiased text-gray-800 bg-gradient-to-br from-[#fdfbf7] via-[#fff4eb] to-[#e6f4ea] animate-gradient-xy min-h-screen">
+
+<main class="flex flex-col lg:flex-row min-h-screen w-full relative">
+
+    <section class="w-full lg:w-[60%] p-8 lg:p-16 xl:p-24 flex flex-col justify-center relative z-10">
+
+        <div class="absolute top-8 left-8 lg:top-12 lg:left-16 xl:left-24 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center font-bold shadow-md">
+                <i class="fa-solid fa-code"></i>
+            </div>
+            <span class="font-semibold text-gray-800 tracking-tight">SEAL – Software Engineering Agile League</span>
+        </div>
+
+        <div class="mt-20 lg:mt-0 max-w-2xl">
+            <h1 class="text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-tight text-gray-900">
+                Unleash Your <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-400">Potential</span> In The<br>
+                Next Tech Wave
+            </h1>
+            <p class="mt-6 text-lg text-gray-600 leading-relaxed max-w-lg">
+                Join elite developer teams, build high-impact agile software, and prove your engineering skills to top tech industries.
+            </p>
+
+            <div class="grid grid-cols-2 gap-4 lg:gap-6 mt-12">
+                <div class="bg-white/70 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-white/50 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">1. Register</h3>
+                    <p class="text-xs font-medium text-gray-500 mt-1">Create your developer identity profile within seconds.</p>
+                </div>
+
+                <div class="bg-white/70 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-white/50 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-users-rectangle"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">2. Team Up</h3>
+                    <p class="text-xs font-medium text-gray-500 mt-1">Form a new squad or match with active product teams.</p>
+                </div>
+
+                <div class="bg-white/70 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-white/50 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-laptop-code"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">3. Build Sprint</h3>
+                    <p class="text-xs font-medium text-gray-500 mt-1">Develop, iterate, and deploy clean architecture systems.</p>
+                </div>
+
+                <div class="bg-white/70 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-white/50 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">4. Win Big</h3>
+                    <p class="text-xs font-medium text-gray-500 mt-1">Pitch to industrial judges and claim part of the $10K prize pool.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="w-full lg:w-[40%] p-6 lg:p-12 flex items-center justify-center relative z-20">
+
+        <div class="w-full max-w-[460px] bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 my-8">
+
+            <h2 class="text-2xl font-bold text-gray-900">Get started 🚀</h2>
+            <p class="text-sm text-gray-500 mt-1 mb-6">Join the SEAL Hackathon community today</p>
+
+            <div class="grid grid-cols-2 gap-4 mb-5">
+                <a th:href="@{/oauth2/authorization/github}"
+                   class="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white p-2.5 rounded-xl font-medium transition-colors">
+                    <i class="fa-brands fa-github text-lg"></i>
+                    GitHub
+                </a>
+                <a th:href="@{/oauth2/authorization/google}"
+                   class="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 p-2.5 rounded-xl font-medium shadow-sm transition-colors">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                         alt="Google"
+                         class="w-4 h-4">
+                    Google
+                </a>
+            </div>
+
+            <div class="relative flex items-center py-1 mb-5">
+                <div class="flex-grow border-t border-gray-200"></div>
+                <span class="flex-shrink-0 mx-4 text-xs font-medium text-gray-400 uppercase">or register with credentials</span>
+                <div class="flex-grow border-t border-gray-200"></div>
+            </div>
+
+            <form onsubmit="event.preventDefault();" class="space-y-3.5">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Full Name</label>
+                    <input type="text" placeholder="Alex Johnson"
+                           class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Email address</label>
+                    <input type="email" placeholder="alex.johnson@fpt.edu.vn"
+                           class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Student Code</label>
+                        <input type="text" placeholder="SE123456"
+                               class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">University</label>
+                        <input type="text" placeholder="FPT University"
+                               class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Password </label>
+
+                    <div class="relative">
+                        <input type="password" id="passwordInput" placeholder="••••••••"
+                               class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                        <button type="button" onclick="togglePassword('passwordInput', 'eyeIcon1')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i id="eyeIcon1" class="fa-regular fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Confirm Password</label>
+                    <div class="relative">
+                        <input type="password" id="confirmPasswordInput" placeholder="••••••••"
+                               class="w-full px-4 py-2.5 rounded-xl bg-white/50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all text-sm">
+                        <button type="button" onclick="togglePassword('confirmPasswordInput', 'eyeIcon2')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i id="eyeIcon2" class="fa-regular fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <p id="passwordError" class="text-xs text-red-500 mt-1 hidden">Passwords do not match.</p>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="terms" class="rounded border-gray-300 text-orange-500 focus:ring-orange-500/50 w-4 h-4 accent-orange-500">
+                    <label for="terms" class="text-xs text-gray-500 select-none">I agree to the <a href="#" class="text-orange-500 hover:underline">Terms & Conditions</a></label>
+                </div>
+
+<!--                <button type="submit" class="w-full mt-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all duration-300 text-sm">-->
+<!--                    Create Account-->
+<!--                </button>-->
+                <button type="submit" onclick="validatePassword()"
+                        class="w-full mt-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-xl">
+                    Create Account
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-gray-500 mt-6">
+                Already have an account?
+                <a th:href="@{/login}" class="font-medium text-orange-500 hover:text-orange-600 hover:underline transition-all">Sign In</a>
+            </p>
+
+        </div>
+    </section>
+
+</main>
+<script>
+    function validatePassword() {
+        const password = document.getElementById("passwordInput").value;
+        const confirmPassword = document.getElementById("confirmPasswordInput").value;
+        const error = document.getElementById("passwordError");
+
+        if (password !== confirmPassword) {
+            error.classList.remove("hidden");
+            return false;
+        }
+
+        error.classList.add("hidden");
+
+        // Gọi API hoặc submit form ở đây
+        alert("Đăng ký thành công!");
+        return true;
+    }
+</script>
+<script>
+    function togglePassword(inputId, iconId) {
+        const pwdInput = document.getElementById(inputId);
+        const eyeIcon = document.getElementById(iconId);
+
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            pwdInput.type = 'password';
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
+</script>
+</body>
+</html>
