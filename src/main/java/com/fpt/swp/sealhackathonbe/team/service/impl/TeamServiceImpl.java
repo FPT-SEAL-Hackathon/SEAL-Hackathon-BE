@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.team.service;
+package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
@@ -6,6 +6,9 @@ import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamService;
+import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
             UUID.fromString("60000000-0000-0000-0000-000000000001");
@@ -22,14 +26,6 @@ public class TeamServiceImpl implements TeamService {
 
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
-
-    public TeamServiceImpl(
-            TeamsRepository teamsRepository,
-            TeamMembersRepository teamMembersRepository
-    ) {
-        this.teamsRepository = teamsRepository;
-        this.teamMembersRepository = teamMembersRepository;
-    }
 
     @Override
     @Transactional

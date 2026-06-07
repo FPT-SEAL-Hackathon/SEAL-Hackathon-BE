@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.team.service;
+package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -6,6 +6,9 @@ import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
+import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,20 +16,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class TeamDisqualificationServiceImpl implements TeamDisqualificationService {
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
 
     private final TeamsRepository teamsRepository;
     private final DisqualificationsRepository disqualificationsRepository;
-
-    public TeamDisqualificationServiceImpl(
-            TeamsRepository teamsRepository,
-            DisqualificationsRepository disqualificationsRepository
-    ) {
-        this.teamsRepository = teamsRepository;
-        this.disqualificationsRepository = disqualificationsRepository;
-    }
 
     @Override
     @Transactional

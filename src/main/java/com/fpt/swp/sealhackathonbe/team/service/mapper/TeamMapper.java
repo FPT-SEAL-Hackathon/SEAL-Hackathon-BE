@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.team.service;
+package com.fpt.swp.sealhackathonbe.team.service.mapper;
 
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
@@ -8,14 +8,14 @@ import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamJoinRequests;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 import java.util.Collections;
 import java.util.List;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TeamMapper {
-    private TeamMapper() {
-    }
-
     public static TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = new TeamResponse();
         response.setTeamId(team.getTeamId());
