@@ -5,7 +5,7 @@ import com.fpt.swp.sealhackathonbe.ranking.dto.DisqualificationDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.DisqualificationRequestDTO;
 import com.fpt.swp.sealhackathonbe.ranking.entity.Disqualification;
 import com.fpt.swp.sealhackathonbe.ranking.repository.DisqualificationRepository;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,7 @@ public class DisqualificationServiceImpl implements DisqualificationService {
             disqualification.setTeam(entityManager.getReference(Team.class, requestDTO.getTeamId()));
         }
         if (requestDTO.getSubmissionId() != null) {
-            disqualification.setSubmission(entityManager.getReference(Submission.class, requestDTO.getSubmissionId()));
+            disqualification.setSubmission(entityManager.getReference(Submissions.class, requestDTO.getSubmissionId()));
         }
         
         disqualification.setReason(requestDTO.getReason());
