@@ -7,9 +7,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Controller
 public class UserController {
-    @GetMapping("/home")
-    public String index() {
+    @GetMapping("/")
+    public String login(){
+        return "index";
+    }
+    @PostMapping("/login")
+    public String home(){
         return "home";
     }
+
+
+    
 }
 

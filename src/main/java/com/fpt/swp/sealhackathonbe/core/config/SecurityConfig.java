@@ -18,7 +18,10 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/swagger-resources/**",
-            "/webjars/**"
+            "/webjars/**",
+            "/",
+            "/login",
+
     };
 
     @Bean
@@ -30,8 +33,10 @@ public class SecurityConfig {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(Customizer.withDefaults());
-
+                .oauth2Login(oauth -> oauth
+                        .loginPage("/")
+                        .defaultSuccessUrl("/home", true)
+                );
         return http.build();
     }
 }
