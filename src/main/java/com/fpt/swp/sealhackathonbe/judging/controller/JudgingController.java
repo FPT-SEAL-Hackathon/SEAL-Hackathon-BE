@@ -26,24 +26,10 @@ public class JudgingController {
 
     @PostMapping("/scores")
     public ResponseEntity<Void> recordJudging(@Valid @RequestBody ScoreSubmissionDTO scoreSubmissionDTO) {
-        judgingService.recordScore(scoreSubmissionDTO);
+        judgingService.recordJudging(scoreSubmissionDTO);
         return ResponseEntity.ok().build();
     }
-
-    @GetMapping("/judge/assignments")
-    public ResponseEntity<List<AssignmentDTO>> getJudgeAssignments(
-            @RequestParam(required = false) UUID judgeId) { // Can be removed if using SecurityContext
-        
-        // Use a mock ID or fetch from security context later
-        UUID id = judgeId != null ? judgeId : UUID.randomUUID(); 
-        
-        // In a real implementation, you would call:
-        // List<AssignmentDTO> assignments = judgingService.getJudgeAssignments(id);
-        
-        // MOCKED list
-        List<AssignmentDTO> assignments = new ArrayList<>();
-        return ResponseEntity.ok(assignments);
-    }
+    
 
     @GetMapping("/judging/submission/{submissionId}")
     public ResponseEntity<List<JudgingDTO>> getJudgingBySubmission(@PathVariable UUID submissionId) {

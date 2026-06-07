@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface JudgingService {
-    void recordScore(ScoreSubmissionDTO dto);
+    void recordJudging(ScoreSubmissionDTO dto);
     List<JudgingDTO> getScoresBySubmission(UUID submissionId);
     List<JudgingDTO> getScoresByJudge(UUID judgeUserId);
-    List<AssignmentDTO> getJudgeAssignments(UUID judgeUserId);
 }

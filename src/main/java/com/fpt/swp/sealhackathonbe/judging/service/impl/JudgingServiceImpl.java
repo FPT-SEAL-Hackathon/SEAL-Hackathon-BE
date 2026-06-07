@@ -6,6 +6,8 @@ import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
+import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,7 +42,7 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional
-    public void recordScore(ScoreSubmissionDTO dto) {
+    public void recordJudging(ScoreSubmissionDTO dto) {
         // 1. Fetch & validate that the submission exists
         Submission submission = submissionRepository.findById(dto.getSubmissionId())
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + dto.getSubmissionId()));
@@ -107,7 +109,7 @@ public class JudgingServiceImpl implements JudgingService {
         }
 
         // 7. Extract Team and Event from the submission hierarchy
-        Team team = submission.getTeam();
+        Teams team = submission.getTeam();
         Event event = (team != null) ? team.getEvent() : null;
 
         if (event == null) {
@@ -147,11 +149,6 @@ public class JudgingServiceImpl implements JudgingService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getJudgeAssignments(UUID judgeUserId){
-
-    }
 
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
