@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.ranking.service;
-
-public class RankService {
-}
+//package com.fpt.swp.sealhackathonbe.ranking.service;
+//
+//public class RankService {
+//}
