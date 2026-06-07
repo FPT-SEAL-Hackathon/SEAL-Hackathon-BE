@@ -13,9 +13,13 @@ public class UserController {
     }
     @PostMapping("/login")
     public String home(){
+
         return "home";
     }
-
+    @GetMapping("/register")
+    public String regis(){
+        return "regis-form";
+    }
 
     
 }

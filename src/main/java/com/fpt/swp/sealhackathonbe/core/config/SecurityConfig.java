@@ -21,6 +21,7 @@ public class SecurityConfig {
             "/webjars/**",
             "/",
             "/login",
+            "/register",
 
     };
 
