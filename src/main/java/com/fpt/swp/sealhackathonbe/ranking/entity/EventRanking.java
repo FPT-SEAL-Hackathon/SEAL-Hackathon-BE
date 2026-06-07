@@ -1,7 +1,5 @@
 package com.fpt.swp.sealhackathonbe.ranking.entity;
 
-import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 // Mock imports
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.event.entity.Category;
+import com.fpt.swp.sealhackathonbe.team.entity.Team;
 
 @Entity
 @Table(name = "EventRankings", uniqueConstraints = {
@@ -32,15 +33,15 @@ public class EventRanking {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EventID", nullable = false)
-    private User event;
+    private Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CategoryID", nullable = false)
-    private User category;
+    private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TeamID", nullable = false)
-    private Teams team;
+    private Team team;
 
     @Column(name = "FinalScore", nullable = false, precision = 10, scale = 4)
     private BigDecimal finalScore;

@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.judging.entity;
 
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,6 +17,8 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 // In reality, these should be imported from their respective packages.
 // Since we are instructed to simulate/mock missing entities if needed and missing entity is fine,
 // we will just refer to them by their expected package structure, relying on the compiler to fail if missing.
+import com.fpt.swp.sealhackathonbe.core.entity.User; // Assuming User is in core
+import com.fpt.swp.sealhackathonbe.event.entity.EventCriterion; // Assuming EventCriterion is in event
 
 @Entity
 @Table(name = "judging")
@@ -32,10 +33,9 @@ public class Judging {
     @Column(name = "JudgingID")
     private UUID id;
 
-    //need to refactor to object
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SubmissionID", nullable = false)
-    private User submission;
+    private Submission submission;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "JudgeUserid", nullable = false)
@@ -43,7 +43,7 @@ public class Judging {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EventCriterionID", nullable = false)
-    private User eventCriterion;
+    private EventCriterion eventCriterion;
 
     @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal scoreValue;
