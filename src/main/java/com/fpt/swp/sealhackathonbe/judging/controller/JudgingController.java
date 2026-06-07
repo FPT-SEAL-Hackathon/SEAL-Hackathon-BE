@@ -29,7 +29,7 @@ public class JudgingController {
         judgingService.recordJudging(scoreSubmissionDTO);
         return ResponseEntity.ok().build();
     }
-    
+
 
     @GetMapping("/judging/submission/{submissionId}")
     public ResponseEntity<List<JudgingDTO>> getJudgingBySubmission(@PathVariable UUID submissionId) {

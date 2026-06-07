@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ranking.entity;
 
+import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,10 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-// Mock imports
-import com.fpt.swp.sealhackathonbe.team.entity.Team;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
-import com.fpt.swp.sealhackathonbe.core.entity.User;
+
 
 @Entity
 @Table(name = "Disqualifications")
@@ -30,11 +29,11 @@ public class Disqualification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TeamID")
-    private Team team;
+    private Teams team;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SubmissionID")
-    private Submission submission;
+    private User submission;
 
     @Column(name = "Reason", nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String reason;

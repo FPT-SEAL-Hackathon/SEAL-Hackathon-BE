@@ -56,9 +56,9 @@ public class RankingController {
 
         List<EventRankingDTO> dtos = rankings.stream().map(r -> EventRankingDTO.builder()
                 .id(r.getId())
-                .eventId(r.getEvent().getId())
-                .categoryId(r.getCategory().getId())
-                .teamId(r.getTeam().getId())
+//                .eventId(r.getEvent().getId())
+//                .categoryId(r.getCategory().getId())
+//                .teamId(r.getTeam().getId())
                 .finalScore(r.getFinalScore())
                 .rankPosition(r.getRankPosition())
                 .computedAt(r.getComputedAt())
