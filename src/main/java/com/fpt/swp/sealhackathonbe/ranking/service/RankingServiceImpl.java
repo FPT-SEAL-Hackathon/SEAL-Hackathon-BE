@@ -9,11 +9,12 @@ import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.DisqualificationRepository;
 import com.fpt.swp.sealhackathonbe.ranking.repository.EventRankingRepository;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
+
 // Mock imports for entities
 import com.fpt.swp.sealhackathonbe.event.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.entity.Round;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
 
 import jakarta.persistence.EntityManager;
@@ -60,7 +61,7 @@ public class RankingServiceImpl implements RankingService {
             if (teamId == null) continue;
 
             Team teamRef = entityManager.getReference(Team.class, teamId);
-            Submissions submissionRef = entityManager.getReference(Submissions.class, submissionId);
+            Submission submissionRef = entityManager.getReference(Submission.class, submissionId);
 
             // Fetch scores
             List<Judging> judgings = judgingRepository.findBySubmissionId(submissionId);
