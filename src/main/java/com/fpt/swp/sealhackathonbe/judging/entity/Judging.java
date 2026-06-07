@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 // Mocking other entity imports to avoid compiler errors if they are not correctly mapped or if the user requested missing entity errors are fine.
 // In reality, these should be imported from their respective packages.
 // Since we are instructed to simulate/mock missing entities if needed and missing entity is fine,

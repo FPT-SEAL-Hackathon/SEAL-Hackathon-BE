@@ -12,7 +12,6 @@ import java.util.UUID;
 
 // Mock imports
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 import com.fpt.swp.sealhackathonbe.core.entity.User;
 
 @Entity

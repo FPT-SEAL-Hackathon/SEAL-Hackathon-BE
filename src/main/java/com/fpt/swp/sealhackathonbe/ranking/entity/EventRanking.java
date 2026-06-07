@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 // Mock imports
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.event.entity.Category;
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
 
 @Entity
