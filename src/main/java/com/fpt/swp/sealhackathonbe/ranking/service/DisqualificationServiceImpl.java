@@ -5,7 +5,6 @@ import com.fpt.swp.sealhackathonbe.ranking.dto.DisqualificationDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.DisqualificationRequestDTO;
 import com.fpt.swp.sealhackathonbe.ranking.entity.Disqualification;
 import com.fpt.swp.sealhackathonbe.ranking.repository.DisqualificationRepository;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;

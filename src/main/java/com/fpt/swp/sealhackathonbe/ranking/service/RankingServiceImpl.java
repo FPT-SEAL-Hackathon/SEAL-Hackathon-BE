@@ -11,10 +11,7 @@ import com.fpt.swp.sealhackathonbe.ranking.repository.EventRankingRepository;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 
 // Mock imports for entities
-import com.fpt.swp.sealhackathonbe.event.entity.Category;
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.entity.Round;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
 import com.fpt.swp.sealhackathonbe.team.entity.Team;
 
 import jakarta.persistence.EntityManager;
