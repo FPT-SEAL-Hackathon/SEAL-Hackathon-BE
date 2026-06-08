@@ -30,21 +30,21 @@ public class SubmissionController {
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
 
-    @Operation(
-            summary = "Submit work",
-            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
-    )
-    @PostMapping("/submissions")
-    public ResponseEntity<SubmissionResponse> submitWork(
-            @Valid @RequestBody CreateSubmissionRequest request
-    ) {
-        UUID currentUserId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-
-        SubmissionResponse response =
-                submissionCommandService.submitWork(request, currentUserId);
-
-        return ResponseEntity.ok(response);
-    }
+//    @Operation(
+//            summary = "Submit work",
+//            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
+//    )
+//    @PostMapping("/submissions")
+//    public ResponseEntity<SubmissionResponse> submitWork(
+//            @Valid @RequestBody CreateSubmissionRequest request
+//    ) {
+//        UUID currentUserId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+//
+//        SubmissionResponse response =
+//                submissionCommandService.submitWork(request, currentUserId);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
     @Operation(
             summary = "Get submission by ID",
