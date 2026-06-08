@@ -2,9 +2,11 @@ package com.fpt.swp.sealhackathonbe.submission.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 import java.util.UUID;
 
+@Data
 public class CreateSubmissionRequest {
     @NotNull(message = "Team ID is required")
     private UUID teamId;
