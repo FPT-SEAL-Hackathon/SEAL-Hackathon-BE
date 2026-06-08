@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,22 +14,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
+@RequiredArgsConstructor
 public class TeamController {
     private static final UUID CURRENT_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final TeamService teamService;
     private final TeamJoinRequestService teamJoinRequestService;
     private final TeamDisqualificationService teamDisqualificationService;
-
-    public TeamController(
-            TeamService teamService,
-            TeamJoinRequestService teamJoinRequestService,
-            TeamDisqualificationService teamDisqualificationService
-    ) {
-        this.teamService = teamService;
-        this.teamJoinRequestService = teamJoinRequestService;
-        this.teamDisqualificationService = teamDisqualificationService;
-    }
 
     @PostMapping("/teams")
     public ResponseEntity<TeamResponse> createTeam(
