@@ -1,16 +1,20 @@
 package com.fpt.swp.sealhackathonbe.judging.service.impl;
 
+import com.fpt.swp.sealhackathonbe.criteria.entity.EventCriteria;
+import com.fpt.swp.sealhackathonbe.criteria.repository.EventCriterionRepository;
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judge_assignment.dto.AssignmentDTO;
+import com.fpt.swp.sealhackathonbe.judging.dto.JudgeAssignmentRequest;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
-<<<<<<< Updated upstream
-=======
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
->>>>>>> Stashed changes
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,14 +30,14 @@ public class JudgingServiceImpl implements JudgingService {
 
     private final JudgingRepository judgingRepository;
     private final UserRepository userRepository;
-    private final SubmissionRepository submissionRepository;
+    private final SubmissionsRepository submissionRepository;
     private final EventCriterionRepository eventCriterionRepository;
     private final EvaluationAuditLogRepository evaluationAuditLogRepository;
 
     @Autowired
     public JudgingServiceImpl(JudgingRepository judgingRepository,
                               UserRepository userRepository,
-                              SubmissionRepository submissionRepository,
+                              SubmissionsRepository submissionRepository,
                               EventCriterionRepository eventCriterionRepository,
                               EvaluationAuditLogRepository evaluationAuditLogRepository) {
         this.judgingRepository = judgingRepository;
@@ -45,13 +49,10 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional
-<<<<<<< Updated upstream
-    public void recordScore(ScoreSubmissionDTO dto) {
-=======
     public void recordJudging(ScoreSubmissionDTO dto) {
->>>>>>> Stashed changes
+
         // 1. Fetch & validate that the submission exists
-        Submission submission = submissionRepository.findById(dto.getSubmissionId())
+        Submissions submission = submissionRepository.findById(dto.getSubmissionId())
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + dto.getSubmissionId()));
 
         // 2. Fetch & validate that the judge exists
@@ -63,7 +64,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Actor User not found with ID: " + dto.getActorId()));
 
         // 4. Fetch & validate that the event criterion exists
-        EventCriterion criterion = eventCriterionRepository.findById(dto.getEventCriterionId())
+        EventCriteria criterion = eventCriterionRepository.findById(dto.getEventCriterionId())
                 .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found with ID: " + dto.getEventCriterionId()));
 
         // 5. Validate that the score value does not exceed the maximum allowed value
@@ -91,11 +92,6 @@ public class JudgingServiceImpl implements JudgingService {
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
             actionType = "SCORE_UPDATE";
-<<<<<<< Updated upstream
-            
-=======
-
->>>>>>> Stashed changes
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
@@ -107,11 +103,6 @@ public class JudgingServiceImpl implements JudgingService {
             savedJudging = judgingRepository.save(existingJudging);
         } else {
             actionType = "SCORE_CREATE";
-<<<<<<< Updated upstream
-            
-=======
-
->>>>>>> Stashed changes
             Judging newJudging = new Judging();
             newJudging.setSubmission(submission);
             newJudging.setJudgeUser(judge);
@@ -119,39 +110,30 @@ public class JudgingServiceImpl implements JudgingService {
             newJudging.setScoreValue(dto.getScoreValue());
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
-<<<<<<< Updated upstream
-            
-=======
-
->>>>>>> Stashed changes
             savedJudging = judgingRepository.save(newJudging);
         }
 
         // 7. Extract Team and Event from the submission hierarchy
-<<<<<<< Updated upstream
-        Team team = submission.getTeam();
-=======
         Teams team = submission.getTeam();
->>>>>>> Stashed changes
         Event event = (team != null) ? team.getEvent() : null;
 
         if (event == null) {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
 
-        // 8. Create and save the EvaluationAuditLog
-        EvaluationAuditLog auditLog = new EvaluationAuditLog();
-        auditLog.setEvent(event);
-        auditLog.setActionType(actionType);
-        auditLog.setActor(actor);
-        auditLog.setScore(savedJudging);
-        auditLog.setTeam(team);
-        auditLog.setSubmission(submission);
-        auditLog.setOldValue(oldValue);
-        auditLog.setNewValue(newValue);
-        auditLog.setReason(dto.getReason());
-
-        evaluationAuditLogRepository.save(auditLog);
+//        // 8. Create and save the EvaluationAuditLog
+//        EvaluationAuditLog auditLog = new EvaluationAuditLog();
+//        auditLog.setEvent(event);
+//        auditLog.setActionType(actionType);
+//        auditLog.setActor(actor);
+//        auditLog.setScore(savedJudging);
+//        auditLog.setTeam(team);
+//        auditLog.setSubmission(submission);
+//        auditLog.setOldValue(oldValue);
+//        auditLog.setNewValue(newValue);
+//        auditLog.setReason(dto.getReason());
+//
+//        evaluationAuditLogRepository.save(auditLog);
     }
 
     @Override
@@ -172,20 +154,17 @@ public class JudgingServiceImpl implements JudgingService {
                 .collect(Collectors.toList());
     }
 
-<<<<<<< Updated upstream
     @Override
     @Transactional(readOnly = true)
-    public List<AssignmentDTO> getJudgeAssignments(UUID judgeUserId){
+    public List<JudgeAssignmentRequest> getJudgeAssignments(UUID judgeUserId){
 
     }
-=======
->>>>>>> Stashed changes
 
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
-                .submissionId(judging.getSubmission() != null ? judging.getSubmission().getId() : null)
-                .judgeUserId(judging.getJudgeUser() != null ? judging.getJudgeUser().getId() : null)
+                .submissionId(judging.getSubmission() != null ? judging.getSubmission().getSubmissionId() : null)
+                .judgeUserId(judging.getJudgeUser() != null ? judging.getJudgeUser().getUserId() : null)
                 .judgeName(judging.getJudgeUser() != null ? judging.getJudgeUser().getFullName() : null)
                 .eventCriterionId(judging.getEventCriterion() != null ? judging.getEventCriterion().getId() : null)
                 .criterionName(judging.getEventCriterion() != null ? judging.getEventCriterion().getCriterionName() : null)
