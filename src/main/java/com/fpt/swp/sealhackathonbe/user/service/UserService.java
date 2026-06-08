@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
 import com.fpt.swp.sealhackathonbe.user.entity.User;
-import com.fpt.swp.sealhackathonbe.user.repo.UserRepo;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,7 +19,7 @@ public class UserService {
     AuthenticationManager authManager;
 
     @Autowired
-    private UserRepo repo;
+    private UserRepository repo;
 
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
