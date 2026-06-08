@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;
 
-public interface EvenCriterionRepository extends JpaRepository<EventCriteria, Long> {
+public interface EventCriterionRepository extends JpaRepository<EventCriteria, UUID> {
     List<EventCriteria> findByEventId(UUID eventId);
 }
