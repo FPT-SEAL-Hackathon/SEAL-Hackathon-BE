@@ -2,6 +2,8 @@ package com.fpt.swp.sealhackathonbe.award.service;
 
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse;
+import com.fpt.swp.sealhackathonbe.award.entity.Award;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,4 +17,7 @@ public interface AwardService {
 
     // Hàm lấy danh sách giải thưởng của một sự kiện (phục vụ hiển thị hoặc kiểm tra)
     List<AwardResponse> getAwardsByEvent(UUID eventId);
+
+    // Lấy dữ liệu cho Sảnh Danh Vọng
+    List<HallOfFameResponse> getHallOfFameData();
 }

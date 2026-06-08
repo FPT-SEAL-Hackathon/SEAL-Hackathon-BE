@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.award.service.impl;
 
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse;
 import com.fpt.swp.sealhackathonbe.award.entity.Award;
 import com.fpt.swp.sealhackathonbe.award.entity.AwardTier;
 import com.fpt.swp.sealhackathonbe.award.repository.AwardRepository;
@@ -130,5 +131,35 @@ public class AwardServiceImpl implements AwardService {
             response.setCategoryName(award.getCategory().getCategoryName());
         }
         return response;
+
+
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<HallOfFameResponse> getHallOfFameData() {
+        // Lấy danh sách Entity
+        List<Award> publishedAwards = awardRepository.findPublishedAwardsForHallOfFame();
+
+        // Map sang DTO
+        return publishedAwards.stream().map(award -> {
+            HallOfFameResponse response = new HallOfFameResponse();
+            response.setEventName(award.getEvent().getEventName());
+
+            // Xử lý an toàn nếu giải thưởng không thuộc một hạng mục (category) cụ thể
+            if (award.getCategory() != null) {
+                response.setCategoryName(award.getCategory().getCategoryName());
+            } else {
+                response.setCategoryName("Giải Toàn Sự Kiện");
+            }
+
+            response.setTeamName(award.getTeam().getTeamName());
+            response.setAwardTierName(award.getAwardTier().getTierName());
+            response.setAwardTitle(award.getAwardTitle());
+
+            // Lấy tên đội trưởng (Leader) từ quan hệ Team -> User
+            response.setLeaderName(award.getTeam().getLeaderUserID().toString()); // Đoạn này khi ráp Entity Team của TV3, bạn gọi .getFullName() là đẹp nhất
+
+            return response;
+        }).collect(Collectors.toList());
     }
 }
