@@ -21,8 +21,10 @@ import java.util.UUID;
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
             UUID.fromString("60000000-0000-0000-0000-000000000001");
-    private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+    // Dư thừa hiện tại: chưa có nghiệp vụ nào trong class này chuyển team sang ACTIVE.
+    // Giữ comment để khi bổ sung luồng kích hoạt team có thể dùng lại đúng status ID.
+    // private static final UUID TEAM_STATUS_ACTIVE =
+    //         UUID.fromString("60000000-0000-0000-0000-000000000002");
 
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
@@ -30,6 +32,7 @@ public class TeamServiceImpl implements TeamService {
     @Override
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest request, UUID currentUserId) {
+        // Luồng dữ liệu: validate request -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         if (teamsRepository.existsByEventIdAndTeamName(request.getEventId(), request.getTeamName())) {
             throw new RuntimeException("Team name already exists in this event");
         }
@@ -65,6 +68,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public TeamResponse getMyTeam(UUID currentUserId) {
+        // Luồng dữ liệu: userId -> TeamMembers active -> Teams -> danh sách member active -> TeamResponse.
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(currentUserId)
                 .orElseThrow(() -> new RuntimeException("User does not belong to any active team"));
 
@@ -76,8 +80,19 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
+    public TeamResponse getById(UUID teamId) {
+        // Luồng dữ liệu: teamId -> Teams -> danh sách member active -> TeamResponse.
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+        return TeamMapper.toTeamResponse(team, members);
+    }
+
+    @Override
     @Transactional
     public void removeMember(UUID userId, UUID currentUserId) {
+        // Luồng dữ liệu: userId cần xóa/rời -> tìm membership active -> kiểm tra quyền -> đánh dấu inactive, không xóa cứng.
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
