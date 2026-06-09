@@ -12,7 +12,7 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
 
    // Dư thừa hiện tại: chưa có service nào cần kiểm tra user trong một team cụ thể.
-   // Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
+   Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
 
    // Lấy danh sách thành viên còn active để build TeamResponse.
    List<TeamMembers> findByTeamIdAndActiveTrue(UUID teamId);
@@ -20,6 +20,6 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    // Kiểm tra user đã thuộc team active nào chưa trước khi tạo team hoặc duyệt request.
    boolean existsByUserIdAndActiveTrue(UUID userId);
 
-   // Dư thừa hiện tại: chưa có nghiệp vụ giới hạn số lượng thành viên theo team.
-   // long countByTeamIdAndActiveTrue(UUID teamId);
+   // Đếm member active để validate MaxTeamSize/MinTeamSize của event.
+   long countByTeamIdAndActiveTrue(UUID teamId);
 }

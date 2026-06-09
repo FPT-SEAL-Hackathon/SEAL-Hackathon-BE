@@ -31,7 +31,8 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             DisqualifyTeamRequest request,
             UUID adminUserId
     ) {
-        // Luồng dữ liệu: admin chọn team -> đổi trạng thái team thành DISQUALIFIED -> lưu lý do vào bảng Disqualifications.
+        // Luồng dữ liệu: admin chọn team -> đổi trạng thái team thành DISQUALIFIED
+        // -> lưu lý do vào bảng Disqualifications -> map ra DisqualificationResponse.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 

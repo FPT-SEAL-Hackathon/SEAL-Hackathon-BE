@@ -16,7 +16,7 @@ import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TeamMapper {
-    // Mapper là lớp chuyển entity nội bộ sang DTO trả về API, không gọi repository và không chứa nghiệp vụ.
+    // Mapper chỉ chuyển entity nội bộ sang DTO trả về API, không gọi repository và không chứa nghiệp vụ.
     public static TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = new TeamResponse();
         response.setTeamId(team.getTeamId());
