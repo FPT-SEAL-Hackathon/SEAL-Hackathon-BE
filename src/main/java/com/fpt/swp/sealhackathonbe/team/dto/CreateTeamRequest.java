@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Data
 public class CreateTeamRequest {
+    // Request từ client khi tạo team: chỉ chứa dữ liệu nhập, leader lấy từ user hiện tại ở controller/service.
     @NotNull(message = "Event ID is required")
     private UUID eventId;
 

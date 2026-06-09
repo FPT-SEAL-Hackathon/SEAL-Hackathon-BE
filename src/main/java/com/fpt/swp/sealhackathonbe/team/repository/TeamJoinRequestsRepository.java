@@ -9,10 +9,13 @@ import java.util.UUID;
 
 public interface TeamJoinRequestsRepository extends JpaRepository<TeamJoinRequests, UUID> {
 
+    // Kiểm tra user đã gửi request PENDING vào team này chưa để tránh tạo trùng.
     boolean existsByTeamIdAndUserIdAndRequestStatus(UUID teamId, UUID userId, String requestStatus);
 
+    // Lấy đúng request còn PENDING để leader xử lý, tránh duyệt/từ chối lại request đã xử lý.
     Optional<TeamJoinRequests> findByRequestIdAndRequestStatus(UUID requestId, String requestStatus);
 
+    // Lấy danh sách request PENDING của một team cho màn hình leader.
     List<TeamJoinRequests> findByTeamIdAndRequestStatus(UUID teamId, String requestStatus);
 
 
