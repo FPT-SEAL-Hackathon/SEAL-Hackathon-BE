@@ -1,9 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -34,8 +31,9 @@ public class Event {
     @Column(name = "BannerImageURL")
     private String bannerImageUrl;
 
-    @Column(name = "EventStatusID")
-    private UUID eventStatusId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "EventStatusID")
+    private EventStatus eventStatus;
 
     @Column(name = "RegistrationStart")
     private LocalDateTime registrationStart;
