@@ -30,6 +30,11 @@ public class SubmissionController {
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
 
+//    LUONG DANG TAM TAT:
+//    Client -> SubmissionController.submitWork -> SubmissionCommandService.submitWork
+//    -> validate team/member/deadline -> sp_UpsertSubmission -> SubmissionsRepository
+//    -> SubmissionMapper -> SubmissionResponse.
+//    Endpoint nay dang bi comment vi van dung currentUserId hard-code.
 //    @Operation(
 //            summary = "Submit work",
 //            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
@@ -54,6 +59,8 @@ public class SubmissionController {
     public ResponseEntity<SubmissionResponse> getSubmissionById(
             @PathVariable UUID submissionId
     ) {
+        // Luong doc: API nhan submissionId, chuyen viec tim kiem cho query service,
+        // sau do tra ve DTO thay vi expose truc tiep JPA entity.
         SubmissionResponse response =
                 submissionQueryService.getSubmissionById(submissionId);
 
@@ -69,6 +76,8 @@ public class SubmissionController {
             @PathVariable UUID teamId,
             @PathVariable UUID roundId
     ) {
+        // Luong doc: teamId + roundId xac dinh duy nhat mot submission,
+        // duoc rang buoc boi UQ_Submissions_Team_Round trong entity Submissions.
         SubmissionResponse response =
                 submissionQueryService.getSubmissionByTeamAndRound(teamId, roundId);
 
@@ -83,6 +92,7 @@ public class SubmissionController {
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
+        // Luong doc: roundId loc tat ca submission cua mot round cho man hinh judge/admin.
         List<SubmissionResponse> response =
                 submissionQueryService.getSubmissionsByRound(roundId);
 

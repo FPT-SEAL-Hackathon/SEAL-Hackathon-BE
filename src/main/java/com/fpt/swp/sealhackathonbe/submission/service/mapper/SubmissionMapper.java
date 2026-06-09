@@ -8,6 +8,7 @@ public class SubmissionMapper {
     }
 
     public static SubmissionResponse toSubmissionResponse(Submissions submission) {
+        // Ranh gioi mapping: JPA entity nam trong service layer, DTO duoc tra ve controller/client.
         if (submission == null) {
             return null;
         }

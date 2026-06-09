@@ -22,6 +22,8 @@ import java.util.UUID;
         }
 )
 public class Submissions {
+    // Mapping voi bang Submissions trong database.
+    // Moi team chi co mot submission trong mot round; rule nay duoc enforce boi UQ_Submissions_Team_Round.
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "SubmissionID")
