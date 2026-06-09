@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 
 import java.util.UUID;
@@ -14,6 +15,9 @@ public interface TeamService {
 
     // Lấy team theo ID, kèm danh sách thành viên active của team đó.
     TeamResponse getById(UUID teamId);
+
+    // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
+    TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
     void removeMember(UUID userId, UUID currentUserId);

@@ -49,6 +49,16 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Luồng xem chi tiết member: teamId + userId -> kiểm tra user là member active của team -> lấy hồ sơ user -> trả DTO.
+    @GetMapping("/teams/{teamId}/members/{userId}")
+    public ResponseEntity<TeamMemberDetailResponse> getTeamMemberDetail(
+            @PathVariable UUID teamId,
+            @PathVariable UUID userId
+    ) {
+        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, userId);
+        return ResponseEntity.ok(response);
+    }
+
     // Luồng xin vào team: teamId + currentUserId -> service kiểm tra điều kiện -> tạo TeamJoinRequests PENDING.
     @PostMapping("/teams/{teamId}/join")
     public ResponseEntity<JoinTeamRequestResponse> requestToJoinTeam(

@@ -17,6 +17,4 @@ public interface TeamJoinRequestsRepository extends JpaRepository<TeamJoinReques
 
     // Lấy danh sách request PENDING của một team cho màn hình leader.
     List<TeamJoinRequests> findByTeamIdAndRequestStatus(UUID teamId, String requestStatus);
-
-
 }
