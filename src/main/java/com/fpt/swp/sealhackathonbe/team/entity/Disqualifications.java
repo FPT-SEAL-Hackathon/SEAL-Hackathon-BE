@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Disqualifications {
 
+  // Entity lưu lịch sử loại team/submission; hiện package team chỉ tạo bản ghi loại team.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "DisqualificationID")
@@ -40,6 +41,7 @@ public class Disqualifications {
   @Column(name = "IsReversed", nullable = false)
   private Boolean reversed;
 
+  // Các trường reverse đang có trong DB nhưng chưa có API xử lý trong package team.
   @Column(name = "ReversedAt")
   private LocalDateTime reversedAt;
 

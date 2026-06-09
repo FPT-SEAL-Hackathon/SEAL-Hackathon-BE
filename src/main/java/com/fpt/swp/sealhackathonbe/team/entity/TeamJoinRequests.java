@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TeamJoinRequests {
 
+  // Entity lưu đơn xin vào team; requestStatus đi theo các giá trị PENDING/APPROVED/REJECTED trong service.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "RequestID")
