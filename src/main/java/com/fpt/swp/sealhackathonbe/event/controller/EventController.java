@@ -22,6 +22,11 @@ public class EventController {
         return eventService.getAll();
     }
 
+    @GetMapping("/{id}")
+    public EventResponse getById(@PathVariable UUID id) {
+        return eventService.getById(id);
+    }
+
     @PostMapping
     public EventResponse create(@RequestBody CreateEventRequest request) {
         return eventService.create(request);

@@ -87,7 +87,10 @@ public class EventServiceImplementation implements EventService {
 
     @Override
     public EventResponse getById(UUID eventId) {
-        return null;
+        Event event = eventRepository
+                .findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+        return eventMapper.toEventResponse(event);
     }
 
     @Override
