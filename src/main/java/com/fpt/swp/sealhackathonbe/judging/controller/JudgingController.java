@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.judging.controller;
 
-import com.fpt.swp.sealhackathonbe.judge_assignment.dto.AssignmentDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -24,7 +22,7 @@ public class JudgingController {
         this.judgingService = judgingService;
     }
 
-    @PostMapping("/scores")
+    @PostMapping("/judging")
     public ResponseEntity<Void> recordJudging(@Valid @RequestBody ScoreSubmissionDTO scoreSubmissionDTO) {
         judgingService.recordJudging(scoreSubmissionDTO);
         return ResponseEntity.ok().build();

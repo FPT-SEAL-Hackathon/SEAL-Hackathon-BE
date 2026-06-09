@@ -1,15 +1,16 @@
 package com.fpt.swp.sealhackathonbe.judging.service.impl;
 
-import com.fpt.swp.sealhackathonbe.criteria.entity.EventCriteria;
 import com.fpt.swp.sealhackathonbe.criteria.repository.EventCriterionRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.judge_assignment.dto.AssignmentDTO;
-import com.fpt.swp.sealhackathonbe.judging.dto.JudgeAssignmentRequest;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundCriteria;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -31,20 +32,24 @@ public class JudgingServiceImpl implements JudgingService {
     private final JudgingRepository judgingRepository;
     private final UserRepository userRepository;
     private final SubmissionsRepository submissionRepository;
-    private final EventCriterionRepository eventCriterionRepository;
-    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
+//    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
+    private final RoundJudgeRepository roundJudgeRepository;
+    private final RoundCriterionRepository roundCriterionRepository;
 
     @Autowired
     public JudgingServiceImpl(JudgingRepository judgingRepository,
                               UserRepository userRepository,
                               SubmissionsRepository submissionRepository,
                               EventCriterionRepository eventCriterionRepository,
-                              EvaluationAuditLogRepository evaluationAuditLogRepository) {
+//                              EvaluationAuditLogRepository evaluationAuditLogRepository,
+                              RoundJudgeRepository roundJudgeRepository,
+                              RoundCriterionRepository roundCriterionRepository) {
         this.judgingRepository = judgingRepository;
         this.userRepository = userRepository;
         this.submissionRepository = submissionRepository;
-        this.eventCriterionRepository = eventCriterionRepository;
-        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
+//        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
+        this.roundJudgeRepository = roundJudgeRepository;
+        this.roundCriterionRepository = roundCriterionRepository;
     }
 
     @Override
@@ -56,29 +61,29 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + dto.getSubmissionId()));
 
         // 2. Fetch & validate that the judge exists
-        User judge = userRepository.findById(dto.getJudgeUserId())
-                .orElseThrow(() -> new EntityNotFoundException("Judge User not found with ID: " + dto.getJudgeUserId()));
+        RoundJudge judge = roundJudgeRepository.findById(dto.getRoundJudgeId())
+                .orElseThrow(() -> new EntityNotFoundException("Judge User not found with ID: " + dto.getRoundJudgeId()));
 
         // 3. Fetch & validate that the actor (audit user) exists
         User actor = userRepository.findById(dto.getActorId())
                 .orElseThrow(() -> new EntityNotFoundException("Actor User not found with ID: " + dto.getActorId()));
 
         // 4. Fetch & validate that the event criterion exists
-        EventCriteria criterion = eventCriterionRepository.findById(dto.getEventCriterionId())
-                .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found with ID: " + dto.getEventCriterionId()));
+        RoundCriteria criterion = roundCriterionRepository.findById(dto.getRoundCriterionId())
+                .orElseThrow(() -> new EntityNotFoundException("Round Criterion not found with ID: " + dto.getRoundCriterionId()));
 
         // 5. Validate that the score value does not exceed the maximum allowed value
-        if (dto.getScoreValue().compareTo(criterion.getMaxScore()) > 0) {
+        if (dto.getScoreValue().compareTo(criterion.getEventCriterion().getMaxScore()) > 0) {
             throw new IllegalArgumentException(String.format(
                     "Score value %s exceeds the maximum allowed value %s for criterion '%s'.",
-                    dto.getScoreValue(), criterion.getMaxScore(), criterion.getCriterionName()
+                    dto.getScoreValue(), criterion.getEventCriterion().getMaxScore(), criterion.getEventCriterion().getCriterionName()
             ));
         }
 
         // 6. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
-                .findBySubmissionIdAndJudgeUserIdAndEventCriterionId(
-                        dto.getSubmissionId(), dto.getJudgeUserId(), dto.getEventCriterionId()
+                .findBySubmissionIdAndRoundJudgeIdAndRoundCriterionId(
+                        dto.getSubmissionId(), dto.getRoundJudgeId(), dto.getRoundCriterionId()
                 );
 
         String actionType;
@@ -105,8 +110,8 @@ public class JudgingServiceImpl implements JudgingService {
             actionType = "SCORE_CREATE";
             Judging newJudging = new Judging();
             newJudging.setSubmission(submission);
-            newJudging.setJudgeUser(judge);
-            newJudging.setEventCriterion(criterion);
+            newJudging.setRoundJudge(judge);
+            newJudging.setRoundCriterion(criterion);
             newJudging.setScoreValue(dto.getScoreValue());
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
@@ -147,27 +152,22 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<JudgingDTO> getScoresByJudge(UUID judgeUserId) {
-        return judgingRepository.findByJudgeUserId(judgeUserId)
+    public List<JudgingDTO> getScoresByJudge(UUID roundJudgeId) {
+        return judgingRepository.findByRoundJudgeId(roundJudgeId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<JudgeAssignmentRequest> getJudgeAssignments(UUID judgeUserId){
-
-    }
 
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
                 .submissionId(judging.getSubmission() != null ? judging.getSubmission().getSubmissionId() : null)
-                .judgeUserId(judging.getJudgeUser() != null ? judging.getJudgeUser().getUserId() : null)
-                .judgeName(judging.getJudgeUser() != null ? judging.getJudgeUser().getFullName() : null)
-                .eventCriterionId(judging.getEventCriterion() != null ? judging.getEventCriterion().getId() : null)
-                .criterionName(judging.getEventCriterion() != null ? judging.getEventCriterion().getCriterionName() : null)
+                .roundJudgeId(judging.getRoundJudge() != null ? judging.getRoundJudge().getUserId() : null)
+                .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getUserId() : null)
+                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriterionId() : null)
+                .criterionName(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getCriterionName() : null)
                 .scoreValue(judging.getScoreValue())
                 .comment(judging.getComment())
                 .scoredAt(judging.getScoredAt())

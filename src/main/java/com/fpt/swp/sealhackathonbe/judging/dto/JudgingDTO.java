@@ -11,9 +11,9 @@ import java.util.UUID;
 public class JudgingDTO {
     private UUID id;
     private UUID submissionId;
-    private UUID judgeUserId;
+    private UUID roundJudgeId;
     private String judgeName;
-    private UUID eventCriterionId;
+    private UUID roundCriterionId;
     private String criterionName;
     private BigDecimal scoreValue;
     private String comment;

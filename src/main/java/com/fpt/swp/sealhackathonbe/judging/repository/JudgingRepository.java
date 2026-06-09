@@ -12,8 +12,8 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
     List<Judging> findBySubmissionId(UUID submissionId);
 
-    List<Judging> findByJudgeUserId(UUID judgeUserId);
+    List<Judging> findByRoundJudgeId(UUID roundJudgeId);
 
-    Optional<Judging> findBySubmissionIdAndJudgeUserIdAndEventCriterionId(
+    Optional<Judging> findBySubmissionIdAndRoundJudgeIdAndRoundCriterionId(
             UUID submissionId, UUID judgeUserId, UUID eventCriterionId);
 }

@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.judging.entity;
 
 
+import com.fpt.swp.sealhackathonbe.round.entity.RoundCriteria;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -35,12 +37,12 @@ public class Judging {
     private Submissions submission;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "JudgeUserid", nullable = false)
-    private User judgeUser;
+    @JoinColumn(name = "RoundJudgeID", nullable = false)
+    private RoundJudge roundJudge;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "EventCriterionID", nullable = false)
-    private EventCriteria eventCriterion;
+    @JoinColumn(name = "RoundCriterionID", nullable = false)
+    private RoundCriteria roundCriterion;
 
     @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal scoreValue;
