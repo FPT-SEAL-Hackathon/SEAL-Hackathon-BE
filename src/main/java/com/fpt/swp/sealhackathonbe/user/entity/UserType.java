@@ -35,6 +35,15 @@ public class UserType {
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "userType")
     private List<User> userTypeList = new ArrayList<>();
 
+    public void addUser(User user) {
+        userTypeList.add(user);
+        user.setUserType(this);
+    }
+    public void removeUser(User user){
+        userTypeList.remove(user);
+        user.setUserType(null);
+    }
+
     @Override
     public String toString() {
         return "UserType{" +

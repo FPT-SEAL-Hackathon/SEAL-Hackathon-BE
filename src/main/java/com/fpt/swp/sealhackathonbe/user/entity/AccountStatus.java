@@ -38,6 +38,17 @@ public class AccountStatus {
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "accountStatus")
     private List<User> userAccountStatusList = new ArrayList<>();
 
+    //tránh lỗi dữ liệu không đồng bộ (bị null)========
+    public void addUser(User user){
+        userAccountStatusList.add(user);
+        user.setAccountStatus(this);
+    }
+    public void removeUser(User user){
+        userAccountStatusList.remove(user);
+        user.setAccountStatus(null);
+    }
+    //cách làm chuẩn====================================
+
     @Override
     public String toString() {
         return "AccountStatus{" +
