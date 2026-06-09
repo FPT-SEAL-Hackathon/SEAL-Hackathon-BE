@@ -16,6 +16,7 @@ import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TeamMapper {
+    // Mapper là lớp chuyển entity nội bộ sang DTO trả về API, không gọi repository và không chứa nghiệp vụ.
     public static TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = new TeamResponse();
         response.setTeamId(team.getTeamId());
@@ -29,6 +30,7 @@ public class TeamMapper {
 
         List<TeamMemberResponse> memberResponses = (members == null ? Collections.<TeamMembers>emptyList() : members)
                 .stream()
+                // Mỗi TeamMembers entity chỉ expose các trường cần thiết ra TeamMemberResponse.
                 .map(TeamMapper::toTeamMemberResponse)
                 .toList();
 
@@ -46,6 +48,7 @@ public class TeamMapper {
     }
 
     public static JoinTeamRequestResponse toJoinTeamRequestResponse(TeamJoinRequests request) {
+        // Dữ liệu request join được trả lại sau khi tạo, xem danh sách pending hoặc xử lý APPROVED/REJECTED.
         JoinTeamRequestResponse response = new JoinTeamRequestResponse();
         response.setRequestId(request.getRequestId());
         response.setTeamId(request.getTeamId());
@@ -59,6 +62,7 @@ public class TeamMapper {
     }
 
     public static DisqualificationResponse toDisqualificationResponse(Disqualifications disqualification) {
+        // Response loại team chỉ trả thông tin chính, các trường reverse hiện chưa có API xử lý trong package team.
         DisqualificationResponse response = new DisqualificationResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
         response.setTeamId(disqualification.getTeamId());

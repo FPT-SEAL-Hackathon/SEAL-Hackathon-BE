@@ -37,6 +37,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     @Override
     @Transactional
     public JoinTeamRequestResponse requestToJoinTeam(UUID teamId, UUID currentUserId) {
+        // Luồng dữ liệu: teamId + userId -> kiểm tra team hợp lệ, user chưa có team, chưa có request pending -> tạo request PENDING.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
@@ -69,6 +70,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
     @Override
     public List<JoinTeamRequestResponse> getPendingJoinRequests(UUID teamId, UUID leaderUserId) {
+        // Luồng dữ liệu: leaderUserId phải là leader của team -> lấy toàn bộ request PENDING -> map sang response.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
@@ -89,6 +91,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
             HandleJoinRequest request,
             UUID leaderUserId
     ) {
+        // Luồng dữ liệu: requestId -> request PENDING -> xác thực leader -> cập nhật APPROVED/REJECTED -> lưu thông tin phản hồi.
         TeamJoinRequests joinRequest = teamJoinRequestsRepository
                 .findByRequestIdAndRequestStatus(requestId, REQUEST_STATUS_PENDING)
                 .orElseThrow(() -> new RuntimeException("Pending join request not found"));

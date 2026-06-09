@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TeamMembers {
 
+  // Entity ánh xạ quan hệ user-team; khi rời team chỉ set IsActive=false và ghi LeftAt.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamMemberID")

@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Teams {
 
+  // Entity ánh xạ bảng Teams; service cập nhật trạng thái và leaderUserId, không chứa logic nghiệp vụ.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamID")

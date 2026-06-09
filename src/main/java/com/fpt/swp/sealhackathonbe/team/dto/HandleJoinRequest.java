@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 public class HandleJoinRequest {
+    // Request leader gửi khi xử lý đơn xin vào team: chỉ nhận APPROVED hoặc REJECTED.
     @NotBlank(message = "Action is required")
     @Pattern(
             regexp = "APPROVED|REJECTED",
