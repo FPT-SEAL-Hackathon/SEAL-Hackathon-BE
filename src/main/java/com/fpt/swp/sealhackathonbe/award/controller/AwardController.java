@@ -25,7 +25,7 @@ public class AwardController {
      */
     @PostMapping
     public ResponseEntity<AwardResponse> grantAward(@Valid @RequestBody AwardRequest request) {
-//        UUID AdminId = UUID.fromString(SecurityContextHolder.getContext().getAuthentication().getName());
+//      UUID AdminId = UUID.fromString(SecurityContextHolder.getContext().getAuthentication().getName());
 
         UUID mockAdminId = UUID.fromString("10000000-0000-0000-0000-000000000003");
 
