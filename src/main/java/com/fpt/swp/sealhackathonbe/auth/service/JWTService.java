@@ -1,9 +1,10 @@
-package com.fpt.swp.sealhackathonbe.user.service;
+package com.fpt.swp.sealhackathonbe.auth.service;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.KeyGenerator;
@@ -49,5 +50,30 @@ public class JWTService {
     private Key getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretkey);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+    public String extractUserName(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+    private boolean isTokenExpired(String token) {
+        Date expiration = Jwts.parserBuilder()
+                .setSigningKey(getKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+
+        return expiration.before(new Date());
+    }
+    public boolean validateToken(
+            String token,
+            UserDetails userDetails) {
+        String username = extractUserName(token);
+        return username.equals(userDetails.getUsername())
+                && !isTokenExpired(token);
     }
 }
