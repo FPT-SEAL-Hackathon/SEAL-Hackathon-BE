@@ -8,6 +8,8 @@ import com.fpt.swp.sealhackathonbe.award.entity.AwardTier;
 import com.fpt.swp.sealhackathonbe.award.repository.AwardRepository;
 import com.fpt.swp.sealhackathonbe.award.repository.AwardTierRepository;
 import com.fpt.swp.sealhackathonbe.award.service.AwardService;
+import com.fpt.swp.sealhackathonbe.category.entity.Category;
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.CategoryRepository;
