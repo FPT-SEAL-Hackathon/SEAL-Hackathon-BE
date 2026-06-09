@@ -3,6 +3,7 @@ package com.fpt.swp.sealhackathonbe.team.service.impl;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -10,6 +11,8 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,7 @@ public class TeamServiceImpl implements TeamService {
     private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -94,6 +98,20 @@ public class TeamServiceImpl implements TeamService {
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
         return TeamMapper.toTeamResponse(team, members);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId) {
+        // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
+        // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
+        TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
+                .orElseThrow(() -> new RuntimeException("Active team member not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return TeamMapper.toTeamMemberDetailResponse(member, user);
     }
 
     @Override
