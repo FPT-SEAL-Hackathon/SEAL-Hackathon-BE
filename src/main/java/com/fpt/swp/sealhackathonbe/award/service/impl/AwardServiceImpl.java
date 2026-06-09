@@ -158,9 +158,6 @@ public class AwardServiceImpl implements AwardService {
             response.setAwardTierName(award.getAwardTier().getTierName());
             response.setAwardTitle(award.getAwardTitle());
 
-            // Lấy tên đội trưởng (Leader) từ quan hệ Team -> User
-            response.setLeaderName(award.getTeam().getLeaderUserId().getFullName()); // Đoạn này khi ráp Entity Team của TV3, bạn gọi .getFullName() là đẹp nhất
-
             return response;
         }).collect(Collectors.toList());
     }
