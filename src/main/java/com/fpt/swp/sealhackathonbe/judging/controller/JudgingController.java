@@ -37,7 +37,7 @@ public class JudgingController {
 
     @GetMapping("/judging/judge/{judgeUserId}")
     public ResponseEntity<List<JudgingDTO>> getJudgngByJudgeId(@PathVariable UUID judgeUserId) {
-        List<JudgingDTO> scores = judgingService.getScoresByJudge(judgeUserId);
+        List<JudgingDTO> scores = judgingService.getScoresByJudgeId(judgeUserId);
         return ResponseEntity.ok(scores);
     }
 }
