@@ -7,6 +7,8 @@ import java.util.UUID;
 
 @Data
 public class SubmissionResponse {
+    // DTO dau ra cho tat ca API doc submission.
+    // Entity -> SubmissionMapper -> response nay, de controller khong tra truc tiep object persistence.
     private UUID submissionId;
     private UUID teamId;
     private UUID roundId;
