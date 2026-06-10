@@ -55,6 +55,23 @@ public class RankingServiceImpl implements RankingService {
         Round roundRef = entityManager.getReference(Round.class, roundId);
         Category categoryRef = entityManager.getReference(Category.class, categoryId);
 
+        List<UUID> teamIds = new ArrayList<>(submissionToTeamMap.values());
+
+        // 1. Lấy toàn bộ điểm của tất cả submissions, nhóm lại thành Map<SubmissionID, List<Judging>>
+        List<Judging> allJudgings = judgingRepository.findBySubmissionSubmissionIdIn(submissionIds);
+        Map<UUID, List<Judging>> judgingsMap = allJudgings.stream()
+                .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
+
+        // 2. Lấy toàn bộ biên bản vi phạm của Submission, nhét vào một Set để check cực nhanh (O(1))
+        Set<UUID> disqualifiedSubIds = disqualificationRepository.findActiveBySubmissionIds(submissionIds).stream()
+                .map(d -> d.getSubmission().getSubmissionId())
+                .collect(Collectors.toSet());
+
+        // 3. Lấy toàn bộ biên bản vi phạm của Team, nhét vào Set
+        Set<UUID> disqualifiedTeamIds = disqualificationRepository.findActiveByTeamIds(teamIds).stream()
+                .map(d -> d.getTeam().getTeamId())
+                .collect(Collectors.toSet());
+
         for (UUID submissionId : submissionIds) {
             UUID teamId = submissionToTeamMap.get(submissionId);
             if (teamId == null) continue;
@@ -62,32 +79,24 @@ public class RankingServiceImpl implements RankingService {
             Teams teamRef = entityManager.getReference(Teams.class, teamId);
             Submissions submissionRef = entityManager.getReference(Submissions.class, submissionId);
 
-            // Fetch scores
-            List<Judging> judgings = judgingRepository.findBySubmissionId(submissionId);
-
             BigDecimal totalScore = BigDecimal.ZERO;
             BigDecimal averageScore = BigDecimal.ZERO;
 
-            if (!judgings.isEmpty()) {
-                for (Judging j : judgings) {
-                    if (j.getScoreValue() != null) {
-                        totalScore = totalScore.add(j.getScoreValue());
-                    }
-                }
-                averageScore = totalScore.divide(BigDecimal.valueOf(judgings.size()), 4, RoundingMode.HALF_UP);
-            }
+            // KIỂM TRA VI PHẠM (Dùng hàm .contains() của Set cực nhanh)
+            boolean isDisqualified = disqualifiedSubIds.contains(submissionId) || disqualifiedTeamIds.contains(teamId);
 
-            // Check disqualification
-            boolean isDisqualified = disqualificationRepository.findBySubmissionId(submissionId).stream()
-                    .anyMatch(d -> d.getIsReversed() == null || !d.getIsReversed());
             if (!isDisqualified) {
-                isDisqualified = disqualificationRepository.findByTeamId(teamId).stream()
-                        .anyMatch(d -> d.getIsReversed() == null || !d.getIsReversed());
-            }
+                // Lấy danh sách điểm từ Map thay vì gọi DB
+                List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
-            if (isDisqualified) {
-                totalScore = BigDecimal.ZERO;
-                averageScore = BigDecimal.ZERO;
+                if (!judgings.isEmpty()) {
+                    for (Judging j : judgings) {
+                        if (j.getScoreValue() != null) {
+                            totalScore = totalScore.add(j.getScoreValue());
+                        }
+                    }
+                    averageScore = totalScore.divide(BigDecimal.valueOf(judgings.size()), 4, RoundingMode.HALF_UP);
+                }
             }
 
             RoundRanking ranking = new RoundRanking();
@@ -97,7 +106,6 @@ public class RankingServiceImpl implements RankingService {
             ranking.setSubmission(submissionRef);
             ranking.setTotalScore(totalScore);
             ranking.setAverageScore(averageScore);
-            // Temporary position, will sort next
             ranking.setRankPosition(0);
             ranking.setIsAdvanced(false);
 
@@ -107,7 +115,6 @@ public class RankingServiceImpl implements RankingService {
         // Sort by total score descending
         rankings.sort((r1, r2) -> r2.getTotalScore().compareTo(r1.getTotalScore()));
 
-        // Assign ranks
         int currentRank = 1;
         for (int i = 0; i < rankings.size(); i++) {
             if (i > 0 && rankings.get(i).getTotalScore().compareTo(rankings.get(i - 1).getTotalScore()) < 0) {
