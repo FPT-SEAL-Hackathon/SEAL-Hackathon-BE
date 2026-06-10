@@ -101,10 +101,9 @@ public class AwardServiceImpl implements AwardService {
     @Override
     @Transactional(readOnly = true)
     public List<AwardResponse> getAwardsByEvent(UUID eventId) {
-        // Bạn có thể viết thêm hàm findByEventId ở AwardRepository để gọi chỗ này
-        // Tạm thời trả về danh sách convert mẫu
-        return awardRepository.findAll().stream()
-                .filter(a -> a.getEvent().getEventId().equals(eventId))
+        List<Award> awards = awardRepository.findByEventId(eventId);
+
+        return awards.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -140,7 +139,7 @@ public class AwardServiceImpl implements AwardService {
     @Transactional(readOnly = true)
     public List<HallOfFameResponse> getHallOfFameData() {
         // Lấy danh sách Entity
-        List<Award> publishedAwards = awardRepository.findPublishedAwardsForHallOfFame();
+        List<Award> publishedAwards = awardRepository.findByIsPublishedTrueOrderByAwardedAtDesc();
 
         // Map sang DTO
         return publishedAwards.stream().map(award -> {
