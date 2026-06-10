@@ -12,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class TeamServiceImpl implements TeamService {
     private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -46,8 +48,8 @@ public class TeamServiceImpl implements TeamService {
             throw new RuntimeException("Team name already exists in this event");
         }
 
-        if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, event.getEventId())) {
-            throw new RuntimeException("User already belongs to an active team in this event");
+        if (teamMembersRepository.existsByUserIdAndActiveTrue(currentUserId)) {
+            throw new RuntimeException("User already belongs to an active team");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -76,20 +78,19 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public TeamResponse getMyTeam(UUID currentUserId) {
         // Luồng xem team của tôi: userId -> TeamMembers active -> Teams -> danh sách member active -> TeamResponse.
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(currentUserId)
                 .orElseThrow(() -> new RuntimeException("User does not belong to any active team"));
 
-        Teams team = member.getTeam();
+        Teams team = teamsRepository.findById(member.getTeamId())
+                .orElseThrow(() -> new RuntimeException("Team not found"));
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
         return TeamMapper.toTeamResponse(team, members);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public TeamResponse getById(UUID teamId) {
         // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
         Teams team = teamsRepository.findById(teamId)
@@ -107,7 +108,8 @@ public class TeamServiceImpl implements TeamService {
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
-        User user = member.getUser();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         return TeamMapper.toTeamMemberDetailResponse(member, user);
     }
@@ -120,7 +122,8 @@ public class TeamServiceImpl implements TeamService {
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
-        Teams team = member.getTeam();
+        Teams team = teamsRepository.findById(member.getTeamId())
+                .orElseThrow(() -> new RuntimeException("Team not found"));
 
         boolean isLeader = team.getLeaderUserId().equals(currentUserId);
         boolean isSelfLeaving = userId.equals(currentUserId);
@@ -165,7 +168,7 @@ public class TeamServiceImpl implements TeamService {
 
     private void validateTeamWillNotBeBelowMinimum(Teams team) {
         // MinTeamSize nằm ở Event, nên cần đi từ team -> event để kiểm tra trước khi xóa/rời member.
-        Event event = requireActiveEvent(team.getEvent());
+        Event event = getActiveEvent(team.getEventId());
         validateTeamSizeConfig(event);
 
         Integer minTeamSize = event.getMinTeamSize();
@@ -174,13 +177,5 @@ public class TeamServiceImpl implements TeamService {
         if (minTeamSize != null && activeMemberCount - 1 < minTeamSize) {
             throw new RuntimeException("Cannot remove member because team would be below minimum size");
         }
-    }
-
-    private Event requireActiveEvent(Event event) {
-        if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
-            throw new RuntimeException("Event not found");
-        }
-
-        return event;
     }
 }
