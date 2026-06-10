@@ -22,8 +22,7 @@ import java.util.UUID;
 @Service
 public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     // Phan command cua luong submission.
-    // Hien chua active tu HTTP vi endpoint POST dang bi comment trong SubmissionController.
-    // Khi bat lai, currentUserId nen lay tu authenticated principal, khong dung UUID hard-code.
+    // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT authentication.
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
 
