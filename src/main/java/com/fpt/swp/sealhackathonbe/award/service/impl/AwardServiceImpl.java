@@ -129,7 +129,7 @@ public class AwardServiceImpl implements AwardService {
         response.setPublishedAt(award.getPublishedAt());
 
         if (award.getCategory() != null) {
-            response.setCategoryId(award.getCategory().getId());
+            response.setCategoryId(award.getCategory().getCategoryId());
             response.setCategoryName(award.getCategory().getCategoryName());
         }
         return response;

@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.round.entity;
-
-public class RoundJudge {
-}
+//package com.fpt.swp.sealhackathonbe.round.entity;
+//
+//public class RoundJudge {
+//}
