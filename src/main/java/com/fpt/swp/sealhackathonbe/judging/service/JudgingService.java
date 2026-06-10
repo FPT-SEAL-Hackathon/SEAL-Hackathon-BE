@@ -8,6 +8,6 @@ import java.util.UUID;
 
 public interface JudgingService {
     List<JudgingDTO> getScoresBySubmission(UUID submissionId);
-    List<JudgingDTO> getScoresByJudge(UUID judgeUserId);
+    List<JudgingDTO> getScoresByJudgeId(UUID judgeUserId);
     void recordJudging(ScoreSubmissionDTO dto);
 }
