@@ -1,16 +1,12 @@
 package com.fpt.swp.sealhackathonbe.judging.service.impl;
 
-import com.fpt.swp.sealhackathonbe.judge_assignment.dto.AssignmentDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
-<<<<<<< Updated upstream
-=======
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
->>>>>>> Stashed changes
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -45,11 +41,7 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional
-<<<<<<< Updated upstream
-    public void recordScore(ScoreSubmissionDTO dto) {
-=======
     public void recordJudging(ScoreSubmissionDTO dto) {
->>>>>>> Stashed changes
         // 1. Fetch & validate that the submission exists
         Submission submission = submissionRepository.findById(dto.getSubmissionId())
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + dto.getSubmissionId()));
@@ -91,11 +83,7 @@ public class JudgingServiceImpl implements JudgingService {
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
             actionType = "SCORE_UPDATE";
-<<<<<<< Updated upstream
-            
-=======
 
->>>>>>> Stashed changes
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
@@ -107,11 +95,7 @@ public class JudgingServiceImpl implements JudgingService {
             savedJudging = judgingRepository.save(existingJudging);
         } else {
             actionType = "SCORE_CREATE";
-<<<<<<< Updated upstream
-            
-=======
 
->>>>>>> Stashed changes
             Judging newJudging = new Judging();
             newJudging.setSubmission(submission);
             newJudging.setJudgeUser(judge);
@@ -119,20 +103,12 @@ public class JudgingServiceImpl implements JudgingService {
             newJudging.setScoreValue(dto.getScoreValue());
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
-<<<<<<< Updated upstream
-            
-=======
 
->>>>>>> Stashed changes
             savedJudging = judgingRepository.save(newJudging);
         }
 
         // 7. Extract Team and Event from the submission hierarchy
-<<<<<<< Updated upstream
-        Team team = submission.getTeam();
-=======
         Teams team = submission.getTeam();
->>>>>>> Stashed changes
         Event event = (team != null) ? team.getEvent() : null;
 
         if (event == null) {
@@ -171,15 +147,6 @@ public class JudgingServiceImpl implements JudgingService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
-<<<<<<< Updated upstream
-    @Override
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getJudgeAssignments(UUID judgeUserId){
-
-    }
-=======
->>>>>>> Stashed changes
 
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
