@@ -8,20 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
     @Autowired
     private UserService authService;
-    //    @GetMapping("/")
-//    public String login(){
-//        return "index";
-//    }
-//    @PostMapping("/login")
-//    public String home(){
-//
-//        return "home";
-//    }
-//    @GetMapping("/register")
-//    public String regis(){
-//        return "regis-form";
-//    }
-
 
 }
 
