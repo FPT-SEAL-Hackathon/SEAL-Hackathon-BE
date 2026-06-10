@@ -33,7 +33,7 @@ public class JudgingServiceImpl implements JudgingService {
     private final JudgingRepository judgingRepository;
     private final UserRepository userRepository;
     private final SubmissionsRepository submissionRepository;
-//    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
+    //    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final RoundCriterionRepository roundCriterionRepository;
 

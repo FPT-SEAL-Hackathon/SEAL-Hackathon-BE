@@ -21,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class SubmissionCommandServiceImpl implements SubmissionCommandService {
+    // Phan command cua luong submission.
+    // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT authentication.
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
 
@@ -47,6 +49,12 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     @Override
     @Transactional
     public SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId) {
+        // Luong ghi:
+        // 1. Kiem tra user hien tai la member active cua team.
+        // 2. Kiem tra team chua bi disqualified/withdrawn.
+        // 3. Kiem tra round chua qua deadline nop bai.
+        // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
+        // 5. Reload entity va map sang response DTO.
         validateUserBelongsToTeam(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(request.getTeamId());
         validateSubmissionDeadline(request.getRoundId());
@@ -116,6 +124,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void callUpsertSubmissionProcedure(CreateSubmissionRequest request, UUID currentUserId) {
+        // Stored procedure quyet dinh insert/update that su.
+        // Repository chi duoc dung sau do de lay lai ban ghi da persist.
         StoredProcedureQuery query = entityManager
                 .createStoredProcedureQuery("sp_UpsertSubmission");
 
