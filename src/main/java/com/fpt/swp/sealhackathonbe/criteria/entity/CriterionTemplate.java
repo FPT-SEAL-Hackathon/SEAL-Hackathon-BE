@@ -1,9 +1,7 @@
 package com.fpt.swp.sealhackathonbe.criteria.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -37,8 +35,9 @@ public class CriterionTemplate {
     @Column(name = "IsActive")
     private Boolean isActive;
 
-    @Column(name = "CreatedByID")
-    private UUID createdById;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CreatedByID", nullable = false)
+    private User createdBy;
 
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt;
