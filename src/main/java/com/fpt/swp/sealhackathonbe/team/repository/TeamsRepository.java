@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface TeamsRepository extends JpaRepository<Teams, UUID> {
+    // Kiểm tra trùng tên team trong cùng event trước khi tạo team mới.
     boolean existsByEventIdAndTeamName(UUID eventId, String teamName);
 }

@@ -1,9 +1,7 @@
 package com.fpt.swp.sealhackathonbe.criteria.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -22,8 +20,9 @@ public class EventCriteria {
     @Column(name = "EventCriterionID")
     private UUID eventCriterionId;
 
-    @Column(name = "EventID")
-    private UUID eventId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "EventID")
+    private Event event;
 
     @Column(name = "TemplateID")
     private UUID templateId;

@@ -9,6 +9,7 @@ import java.util.UUID;
 @Data
 public class TeamResponse {
 
+    // DTO tổng hợp thông tin team và danh sách member active để trả về API.
     private UUID teamId;
     private UUID eventId;
     private UUID categoryId;

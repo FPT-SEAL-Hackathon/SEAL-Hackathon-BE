@@ -1,6 +1,9 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -8,6 +11,8 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +26,24 @@ import java.util.UUID;
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
             UUID.fromString("60000000-0000-0000-0000-000000000001");
-    private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+    // Dư thừa hiện tại: chưa có nghiệp vụ nào trong class này chuyển team sang ACTIVE.
+    // Giữ comment để khi bổ sung luồng kích hoạt team có thể dùng lại đúng status ID.
+    // private static final UUID TEAM_STATUS_ACTIVE =
+    //         UUID.fromString("60000000-0000-0000-0000-000000000002");
 
+    private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest request, UUID currentUserId) {
+        // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt động
+        // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
+        Event event = getActiveEvent(request.getEventId());
+        validateTeamSizeConfig(event);
+
         if (teamsRepository.existsByEventIdAndTeamName(request.getEventId(), request.getTeamName())) {
             throw new RuntimeException("Team name already exists in this event");
         }
@@ -65,6 +79,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public TeamResponse getMyTeam(UUID currentUserId) {
+        // Luồng xem team của tôi: userId -> TeamMembers active -> Teams -> danh sách member active -> TeamResponse.
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(currentUserId)
                 .orElseThrow(() -> new RuntimeException("User does not belong to any active team"));
 
@@ -76,8 +91,34 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
+    public TeamResponse getById(UUID teamId) {
+        // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+        return TeamMapper.toTeamResponse(team, members);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId) {
+        // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
+        // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
+        TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
+                .orElseThrow(() -> new RuntimeException("Active team member not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return TeamMapper.toTeamMemberDetailResponse(member, user);
+    }
+
+    @Override
     @Transactional
     public void removeMember(UUID userId, UUID currentUserId) {
+        // Luồng rời/kick member: tìm membership active -> kiểm tra quyền leader hoặc tự rời
+        // -> kiểm tra MinTeamSize của event -> đánh dấu inactive, không xóa cứng.
         TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
@@ -95,9 +136,46 @@ public class TeamServiceImpl implements TeamService {
             throw new RuntimeException("Team leader cannot be removed");
         }
 
+        validateTeamWillNotBeBelowMinimum(team);
+
         member.setActive(false);
         member.setLeftAt(LocalDateTime.now());
 
         teamMembersRepository.save(member);
+    }
+
+    private Event getActiveEvent(UUID eventId) {
+        return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+    }
+
+    private void validateTeamSizeConfig(Event event) {
+        Integer minTeamSize = event.getMinTeamSize();
+        Integer maxTeamSize = event.getMaxTeamSize();
+
+        if (minTeamSize != null && minTeamSize < 1) {
+            throw new RuntimeException("Minimum team size must be at least 1");
+        }
+
+        if (maxTeamSize != null && maxTeamSize < 1) {
+            throw new RuntimeException("Maximum team size must be at least 1");
+        }
+
+        if (minTeamSize != null && maxTeamSize != null && minTeamSize > maxTeamSize) {
+            throw new RuntimeException("Minimum team size cannot be greater than maximum team size");
+        }
+    }
+
+    private void validateTeamWillNotBeBelowMinimum(Teams team) {
+        // MinTeamSize nằm ở Event, nên cần đi từ team -> event để kiểm tra trước khi xóa/rời member.
+        Event event = getActiveEvent(team.getEventId());
+        validateTeamSizeConfig(event);
+
+        Integer minTeamSize = event.getMinTeamSize();
+        long activeMemberCount = teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
+
+        if (minTeamSize != null && activeMemberCount - 1 < minTeamSize) {
+            throw new RuntimeException("Cannot remove member because team would be below minimum size");
+        }
     }
 }
