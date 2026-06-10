@@ -1,7 +1,5 @@
 package com.fpt.swp.sealhackathonbe.submission.entity;
 
-import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,19 +32,11 @@ public class Submissions {
     @Column(name = "TeamID", nullable = false)
     private UUID teamId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
-    private Teams team;
-
     @Column(name = "RoundID", nullable = false)
     private UUID roundId;
 
     @Column(name = "SubmissionStatusID", nullable = false)
     private UUID submissionStatusId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SubmissionStatusID", nullable = false, insertable = false, updatable = false)
-    private SubmissionStatus submissionStatus;
 
     @Column(name = "RepositoryURL", length = 500)
     private String repositoryUrl;
@@ -80,10 +70,6 @@ public class Submissions {
 
     @Column(name = "SubmittedByUserID", nullable = false)
     private UUID submittedByUserId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SubmittedByUserID", nullable = false, insertable = false, updatable = false)
-    private User submittedByUser;
 
     @Column(name = "Notes", columnDefinition = "NVARCHAR(MAX)")
     private String notes;

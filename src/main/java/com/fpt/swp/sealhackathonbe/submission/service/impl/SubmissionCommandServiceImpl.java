@@ -6,9 +6,8 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
-import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
-import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.ParameterMode;
@@ -32,15 +31,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             UUID.fromString("60000000-0000-0000-0000-000000000004");
 
     private final SubmissionsRepository submissionsRepository;
+    private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final EntityManager entityManager;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
+            TeamsRepository teamsRepository,
             TeamMembersRepository teamMembersRepository,
             EntityManager entityManager
     ) {
         this.submissionsRepository = submissionsRepository;
+        this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.entityManager = entityManager;
     }
@@ -54,28 +56,33 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 3. Kiem tra round chua qua deadline nop bai.
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
-        Teams team = getMemberTeam(request.getTeamId(), currentUserId);
-        validateTeamCanSubmit(team);
+        validateUserBelongsToTeam(request.getTeamId(), currentUserId);
+        validateTeamCanSubmit(request.getTeamId());
         validateSubmissionDeadline(request.getRoundId());
 
         callUpsertSubmissionProcedure(request, currentUserId);
 
         Submissions submission = submissionsRepository
-                .findByTeam_TeamIdAndRoundId(request.getTeamId(), request.getRoundId())
+                .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
                 .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
 
         return SubmissionMapper.toSubmissionResponse(submission);
     }
 
-    private Teams getMemberTeam(UUID teamId, UUID currentUserId) {
-        TeamMembers member = teamMembersRepository
+    private void validateUserBelongsToTeam(UUID teamId, UUID currentUserId) {
+        boolean isMember = teamMembersRepository
                 .findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
-                .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+                .isPresent();
 
-        return member.getTeam();
+        if (!isMember) {
+            throw new RuntimeException("User does not belong to this team");
+        }
     }
 
-    private void validateTeamCanSubmit(Teams team) {
+    private void validateTeamCanSubmit(UUID teamId) {
+        var team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
         if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
                 || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
             throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
@@ -124,7 +131,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 .createStoredProcedureQuery("sp_UpsertSubmission");
 
         query.registerStoredProcedureParameter("TeamID", UUID.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RoundID", UUID.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("RoundID", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("RepositoryURL", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("DemoURL", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("ReportURL", String.class, ParameterMode.IN);
@@ -137,7 +144,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         query.registerStoredProcedureParameter("SubmittedByUserID", UUID.class, ParameterMode.IN);
 
         query.setParameter("TeamID", request.getTeamId());
-        query.setParameter("RoundID", request.getRoundId());
+        query.setParameter("RoundID", request.getRoundId().toString());
         query.setParameter("RepositoryURL", request.getRepositoryUrl());
         query.setParameter("DemoURL", request.getDemoUrl());
         query.setParameter("ReportURL", request.getReportUrl());
