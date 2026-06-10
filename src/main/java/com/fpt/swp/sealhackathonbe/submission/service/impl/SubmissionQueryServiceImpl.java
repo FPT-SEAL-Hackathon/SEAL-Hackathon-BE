@@ -32,7 +32,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     @Transactional(readOnly = true)
     public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId) {
         // Dung unique key o muc bang: moi team chi co mot submission trong mot round.
-        return submissionsRepository.findByTeamIdAndRoundId(teamId, roundId)
+        return submissionsRepository.findByTeam_TeamIdAndRoundId(teamId, roundId)
                 .map(SubmissionMapper::toSubmissionResponse)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
     }
