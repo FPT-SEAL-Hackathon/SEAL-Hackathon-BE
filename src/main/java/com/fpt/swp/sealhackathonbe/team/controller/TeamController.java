@@ -48,17 +48,13 @@ public class TeamController {
     }
 
     @GetMapping("/teams/my-team")
-    public ResponseEntity<TeamResponse> getMyTeam(
-            Authentication authentication
-    ) {
+    public ResponseEntity<TeamResponse> getMyTeam(Authentication authentication) {
         TeamResponse response = teamService.getMyTeam(currentUserId(authentication));
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/teams/{teamId}")
-    public ResponseEntity<TeamResponse> getTeamById(
-            @PathVariable UUID teamId
-    ) {
+    public ResponseEntity<TeamResponse> getTeamById(@PathVariable UUID teamId) {
         TeamResponse response = teamService.getById(teamId);
         return ResponseEntity.ok(response);
     }
