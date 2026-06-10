@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -80,7 +81,11 @@ public class JudgingServiceImpl implements JudgingService {
             ));
         }
 
-        // 6. Check if a score already exists for this submission, judge, and criterion
+        // 6. Get Criterion weight
+        BigDecimal weight = criterion.getWeight() != null ? criterion.getWeight() : BigDecimal.ONE;
+        BigDecimal weightedScore = dto.getScoreValue().multiply(weight);
+
+        // 7. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
                 .findBySubmissionIdAndRoundJudgeIdAndRoundCriterionId(
                         dto.getSubmissionId(), dto.getRoundJudgeId(), dto.getRoundCriterionId()
@@ -92,7 +97,7 @@ public class JudgingServiceImpl implements JudgingService {
         Judging savedJudging;
 
         String formattedNewComment = dto.getComment() != null ? dto.getComment().replace("\"", "\\\"") : "";
-        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", dto.getScoreValue(), formattedNewComment);
+        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", weightedScore, formattedNewComment);
 
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
@@ -100,7 +105,7 @@ public class JudgingServiceImpl implements JudgingService {
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
-            existingJudging.setScoreValue(dto.getScoreValue());
+            existingJudging.setScoreValue(weightedScore);
             existingJudging.setComment(dto.getComment());
             if (dto.getIsCalibration() != null) {
                 existingJudging.setIsCalibration(dto.getIsCalibration());
@@ -112,13 +117,13 @@ public class JudgingServiceImpl implements JudgingService {
             newJudging.setSubmission(submission);
             newJudging.setRoundJudge(judge);
             newJudging.setRoundCriterion(criterion);
-            newJudging.setScoreValue(dto.getScoreValue());
+            newJudging.setScoreValue(weightedScore);
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
             savedJudging = judgingRepository.save(newJudging);
         }
 
-        // 7. Extract Team and Event from the submission hierarchy
+        // 8. Extract Team and Event from the submission hierarchy
         Teams team = submission.getTeam();
         Event event = (team != null) ? team.getEvent() : null;
 
@@ -126,7 +131,7 @@ public class JudgingServiceImpl implements JudgingService {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
 
-//        // 8. Create and save the EvaluationAuditLog
+//        // 9. Create and save the EvaluationAuditLog
 //        EvaluationAuditLog auditLog = new EvaluationAuditLog();
 //        auditLog.setEvent(event);
 //        auditLog.setActionType(actionType);
@@ -152,7 +157,7 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<JudgingDTO> getScoresByJudge(UUID roundJudgeId) {
+    public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
         return judgingRepository.findByRoundJudgeId(roundJudgeId)
                 .stream()
                 .map(this::convertToDTO)
