@@ -10,4 +10,8 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
     // Dư thừa hiện tại trong package team: service chỉ cần save bản ghi loại team.
     // Nếu sau này cần lịch sử loại theo team thì mở lại method này.
      List<Disqualifications> findByTeamId(UUID teamId);
+
+     List<Disqualifications> findBySubmissionId(UUID submissionId);
+
+
 }
