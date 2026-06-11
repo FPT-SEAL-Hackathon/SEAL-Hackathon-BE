@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.mapper;
 
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberResponse;
@@ -91,6 +92,19 @@ public class TeamMapper {
         response.setDisqualifiedById(disqualification.getDisqualifiedById());
         response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
         response.setReversed(disqualification.getReversed());
+        return response;
+    }
+
+    public static DisqualifiedTeamResponse toDisqualifiedTeamResponse(
+            Disqualifications disqualification,
+            List<TeamMembers> members
+    ) {
+        DisqualifiedTeamResponse response = new DisqualifiedTeamResponse();
+        response.setDisqualificationId(disqualification.getDisqualificationId());
+        response.setTeam(toTeamResponse(disqualification.getTeam(), members));
+        response.setReason(disqualification.getReason());
+        response.setDisqualifiedById(disqualification.getDisqualifiedById());
+        response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
         return response;
     }
 }

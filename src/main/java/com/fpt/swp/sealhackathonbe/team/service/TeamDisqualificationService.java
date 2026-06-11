@@ -1,8 +1,10 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface TeamDisqualificationService {
@@ -12,4 +14,6 @@ public interface TeamDisqualificationService {
             DisqualifyTeamRequest request,
             UUID adminUserId
     );
+
+    List<DisqualifiedTeamResponse> getDisqualifiedTeams();
 }

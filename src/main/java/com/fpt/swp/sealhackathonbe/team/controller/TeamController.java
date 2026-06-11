@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.team.controller;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
@@ -117,6 +118,11 @@ public class TeamController {
         DisqualificationResponse response =
                 teamDisqualificationService.disqualifyTeam(teamId, request, currentUserId(authentication));
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/admin/teams/disqualified")
+    public ResponseEntity<List<DisqualifiedTeamResponse>> getDisqualifiedTeams() {
+        return ResponseEntity.ok(teamDisqualificationService.getDisqualifiedTeams());
     }
 
     private UUID currentUserId(Authentication authentication) {

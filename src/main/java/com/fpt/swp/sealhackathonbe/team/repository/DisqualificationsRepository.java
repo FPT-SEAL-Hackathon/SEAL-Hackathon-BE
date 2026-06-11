@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.team.repository;
 
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,5 +14,11 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
 
      List<Disqualifications> findBySubmissionId(UUID submissionId);
 
+     @Query("""
+             SELECT d FROM Disqualifications d
+             WHERE d.teamId IS NOT NULL AND d.reversed = false
+             ORDER BY d.disqualifiedAt DESC
+             """)
+     List<Disqualifications> findActiveTeamDisqualifications();
 
 }
