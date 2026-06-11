@@ -101,7 +101,7 @@ public class AwardServiceImpl implements AwardService {
     @Override
     @Transactional(readOnly = true)
     public List<AwardResponse> getAwardsByEvent(UUID eventId) {
-        List<Award> awards = awardRepository.findByEventId(eventId);
+        List<Award> awards = awardRepository.findByEvent_EventId(eventId);
 
         return awards.stream()
                 .map(this::convertToResponse)
