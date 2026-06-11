@@ -15,6 +15,6 @@ public interface SubmissionDisqualificationService {
             UUID adminUserId
     );
 
-    // Lay cac submission dang co disqualification active, sap xep moi nhat truoc.
-    List<DisqualifiedSubmissionResponse> getDisqualifiedSubmissions();
+    // Lay cac submission dang co disqualification active trong round, sap xep moi nhat truoc.
+    List<DisqualifiedSubmissionResponse> getDisqualifiedSubmissions(UUID roundId);
 }
