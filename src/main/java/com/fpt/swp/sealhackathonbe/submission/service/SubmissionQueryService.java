@@ -12,4 +12,6 @@ public interface SubmissionQueryService {
     SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId);
 
     List<SubmissionResponse> getSubmissionsByRound(UUID roundId);
+
+    List<SubmissionResponse> findByEventId(UUID eventId);
 }

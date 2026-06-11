@@ -102,6 +102,17 @@ public class SubmissionController {
     }
 
     @Operation(
+            summary = "Get submissions by event",
+            description = "Get all submissions belonging to teams in a specific event."
+    )
+    @GetMapping("/events/{eventId}/submissions")
+    public ResponseEntity<List<SubmissionResponse>> findByEventId(
+            @PathVariable UUID eventId
+    ) {
+        return ResponseEntity.ok(submissionQueryService.findByEventId(eventId));
+    }
+
+    @Operation(
             summary = "Disqualify submission",
             description = "Disqualify a single submission without disqualifying the whole team."
     )
