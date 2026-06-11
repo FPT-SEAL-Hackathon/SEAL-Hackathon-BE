@@ -14,6 +14,7 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
 
      List<Disqualifications> findBySubmissionId(UUID submissionId);
 
+     // Lay cac ban ghi loai team con hieu luc, uu tien ban ghi moi nhat cho man hinh admin.
      @Query("""
              SELECT d FROM Disqualifications d
              WHERE d.teamId IS NOT NULL AND d.reversed = false

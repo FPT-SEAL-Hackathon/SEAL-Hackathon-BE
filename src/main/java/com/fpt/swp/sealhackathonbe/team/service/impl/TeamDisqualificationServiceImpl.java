@@ -70,6 +70,7 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
     @Override
     @Transactional(readOnly = true)
     public List<DisqualifiedTeamResponse> getDisqualifiedTeams() {
+        // Luong du lieu: Disqualifications active -> Team -> member active -> DTO tong hop.
         return disqualificationsRepository.findActiveTeamDisqualifications()
                 .stream()
                 .map(disqualification -> TeamMapper.toDisqualifiedTeamResponse(

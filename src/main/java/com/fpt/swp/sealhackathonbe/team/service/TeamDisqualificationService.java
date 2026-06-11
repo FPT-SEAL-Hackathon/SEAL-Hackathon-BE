@@ -15,5 +15,6 @@ public interface TeamDisqualificationService {
             UUID adminUserId
     );
 
+    // Lay danh sach team dang co disqualification active, sap xep moi nhat truoc.
     List<DisqualifiedTeamResponse> getDisqualifiedTeams();
 }

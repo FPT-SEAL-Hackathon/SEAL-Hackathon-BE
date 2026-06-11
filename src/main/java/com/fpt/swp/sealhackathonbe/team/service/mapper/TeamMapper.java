@@ -99,6 +99,7 @@ public class TeamMapper {
             Disqualifications disqualification,
             List<TeamMembers> members
     ) {
+        // Ghep du lieu tu ban ghi loai va team; mapper khong tu truy van database.
         DisqualifiedTeamResponse response = new DisqualifiedTeamResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
         response.setTeam(toTeamResponse(disqualification.getTeam(), members));

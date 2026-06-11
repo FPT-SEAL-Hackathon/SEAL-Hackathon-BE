@@ -142,11 +142,13 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private Event getActiveEvent(UUID eventId) {
+        // Team chi duoc tao trong event ton tai va chua bi soft delete.
         return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
 
     private void validateTeamSizeConfig(Event event) {
+        // Chan cau hinh event khong hop le truoc khi ap dung gioi han thanh vien.
         Integer minTeamSize = event.getMinTeamSize();
         Integer maxTeamSize = event.getMaxTeamSize();
 
@@ -177,6 +179,7 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private Event requireActiveEvent(Event event) {
+        // Quan he lazy co the null; nghiep vu team khong xu ly event da bi soft delete.
         if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
             throw new RuntimeException("Event not found");
         }
