@@ -50,6 +50,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     @Override
     @Transactional(readOnly = true)
     public List<SubmissionResponse> findByEventId(UUID eventId) {
+        // Luong du lieu: EventID -> Team.EventID -> Submissions -> SubmissionResponse.
         return submissionsRepository.findByEventId(eventId)
                 .stream()
                 .map(SubmissionMapper::toSubmissionResponse)

@@ -12,8 +12,10 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
     // Nếu sau này cần lịch sử loại theo team thì mở lại method này.
      List<Disqualifications> findByTeamId(UUID teamId);
 
+     // Lay lich su loai cua mot submission de kiem tra ban ghi active truoc khi tao moi.
      List<Disqualifications> findBySubmissionId(UUID submissionId);
 
+     // Lay cac bai nop dang bi loai va sap xep moi nhat truoc cho man hinh admin.
      @Query("""
              SELECT d FROM Disqualifications d
              WHERE d.submissionId IS NOT NULL AND d.reversed = false

@@ -69,6 +69,7 @@ public class SubmissionDisqualificationServiceImpl implements SubmissionDisquali
     @Override
     @Transactional(readOnly = true)
     public List<DisqualifiedSubmissionResponse> getDisqualifiedSubmissions() {
+        // Luong du lieu: disqualification active -> submission lien quan -> DTO tong hop.
         return disqualificationsRepository
                 .findActiveSubmissionDisqualifications()
                 .stream()

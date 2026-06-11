@@ -34,6 +34,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class SubmissionController {
+    // Controller nhan HTTP request, lay user hien tai va chuyen nghiep vu cho tung service chuyen trach.
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
@@ -48,6 +49,7 @@ public class SubmissionController {
             @Valid @RequestBody CreateSubmissionRequest request,
             Authentication authentication
     ) {
+        // Du lieu: request + user dang dang nhap -> command service -> stored procedure -> response.
         SubmissionResponse response =
                 submissionCommandService.submitWork(request, currentUserId(authentication));
 
@@ -110,6 +112,7 @@ public class SubmissionController {
     public ResponseEntity<List<SubmissionResponse>> findByEventId(
             @PathVariable UUID eventId
     ) {
+        // Submission khong luu EventID; service loc bai nop thong qua quan he Submission -> Team -> Event.
         return ResponseEntity.ok(submissionQueryService.findByEventId(eventId));
     }
 
@@ -141,12 +144,14 @@ public class SubmissionController {
     )
     @GetMapping("/admin/submissions/disqualified")
     public ResponseEntity<List<DisqualifiedSubmissionResponse>> getDisqualifiedSubmissions() {
+        // Tra cac bai nop dang bi loai, kem ly do va thong tin nguoi thuc hien.
         return ResponseEntity.ok(
                 submissionDisqualificationService.getDisqualifiedSubmissions()
         );
     }
 
     private UUID currentUserId(Authentication authentication) {
+        // JWT filter dat email vao Authentication; controller doi email thanh userId cho command service.
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Unauthenticated user");
         }

@@ -9,6 +9,7 @@ public class SubmissionDisqualificationMapper {
     }
 
     public static SubmissionDisqualificationResponse toResponse(Disqualifications disqualification) {
+        // Response gon cho ket qua ngay sau khi admin loai mot submission.
         SubmissionDisqualificationResponse response = new SubmissionDisqualificationResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
         response.setSubmissionId(disqualification.getSubmissionId());
@@ -22,6 +23,7 @@ public class SubmissionDisqualificationMapper {
     public static DisqualifiedSubmissionResponse toDisqualifiedSubmissionResponse(
             Disqualifications disqualification
     ) {
+        // Ghep ban ghi loai voi thong tin day du cua submission; mapper khong tu truy van database.
         DisqualifiedSubmissionResponse response = new DisqualifiedSubmissionResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
         response.setSubmission(SubmissionMapper.toSubmissionResponse(disqualification.getSubmission()));
