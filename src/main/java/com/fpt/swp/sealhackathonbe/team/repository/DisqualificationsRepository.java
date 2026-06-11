@@ -3,6 +3,7 @@ package com.fpt.swp.sealhackathonbe.team.repository;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,12 +15,20 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
 
      List<Disqualifications> findBySubmissionId(UUID submissionId);
 
-     // Lay cac ban ghi loai team con hieu luc, uu tien ban ghi moi nhat cho man hinh admin.
+     // Team khong chua RoundID; loc round qua submission cua team va loc category truc tiep tren team.
      @Query("""
              SELECT d FROM Disqualifications d
-             WHERE d.teamId IS NOT NULL AND d.reversed = false
+             WHERE d.team.categoryId = :categoryId
+               AND d.reversed = false
+               AND EXISTS (
+                   SELECT s FROM Submissions s
+                   WHERE s.teamId = d.teamId AND s.roundId = :roundId
+               )
              ORDER BY d.disqualifiedAt DESC
              """)
-     List<Disqualifications> findActiveTeamDisqualifications();
+     List<Disqualifications> findActiveTeamDisqualifications(
+             @Param("roundId") UUID roundId,
+             @Param("categoryId") UUID categoryId
+     );
 
 }

@@ -130,10 +130,15 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/admin/teams/disqualified")
-    public ResponseEntity<List<DisqualifiedTeamResponse>> getDisqualifiedTeams() {
-        // Tra cac team dang bi loai, kem thong tin team va ban ghi disqualification.
-        return ResponseEntity.ok(teamDisqualificationService.getDisqualifiedTeams());
+    @GetMapping("/admin/rounds/{roundId}/categories/{categoryId}/teams/disqualified")
+    public ResponseEntity<List<DisqualifiedTeamResponse>> getDisqualifiedTeams(
+            @PathVariable UUID roundId,
+            @PathVariable UUID categoryId
+    ) {
+        // Tra team bi loai thuoc category va co bai nop trong round duoc chon.
+        return ResponseEntity.ok(
+                teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
+        );
     }
 
     private UUID currentUserId(Authentication authentication) {

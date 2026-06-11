@@ -15,6 +15,6 @@ public interface TeamDisqualificationService {
             UUID adminUserId
     );
 
-    // Lay danh sach team dang co disqualification active, sap xep moi nhat truoc.
-    List<DisqualifiedTeamResponse> getDisqualifiedTeams();
+    // Lay team bi loai theo round va category, sap xep ban ghi loai moi nhat truoc.
+    List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId);
 }
