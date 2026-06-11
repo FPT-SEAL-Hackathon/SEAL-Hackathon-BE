@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.submission.controller;
 
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
@@ -132,6 +133,17 @@ public class SubmissionController {
                 );
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get disqualified submissions",
+            description = "Get all submissions with an active disqualification, newest first."
+    )
+    @GetMapping("/admin/submissions/disqualified")
+    public ResponseEntity<List<DisqualifiedSubmissionResponse>> getDisqualifiedSubmissions() {
+        return ResponseEntity.ok(
+                submissionDisqualificationService.getDisqualifiedSubmissions()
+        );
     }
 
     private UUID currentUserId(Authentication authentication) {
