@@ -1,14 +1,20 @@
 package com.fpt.swp.sealhackathonbe.submission.controller;
 
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
+import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,22 +35,23 @@ import java.util.UUID;
 public class SubmissionController {
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
+    private final SubmissionDisqualificationService submissionDisqualificationService;
+    private final UserRepository userRepository;
 
-//    @Operation(
-//            summary = "Submit work",
-//            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
-//    )
-//    @PostMapping("/submissions")
-//    public ResponseEntity<SubmissionResponse> submitWork(
-//            @Valid @RequestBody CreateSubmissionRequest request
-//    ) {
-//        UUID currentUserId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-//
-//        SubmissionResponse response =
-//                submissionCommandService.submitWork(request, currentUserId);
-//
-//        return ResponseEntity.ok(response);
-//    }
+    @Operation(
+            summary = "Submit work",
+            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
+    )
+    @PostMapping("/submissions")
+    public ResponseEntity<SubmissionResponse> submitWork(
+            @Valid @RequestBody CreateSubmissionRequest request,
+            Authentication authentication
+    ) {
+        SubmissionResponse response =
+                submissionCommandService.submitWork(request, currentUserId(authentication));
+
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(
             summary = "Get submission by ID",
@@ -54,6 +61,8 @@ public class SubmissionController {
     public ResponseEntity<SubmissionResponse> getSubmissionById(
             @PathVariable UUID submissionId
     ) {
+        // Luong doc: API nhan submissionId, chuyen viec tim kiem cho query service,
+        // sau do tra ve DTO thay vi expose truc tiep JPA entity.
         SubmissionResponse response =
                 submissionQueryService.getSubmissionById(submissionId);
 
@@ -69,6 +78,8 @@ public class SubmissionController {
             @PathVariable UUID teamId,
             @PathVariable UUID roundId
     ) {
+        // Luong doc: teamId + roundId xac dinh duy nhat mot submission,
+        // duoc rang buoc boi UQ_Submissions_Team_Round trong entity Submissions.
         SubmissionResponse response =
                 submissionQueryService.getSubmissionByTeamAndRound(teamId, roundId);
 
@@ -83,9 +94,45 @@ public class SubmissionController {
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
+        // Luong doc: roundId loc tat ca submission cua mot round cho man hinh judge/admin.
         List<SubmissionResponse> response =
                 submissionQueryService.getSubmissionsByRound(roundId);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Disqualify submission",
+            description = "Disqualify a single submission without disqualifying the whole team."
+    )
+    @PostMapping("/admin/submissions/{submissionId}/disqualify")
+    public ResponseEntity<SubmissionDisqualificationResponse> disqualifySubmission(
+            @PathVariable UUID submissionId,
+            @Valid @RequestBody DisqualifySubmissionRequest request,
+            Authentication authentication
+    ) {
+        // Endpoint rieng cho submission de khong nham voi /admin/teams/{teamId}/disqualify.
+        // Service se ghi Disqualifications.SubmissionID va de TeamID = null.
+        SubmissionDisqualificationResponse response =
+                submissionDisqualificationService.disqualifySubmission(
+                        submissionId,
+                        request,
+                        currentUserId(authentication)
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    private UUID currentUserId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Unauthenticated user");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName());
+        if (user == null) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+
+        return user.getUserId();
     }
 }

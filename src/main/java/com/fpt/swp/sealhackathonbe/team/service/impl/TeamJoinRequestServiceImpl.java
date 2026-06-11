@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamJoinRequests;
@@ -32,7 +31,6 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private static final String REQUEST_STATUS_APPROVED = "APPROVED";
     private static final String REQUEST_STATUS_REJECTED = "REJECTED";
 
-    private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
@@ -47,8 +45,8 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         validateTeamCanReceiveJoinRequest(team);
 
-        if (teamMembersRepository.existsByUserIdAndActiveTrue(currentUserId)) {
-            throw new RuntimeException("User already belongs to an active team");
+        if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, team.getEventId())) {
+            throw new RuntimeException("User already belongs to an active team in this event");
         }
 
         if (teamJoinRequestsRepository.existsByTeamIdAndUserIdAndRequestStatus(
@@ -70,6 +68,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<JoinTeamRequestResponse> getPendingJoinRequests(UUID teamId, UUID leaderUserId) {
         // Luồng leader xem đơn: kiểm tra leader của team -> lấy các request PENDING -> map sang response.
         Teams team = teamsRepository.findById(teamId)
@@ -98,8 +97,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 .findByRequestIdAndRequestStatus(requestId, REQUEST_STATUS_PENDING)
                 .orElseThrow(() -> new RuntimeException("Pending join request not found"));
 
-        Teams team = teamsRepository.findById(joinRequest.getTeamId())
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+        Teams team = joinRequest.getTeam();
 
         if (!team.getLeaderUserId().equals(leaderUserId)) {
             throw new RuntimeException("Only team leader can handle join request");
@@ -108,8 +106,11 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         if (REQUEST_STATUS_APPROVED.equals(request.getAction())) {
             validateTeamCanReceiveJoinRequest(team);
 
-            if (teamMembersRepository.existsByUserIdAndActiveTrue(joinRequest.getUserId())) {
-                throw new RuntimeException("User already belongs to an active team");
+            if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(
+                    joinRequest.getUserId(),
+                    team.getEventId()
+            )) {
+                throw new RuntimeException("User already belongs to an active team in this event");
             }
 
             TeamMembers member = new TeamMembers();
@@ -146,8 +147,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
     private void validateTeamIsNotFull(Teams team) {
         // MaxTeamSize nằm ở Event; trước khi tạo/duyệt request cần đếm member active hiện tại của team.
-        Event event = eventRepository.findByEventIdAndIsDeletedFalse(team.getEventId())
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+        Event event = requireActiveEvent(team.getEvent());
 
         Integer maxTeamSize = event.getMaxTeamSize();
         long activeMemberCount = teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
@@ -155,5 +155,13 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         if (maxTeamSize != null && activeMemberCount >= maxTeamSize) {
             throw new RuntimeException("Team has reached maximum size");
         }
+    }
+
+    private Event requireActiveEvent(Event event) {
+        if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
+            throw new RuntimeException("Event not found");
+        }
+
+        return event;
     }
 }
