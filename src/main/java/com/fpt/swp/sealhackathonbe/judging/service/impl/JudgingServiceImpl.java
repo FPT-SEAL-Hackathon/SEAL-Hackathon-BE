@@ -22,9 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -164,7 +162,18 @@ public class JudgingServiceImpl implements JudgingService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public Map<UUID, List<Judging>> getJudgingsGroupedBySubmissionIds(List<UUID> submissionIds) {
 
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Judging> allJudgings = judgingRepository.findBySubmission_SubmissionIdIn(submissionIds);
+
+        return allJudgings.stream()
+                .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
+    }
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
