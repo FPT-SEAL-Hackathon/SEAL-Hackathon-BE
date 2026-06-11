@@ -46,4 +46,14 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
                 .map(SubmissionMapper::toSubmissionResponse)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubmissionResponse> findByEventId(UUID eventId) {
+        // Luong du lieu: EventID -> Team.EventID -> Submissions -> SubmissionResponse.
+        return submissionsRepository.findByEventId(eventId)
+                .stream()
+                .map(SubmissionMapper::toSubmissionResponse)
+                .toList();
+    }
 }
