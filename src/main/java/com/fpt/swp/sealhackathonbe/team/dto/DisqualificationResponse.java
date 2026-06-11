@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class DisqualificationResponse {
+    // Response trả về sau khi admin loại team; dữ liệu được map từ entity Disqualifications.
     private UUID disqualificationId;
     private UUID teamId;
     private String reason;

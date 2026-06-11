@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> {
+
    Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
 
    Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
@@ -15,6 +16,8 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    List<TeamMembers> findByTeamIdAndActiveTrue(UUID teamId);
 
    boolean existsByUserIdAndActiveTrue(UUID userId);
+
+   boolean existsByUserIdAndTeam_EventIdAndActiveTrue(UUID userId, UUID eventId);
 
    long countByTeamIdAndActiveTrue(UUID teamId);
 }

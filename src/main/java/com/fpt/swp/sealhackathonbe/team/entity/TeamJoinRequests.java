@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TeamJoinRequests {
 
+  // Entity lưu đơn xin vào team; requestStatus đi theo các giá trị PENDING/APPROVED/REJECTED trong service.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "RequestID")
@@ -25,8 +27,16 @@ public class TeamJoinRequests {
   @Column(name = "TeamID", nullable = false)
   private UUID teamId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
+  private Teams team;
+
   @Column(name = "UserID", nullable = false)
   private UUID userId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "UserID", nullable = false, insertable = false, updatable = false)
+  private User user;
 
   @Column(name = "RequestStatus", nullable = false, length = 20)
   private String requestStatus;
@@ -39,6 +49,10 @@ public class TeamJoinRequests {
 
   @Column(name = "RespondedByID")
   private UUID respondedById;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "RespondedByID", insertable = false, updatable = false)
+  private User respondedBy;
 
   @Column(name = "ResponseNote", length = 500)
   private String responseNote;

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class JoinTeamRequestResponse {
+    // DTO trả trạng thái đơn xin vào team cho cả luồng tạo request, xem pending và xử lý request.
     private UUID requestId;
     private UUID teamId;
     private UUID userId;
