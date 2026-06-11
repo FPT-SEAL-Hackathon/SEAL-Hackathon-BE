@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -38,27 +39,46 @@ public class SecurityConfig {
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//
+//        http
+//                .csrf(AbstractHttpConfigurer::disable)
+//
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(
+//                                "/auth/register",
+//                                "/auth/login"
+//                        ).permitAll()
+//
+//                        .anyRequest().authenticated()
+//                )
+//
+//                .addFilterBefore(
+//                        jwtFilter,
+//                        UsernamePasswordAuthenticationFilter.class
+//                )
+//                .sessionManagement(session ->
+//                        session.sessionCreationPolicy(
+//                                SessionCreationPolicy.STATELESS
+//                        )
+//                );
+//
+////                .oauth2Login(oauth -> oauth
+////                        .loginPage("/")
+////                        .defaultSuccessUrl("/home", true)
+////                );
+//        return http.build();
+//    }
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                SWAGGER_WHITELIST
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-
-                .addFilterBefore(
-                        jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-
-                .oauth2Login(oauth -> oauth
-                        .loginPage("/")
-                        .defaultSuccessUrl("/home", true)
+                        .anyRequest().permitAll()
                 );
+
         return http.build();
     }
     @Bean
