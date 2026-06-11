@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -62,5 +64,16 @@ public class SubmissionDisqualificationServiceImpl implements SubmissionDisquali
 
         Disqualifications saved = disqualificationsRepository.save(disqualification);
         return SubmissionDisqualificationMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DisqualifiedSubmissionResponse> getDisqualifiedSubmissions() {
+        // Luong du lieu: disqualification active -> submission lien quan -> DTO tong hop.
+        return disqualificationsRepository
+                .findActiveSubmissionDisqualifications()
+                .stream()
+                .map(SubmissionDisqualificationMapper::toDisqualifiedSubmissionResponse)
+                .toList();
     }
 }
