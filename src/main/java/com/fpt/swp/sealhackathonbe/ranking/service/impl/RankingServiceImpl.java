@@ -3,7 +3,7 @@ package com.fpt.swp.sealhackathonbe.ranking.service.impl;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judging.entity.Judging;
-import com.fpt.swp.sealhackathonbe.judging.repository.JudgingRepository;
+import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.entity.EventRanking;
@@ -14,10 +14,17 @@ import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
+import com.fpt.swp.sealhackathonbe.round.service.RoundService;
+import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse;
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
+import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,49 +35,50 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class RankingServiceImpl implements RankingService {
 
-    private final JudgingRepository judgingRepository;
+    private final JudgingService judgingService;
     private final RoundRankingRepository roundRankingRepository;
     private final EventRankingRepository eventRankingRepository;
-    private final DisqualificationsRepository disqualificationRepository;
+    private final TeamDisqualificationService teamDisqualificationService;
+    private final SubmissionDisqualificationService submissionDisqualificationService;
+    private final SubmissionQueryService submissionQueryService;
     private final EntityManager entityManager;
+    private final RoundService roundService;
 
-    public RankingServiceImpl(JudgingRepository judgingRepository,
-                              RoundRankingRepository roundRankingRepository,
-                              EventRankingRepository eventRankingRepository, DisqualificationsRepository disqualificationRepository,
-                              EntityManager entityManager) {
-        this.judgingRepository = judgingRepository;
-        this.roundRankingRepository = roundRankingRepository;
-        this.eventRankingRepository = eventRankingRepository;
-        this.disqualificationRepository = disqualificationRepository;
-        this.entityManager = entityManager;
-    }
 
     @Override
     @Transactional
-    public List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId, List<UUID> submissionIds, Map<UUID, UUID> submissionToTeamMap) {
+    public List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId) {
         List<RoundRanking> rankings = new ArrayList<>();
 
         Round roundRef = entityManager.getReference(Round.class, roundId);
         Category categoryRef = entityManager.getReference(Category.class, categoryId);
+        List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
 
-        List<UUID> teamIds = new ArrayList<>(submissionToTeamMap.values());
+        List<UUID> submissionIds = submissionsList.stream()
+                .map(SubmissionResponse::getSubmissionId)
+                .collect(Collectors.toList());
+
+        List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
+                .map(DisqualifiedSubmissionResponse::getSubmissionId)
+                .collect(Collectors.toList());
+
+        List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(roundId).stream()
+                .map(SubmissionResponse::getTeamId)
+                .collect(Collectors.toList());
+
+        Set<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId);
+
+        Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
+                SubmissionResponse::getSubmissionId,
+                SubmissionResponse::getTeamId
+        ));
 
         // 1. Lấy toàn bộ điểm của tất cả submissions, nhóm lại thành Map<SubmissionID, List<Judging>>
-        List<Judging> allJudgings = judgingRepository.findBySubmissionSubmissionIdIn(submissionIds);
-        Map<UUID, List<Judging>> judgingsMap = allJudgings.stream()
-                .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
+        Map<UUID, List<Judging>> judgingsMap = judgingService.getJudgingsGroupedBySubmissionIds(submissionIds);
 
-        // 2. Lấy toàn bộ biên bản vi phạm của Submission, nhét vào một Set để check cực nhanh (O(1))
-        Set<UUID> disqualifiedSubIds = disqualificationRepository.findActiveBySubmissionIds(submissionIds).stream()
-                .map(d -> d.getSubmission().getSubmissionId())
-                .collect(Collectors.toSet());
-
-        // 3. Lấy toàn bộ biên bản vi phạm của Team, nhét vào Set
-        Set<UUID> disqualifiedTeamIds = disqualificationRepository.findActiveByTeamIds(teamIds).stream()
-                .map(d -> d.getTeam().getTeamId())
-                .collect(Collectors.toSet());
 
         for (UUID submissionId : submissionIds) {
             UUID teamId = submissionToTeamMap.get(submissionId);
@@ -84,7 +92,6 @@ public class RankingServiceImpl implements RankingService {
 
             // KIỂM TRA VI PHẠM (Dùng hàm .contains() của Set cực nhanh)
             boolean isDisqualified = disqualifiedSubIds.contains(submissionId) || disqualifiedTeamIds.contains(teamId);
-
             if (!isDisqualified) {
                 // Lấy danh sách điểm từ Map thay vì gọi DB
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
@@ -116,11 +123,15 @@ public class RankingServiceImpl implements RankingService {
         rankings.sort((r1, r2) -> r2.getTotalScore().compareTo(r1.getTotalScore()));
 
         int currentRank = 1;
+        int advancementN = roundService.getAdvancementTopN();
         for (int i = 0; i < rankings.size(); i++) {
             if (i > 0 && rankings.get(i).getTotalScore().compareTo(rankings.get(i - 1).getTotalScore()) < 0) {
                 currentRank = i + 1;
             }
             rankings.get(i).setRankPosition(currentRank);
+            if(currentRank <= advancementN){
+                rankings.get(i).setIsAdvanced(true);
+            }
         }
 
         // Save to DB
@@ -145,30 +156,42 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
-    public List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId, List<UUID> teamIds) {
+    public List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId) {
         List<EventRanking> rankings = new ArrayList<>();
 
         Event eventRef = entityManager.getReference(Event.class, eventId);
         Category categoryRef = entityManager.getReference(Category.class, categoryId);
+        Round finalRound = roundService.getFinalRound(categoryId);
+
+        List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(finalRound.getRoundId()).stream()
+                .map(SubmissionResponse::getTeamId)
+                .collect(Collectors.toList());
+
+        Set<UUID> disqualifiedTeamIds = TeamDisqualificationService.getDisqualifiedTeam;
+
+        Map<UUID, BigDecimal> teamFinalRoundScores = new HashMap<>();
+
+        if (finalRound != null) {
+            List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
+            teamFinalRoundScores = finalRoundRankings.stream()
+                    .collect(Collectors.toMap(
+                            r -> r.getTeam().getTeamId(),
+                            RoundRanking::getTotalScore
+                    ));
+        }
 
         for (UUID teamId : teamIds) {
             Teams teamRef = entityManager.getReference(Teams.class, teamId);
             BigDecimal finalScore = BigDecimal.ZERO;
 
-            // Check disqualification
-            boolean isDisqualified = disqualificationRepository.findByTeamId(teamId).stream()
-                    .anyMatch(d -> d.getIsReversed() == null || !d.getIsReversed());
-
-            if (isDisqualified) {
-                finalScore = BigDecimal.ZERO;
-            } else {
-                // Currently no direct query for Team + Category in RoundRankingRepo, we could mock or leave as 0
-                // Placeholder: finalScore remains 0 or some logic
+            // Nếu Đội không bị tước tư cách -> Lấy điểm từ Vòng Chung Kết
+            if (!disqualifiedTeamIds.contains(teamId)) {
+                finalScore = teamFinalRoundScores.getOrDefault(teamId, BigDecimal.ZERO);
             }
 
             EventRanking ranking = new EventRanking();
             ranking.setEvent(eventRef);
-            ranking.setCategory(categoryRef);
+            ranking.setCategory(categoryRef); // Ranking phân chia chuẩn theo Category
             ranking.setTeam(teamRef);
             ranking.setFinalScore(finalScore);
             ranking.setRankPosition(0);
@@ -181,6 +204,7 @@ public class RankingServiceImpl implements RankingService {
 
         int currentRank = 1;
         for (int i = 0; i < rankings.size(); i++) {
+            // Nếu điểm đội hiện tại nhỏ hơn đội đứng trước -> Rớt hạng
             if (i > 0 && rankings.get(i).getFinalScore().compareTo(rankings.get(i - 1).getFinalScore()) < 0) {
                 currentRank = i + 1;
             }
@@ -200,4 +224,22 @@ public class RankingServiceImpl implements RankingService {
                 .build()
         ).collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId) {
+        List<EventRanking> rankings = eventRankingRepository.findByEventIdAndCategoryId(eventId, categoryId);
+        return rankings.stream().map(r -> EventRankingDTO.builder()
+                .id(r.getId())
+                .eventId(eventId)
+                .categoryId(categoryId)
+                .teamId(r.getTeam().getTeamId())
+                .finalScore(r.getFinalScore())
+                .rankPosition(r.getRankPosition())
+                .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .build()
+        ).collect(Collectors.toList());
+    }
+
+
 }

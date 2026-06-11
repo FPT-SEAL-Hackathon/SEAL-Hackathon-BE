@@ -12,18 +12,17 @@ public interface RankingService {
      * Compute rankings for a specific round and category based on judge scores.
      * @param roundId The ID of the round.
      * @param categoryId The ID of the category.
-     * @param submissionIds The list of submission IDs to compute ranking for.
-     * @param submissionToTeamMap A map linking submission ID to its corresponding team ID.
      * @return List of computed round rankings.
      */
-    List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId, List<UUID> submissionIds, Map<UUID, UUID> submissionToTeamMap);
+    List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId);
 
     /**
      * Compute final event rankings.
      * @param eventId The ID of the event.
      * @param categoryId The ID of the category.
-     * @param teamIds The list of team IDs to compute final ranking for.
      * @return List of computed event rankings.
      */
-    List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId, List<UUID> teamIds);
+    List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId);
+
+    List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId);
 }
