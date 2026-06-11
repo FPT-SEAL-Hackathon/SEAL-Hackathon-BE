@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.submission.controller;
 
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
@@ -33,6 +34,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class SubmissionController {
+    // Controller nhan HTTP request, lay user hien tai va chuyen nghiep vu cho tung service chuyen trach.
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
@@ -47,6 +49,7 @@ public class SubmissionController {
             @Valid @RequestBody CreateSubmissionRequest request,
             Authentication authentication
     ) {
+        // Du lieu: request + user dang dang nhap -> command service -> stored procedure -> response.
         SubmissionResponse response =
                 submissionCommandService.submitWork(request, currentUserId(authentication));
 
@@ -102,6 +105,18 @@ public class SubmissionController {
     }
 
     @Operation(
+            summary = "Get submissions by event",
+            description = "Get all submissions belonging to teams in a specific event."
+    )
+    @GetMapping("/events/{eventId}/submissions")
+    public ResponseEntity<List<SubmissionResponse>> findByEventId(
+            @PathVariable UUID eventId
+    ) {
+        // Submission khong luu EventID; service loc bai nop thong qua quan he Submission -> Team -> Event.
+        return ResponseEntity.ok(submissionQueryService.findByEventId(eventId));
+    }
+
+    @Operation(
             summary = "Disqualify submission",
             description = "Disqualify a single submission without disqualifying the whole team."
     )
@@ -123,7 +138,22 @@ public class SubmissionController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Get disqualified submissions by round",
+            description = "Get submissions with an active disqualification in a specific round, newest first."
+    )
+    @GetMapping("/admin/rounds/{roundId}/submissions/disqualified")
+    public ResponseEntity<List<DisqualifiedSubmissionResponse>> getDisqualifiedSubmissions(
+            @PathVariable UUID roundId
+    ) {
+        // Tra cac bai nop dang bi loai trong round, kem ly do va thong tin nguoi thuc hien.
+        return ResponseEntity.ok(
+                submissionDisqualificationService.getDisqualifiedSubmissions(roundId)
+        );
+    }
+
     private UUID currentUserId(Authentication authentication) {
+        // JWT filter dat email vao Authentication; controller doi email thanh userId cho command service.
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Unauthenticated user");
         }

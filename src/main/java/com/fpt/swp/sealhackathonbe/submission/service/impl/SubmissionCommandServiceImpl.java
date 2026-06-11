@@ -69,6 +69,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateUserBelongsToTeam(UUID teamId, UUID currentUserId) {
+        // Chi member active cua team moi duoc nop hoac cap nhat bai cua team do.
         boolean isMember = teamMembersRepository
                 .findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
                 .isPresent();
@@ -79,6 +80,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateTeamCanSubmit(UUID teamId) {
+        // Team da bi loai hoac rut lui khong duoc tiep tuc nop bai.
         var team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
@@ -89,6 +91,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateSubmissionDeadline(UUID roundId) {
+        // Doc deadline truc tiep tu Rounds vi entity submission hien khong mapping quan he Round.
         Object result;
 
         try {
@@ -103,12 +106,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         }
 
         if (result == null) {
+            // Deadline null duoc hieu la round khong gioi han thoi gian nop.
             return;
         }
 
         LocalDateTime deadline;
 
         if (result instanceof Timestamp timestamp) {
+            // JDBC driver co the tra nhieu kieu ngay gio, nen chuan hoa ve LocalDateTime.
             deadline = timestamp.toLocalDateTime();
         } else if (result instanceof LocalDateTime localDateTime) {
             deadline = localDateTime;

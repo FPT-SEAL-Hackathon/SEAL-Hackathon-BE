@@ -16,6 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "SubmissionStatus")
 public class SubmissionStatus {
+    // Bang danh muc trang thai submission; Submissions chi luu khoa ngoai StatusID.
     @Id
     @Column(name = "StatusID")
     private UUID statusId;

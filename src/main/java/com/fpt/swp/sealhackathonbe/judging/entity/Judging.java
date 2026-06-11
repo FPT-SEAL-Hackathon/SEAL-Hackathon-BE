@@ -44,10 +44,10 @@ public class Judging {
     @JoinColumn(name = "RoundCriterionID", nullable = false)
     private RoundCriteria roundCriterion;
 
-    @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
+    @Column(name = "ScoreValue", nullable = false, precision = 10, scale = 2)
     private BigDecimal scoreValue;
 
-    @Column(name = "comment", columnDefinition = "TEXT")
+    @Column(name = "Comment", columnDefinition = "TEXT")
     private String comment;
 
     @Column(name = "IsCalibration")

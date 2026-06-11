@@ -2,9 +2,12 @@ package com.fpt.swp.sealhackathonbe.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginRequest {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
@@ -12,4 +15,5 @@ public class LoginRequest {
 
     @NotBlank(message = "Password is required")
     private String password;
+
 }
