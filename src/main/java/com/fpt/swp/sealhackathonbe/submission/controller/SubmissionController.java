@@ -139,14 +139,16 @@ public class SubmissionController {
     }
 
     @Operation(
-            summary = "Get disqualified submissions",
-            description = "Get all submissions with an active disqualification, newest first."
+            summary = "Get disqualified submissions by round",
+            description = "Get submissions with an active disqualification in a specific round, newest first."
     )
-    @GetMapping("/admin/submissions/disqualified")
-    public ResponseEntity<List<DisqualifiedSubmissionResponse>> getDisqualifiedSubmissions() {
-        // Tra cac bai nop dang bi loai, kem ly do va thong tin nguoi thuc hien.
+    @GetMapping("/admin/rounds/{roundId}/submissions/disqualified")
+    public ResponseEntity<List<DisqualifiedSubmissionResponse>> getDisqualifiedSubmissions(
+            @PathVariable UUID roundId
+    ) {
+        // Tra cac bai nop dang bi loai trong round, kem ly do va thong tin nguoi thuc hien.
         return ResponseEntity.ok(
-                submissionDisqualificationService.getDisqualifiedSubmissions()
+                submissionDisqualificationService.getDisqualifiedSubmissions(roundId)
         );
     }
 
