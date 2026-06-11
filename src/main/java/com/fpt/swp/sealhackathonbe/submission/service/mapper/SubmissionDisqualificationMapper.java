@@ -23,10 +23,10 @@ public class SubmissionDisqualificationMapper {
     public static DisqualifiedSubmissionResponse toDisqualifiedSubmissionResponse(
             Disqualifications disqualification
     ) {
-        // Ghep ban ghi loai voi thong tin day du cua submission; mapper khong tu truy van database.
+        // Danh sach chi can SubmissionID, khong expose toan bo SubmissionResponse long ben trong.
         DisqualifiedSubmissionResponse response = new DisqualifiedSubmissionResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
-        response.setSubmission(SubmissionMapper.toSubmissionResponse(disqualification.getSubmission()));
+        response.setSubmissionId(disqualification.getSubmissionId());
         response.setReason(disqualification.getReason());
         response.setDisqualifiedById(disqualification.getDisqualifiedById());
         response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
