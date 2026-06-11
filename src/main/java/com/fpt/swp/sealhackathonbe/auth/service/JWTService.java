@@ -1,17 +1,15 @@
 package com.fpt.swp.sealhackathonbe.auth.service;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,60 +17,62 @@ import java.util.Map;
 @Service
 public class JWTService {
 
-    private String secretkey = "";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    public JWTService() {
-
-        try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
-            SecretKey sk = keyGen.generateKey();
-            secretkey = Base64.getEncoder().encodeToString(sk.getEncoded());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String generateToken(String username) {
+    public String generateToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
+        // thêm data vào payload
+        claims.put("userId", user.getUserId());
+        claims.put("role", user.getUserType().getTypeName());
+
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
+                .setSubject(user.getEmail()) // hoặc username
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000 * 60 * 30)
+                        new Date(System.currentTimeMillis() + 1000L * 60 * 30)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
+
     private Key getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretkey);
+        byte[] keyBytes = secretKey.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
     }
+
     public String extractUserName(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
+    }
+
+    private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+                .getBody();
     }
-    private boolean isTokenExpired(String token) {
-        Date expiration = Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getExpiration();
 
-        return expiration.before(new Date());
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token)
+                .before(new Date());
     }
+
     public boolean validateToken(
             String token,
-            UserDetails userDetails) {
-        String username = extractUserName(token);
+            UserDetails userDetails
+    ) {
+
+        final String username = extractUserName(token);
+
         return username.equals(userDetails.getUsername())
                 && !isTokenExpired(token);
     }
