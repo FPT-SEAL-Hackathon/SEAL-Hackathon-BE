@@ -167,7 +167,7 @@ public class RankingServiceImpl implements RankingService {
                 .map(SubmissionResponse::getTeamId)
                 .collect(Collectors.toList());
 
-        Set<UUID> disqualifiedTeamIds = TeamDisqualificationService.getDisqualifiedTeam;
+        Set<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId);
 
         Map<UUID, BigDecimal> teamFinalRoundScores = new HashMap<>();
 
