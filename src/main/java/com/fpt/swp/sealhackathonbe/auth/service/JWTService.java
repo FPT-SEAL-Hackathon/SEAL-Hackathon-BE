@@ -20,12 +20,20 @@ public class JWTService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    // 🔥 ACCESS TOKEN
     public String generateAccessToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
         claims.put("userId", user.getUserId());
-        claims.put("userType", user.getUserType().getTypeName());
+
+        // 🔥 ADD ROLE (QUAN TRỌNG)
+        String role = user.getUserType()
+                .getTypeName()
+                .replace(" ", "_")
+                .toUpperCase();
+
+        claims.put("role", role);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -37,6 +45,8 @@ public class JWTService {
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
+    // 🔥 REFRESH TOKEN (giữ nhẹ, không cần role)
     public String generateRefreshToken(User user) {
 
         return Jwts.builder()
@@ -49,13 +59,16 @@ public class JWTService {
                 .compact();
     }
 
-    private Key getKey() {
-        byte[] keyBytes = secretKey.getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+    // =========================
+    // PARSE JWT
+    // =========================
 
     public String extractUserName(String token) {
         return extractAllClaims(token).getSubject();
+    }
+
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
     }
 
     public Date extractExpiration(String token) {
@@ -71,18 +84,22 @@ public class JWTService {
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token)
-                .before(new Date());
+        return extractExpiration(token).before(new Date());
     }
 
-    public boolean validateToken(
-            String token,
-            UserDetails userDetails
-    ) {
-
+    public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUserName(token);
 
         return username.equals(userDetails.getUsername())
                 && !isTokenExpired(token);
+    }
+
+    // =========================
+    // KEY
+    // =========================
+
+    private Key getKey() {
+        byte[] keyBytes = secretKey.getBytes();
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
