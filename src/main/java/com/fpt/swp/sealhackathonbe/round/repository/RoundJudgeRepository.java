@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
+    boolean existsByRoundRoundId(UUID roundId);
 }
