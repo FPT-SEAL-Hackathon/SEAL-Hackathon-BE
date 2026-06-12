@@ -13,6 +13,7 @@ import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
-
+@SecurityRequirement(name = "bearerAuth")
 public class AuthController {
 
     @Autowired
