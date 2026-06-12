@@ -64,16 +64,16 @@ public class RankingServiceImpl implements RankingService {
 
         List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
                 .map(DisqualifiedSubmissionResponse::getSubmissionId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(roundId).stream()
                 .map(SubmissionResponse::getTeamId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
-                .collect(Collectors.toList());
+                .toList();
 
         Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
                 SubmissionResponse::getSubmissionId,
@@ -174,7 +174,7 @@ public class RankingServiceImpl implements RankingService {
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId)
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
-                .collect(Collectors.toList());
+                .toList();
         Map<UUID, BigDecimal> teamFinalRoundScores = new HashMap<>();
 
         if (finalRound != null) {
