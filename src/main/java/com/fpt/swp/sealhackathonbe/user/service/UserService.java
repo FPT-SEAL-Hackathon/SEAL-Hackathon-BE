@@ -21,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -129,7 +130,7 @@ public class UserService {
             user.setPhone(request.getPhone());
             user.setUserType(userType);
             user.setAccountStatus(accountStatus);
-
+            user.setCreatedAt(LocalDateTime.now());
             // Student code
             UUID FPT_STUDENT_ID = UUID.fromString(
                     "10000000-0000-0000-0000-000000000001"
