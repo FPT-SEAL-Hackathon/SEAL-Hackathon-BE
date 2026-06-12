@@ -19,6 +19,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TeamStatus {
 
+    // Bang danh muc trang thai cua team; Teams chi luu khoa ngoai StatusID.
     @Id
     @Column(name = "StatusID")
     private UUID statusId;
