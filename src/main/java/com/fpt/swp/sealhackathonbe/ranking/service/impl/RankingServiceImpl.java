@@ -21,7 +21,6 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -228,7 +227,7 @@ public class RankingServiceImpl implements RankingService {
     @Override
     @Transactional(readOnly = true)
     public List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId) {
-        List<EventRanking> rankings = eventRankingRepository.findByEventIdAndCategoryId(eventId, categoryId);
+        List<EventRanking> rankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
         return rankings.stream().map(r -> EventRankingDTO.builder()
                 .id(r.getId())
                 .eventId(eventId)
