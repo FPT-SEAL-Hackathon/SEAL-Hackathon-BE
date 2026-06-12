@@ -118,5 +118,13 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new RuntimeException("No any rounds in this category"));
     }
 
+    @Override
+    public Integer getAdvancementTopN(UUID roundId) {
+        Round round = roundRepository
+                .findById(roundId)
+                .orElseThrow(() -> new RuntimeException("Round not found"));
+        return round.getAdvancementTopN();
+    }
+
 
 }
