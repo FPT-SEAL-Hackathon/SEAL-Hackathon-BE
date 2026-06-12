@@ -58,22 +58,10 @@ public class RankingController {
             @PathVariable("eventId") UUID eventId,
             @PathVariable("categoryId") UUID categoryId) {
 
-        List<EventRanking> rankings =
+        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
 
         // Sort by rank position
         rankings.sort((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()));
-
-        List<EventRankingDTO> dtos = rankings.stream().map(r -> EventRankingDTO.builder()
-                .id(r.getId())
-                .eventId(r.getEvent().getEventId())
-                .categoryId(r.getCategory().getCategoryId())
-                .teamId(r.getTeam().getTeamId())
-                .finalScore(r.getFinalScore())
-                .rankPosition(r.getRankPosition())
-                .computedAt(r.getComputedAt())
-                .build()
-        ).collect(Collectors.toList());
-
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(rankings);
     }
 }
