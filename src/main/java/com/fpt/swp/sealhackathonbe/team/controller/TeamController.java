@@ -35,6 +35,8 @@ public class TeamController {
     private final TeamJoinRequestService teamJoinRequestService;
     private final UserRepository userRepository;
 
+    // Quyen hien tai: moi tai khoan co JWT hop le deu co the tao team.
+    // Chua gioi han theo UserType; service chi chan user da o team active trong cung event.
     @PostMapping("/teams")
     public ResponseEntity<TeamResponse> createTeam(
             @Valid @RequestBody CreateTeamRequest request,
@@ -45,6 +47,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: moi tai khoan co JWT hop le.
+    // Tai khoan phai dang la member active cua mot team.
     @GetMapping("/teams/my-team")
     public ResponseEntity<TeamResponse> getMyTeam(Authentication authentication) {
         // Tim membership active cua user hien tai de tra ve team ma user dang tham gia.
@@ -52,6 +56,7 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: moi tai khoan co JWT hop le, khong can la member cua team.
     @GetMapping("/teams/{teamId}")
     public ResponseEntity<TeamResponse> getTeamById(@PathVariable UUID teamId) {
         // Lay thong tin team va danh sach member active theo teamId.
@@ -59,6 +64,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: chi tai khoan dang la member active cua teamId.
+    // userId duoc xem cung phai la member active cua chinh team do.
     @GetMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<TeamMemberDetailResponse> getTeamMemberDetail(
             @PathVariable UUID teamId,
@@ -74,6 +81,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: moi tai khoan co JWT hop le chua o team active trong cung event.
+    // Team dich phai con nhan thanh vien va user chua co request PENDING trung lap.
     @PostMapping("/teams/{teamId}/join")
     public ResponseEntity<JoinTeamRequestResponse> requestToJoinTeam(
             @PathVariable UUID teamId,
@@ -85,6 +94,7 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: chi tai khoan la leader cua teamId.
     @GetMapping("/teams/{teamId}/requests")
     public ResponseEntity<List<JoinTeamRequestResponse>> getPendingJoinRequests(
             @PathVariable UUID teamId,
@@ -96,6 +106,7 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: chi tai khoan la leader cua team nhan request.
     @PutMapping("/teams/requests/{requestId}")
     public ResponseEntity<JoinTeamRequestResponse> handleJoinRequest(
             @PathVariable UUID requestId,
@@ -108,6 +119,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Quyen hien tai: leader duoc kick member cua team; member duoc tu roi team.
+    // Leader khong the bi xoa va team khong duoc thap hon MinTeamSize.
     @DeleteMapping("/teams/members/{userId}")
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID userId,
