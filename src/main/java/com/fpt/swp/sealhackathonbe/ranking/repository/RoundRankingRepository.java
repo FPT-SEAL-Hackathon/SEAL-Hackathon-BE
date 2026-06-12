@@ -9,6 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface RoundRankingRepository extends JpaRepository<RoundRanking, UUID> {
-    List<RoundRanking> findByRoundIdAndCategoryId(UUID roundId, UUID categoryId);
+    List<RoundRanking> findByRound_RoundIdAndCategory_CategoryId(UUID roundId, UUID categoryId);
     List<RoundRanking> findByRoundRoundIdAndTeamTeamIdIn(UUID roundId, List<UUID> teamIds);
 }
