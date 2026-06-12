@@ -23,7 +23,6 @@ import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualification
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -65,16 +64,16 @@ public class RankingServiceImpl implements RankingService {
 
         List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
                 .map(DisqualifiedSubmissionResponse::getSubmissionId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(roundId).stream()
                 .map(SubmissionResponse::getTeamId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
-                .collect(Collectors.toList());
+                .toList();
 
         Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
                 SubmissionResponse::getSubmissionId,
@@ -175,7 +174,7 @@ public class RankingServiceImpl implements RankingService {
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId)
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
-                .collect(Collectors.toList());
+                .toList();
         Map<UUID, BigDecimal> teamFinalRoundScores = new HashMap<>();
 
         if (finalRound != null) {
@@ -235,7 +234,7 @@ public class RankingServiceImpl implements RankingService {
     @Override
     @Transactional(readOnly = true)
     public List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId) {
-        List<EventRanking> rankings = eventRankingRepository.findByEventIdAndCategoryId(eventId, categoryId);
+        List<EventRanking> rankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
         return rankings.stream().map(r -> EventRankingDTO.builder()
                 .id(r.getId())
                 .eventId(eventId)
