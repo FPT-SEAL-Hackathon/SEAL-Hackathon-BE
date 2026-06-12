@@ -4,6 +4,7 @@ import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +15,14 @@ import java.util.UUID;
 public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     // Phan query cua luong submission: repository doc bang Submissions, mapper chuyen entity sang DTO.
     private final SubmissionsRepository submissionsRepository;
+    private final TeamMembersRepository teamMembersRepository;
 
-    public SubmissionQueryServiceImpl(SubmissionsRepository submissionsRepository) {
+    public SubmissionQueryServiceImpl(
+            SubmissionsRepository submissionsRepository,
+            TeamMembersRepository teamMembersRepository
+    ) {
         this.submissionsRepository = submissionsRepository;
+        this.teamMembersRepository = teamMembersRepository;
     }
 
     @Override
@@ -30,8 +36,11 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId) {
+    public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId) {
         // Dung unique key o muc bang: moi team chi co mot submission trong mot round.
+        teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
+                .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+
         return submissionsRepository.findByTeamIdAndRoundId(teamId, roundId)
                 .map(SubmissionMapper::toSubmissionResponse)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
