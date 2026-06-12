@@ -34,8 +34,8 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "/webjars/**",
             "/",
-//            "/auth/login",
-//            "/auth/register",
+            "/auth/login",
+            "/auth/register",
     };
 
     @Bean
