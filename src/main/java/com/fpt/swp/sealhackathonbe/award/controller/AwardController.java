@@ -3,10 +3,12 @@ package com.fpt.swp.sealhackathonbe.award.controller;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
 import com.fpt.swp.sealhackathonbe.award.service.AwardService;
+import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,12 +26,10 @@ public class AwardController {
      * POST /api/v1/awards
      */
     @PostMapping
-    public ResponseEntity<AwardResponse> grantAward(@Valid @RequestBody AwardRequest request) {
-//      UUID AdminId = UUID.fromString(SecurityContextHolder.getContext().getAuthentication().getName());
+    public ResponseEntity<AwardResponse> grantAward(@Valid @RequestBody AwardRequest request,
+                                                    @AuthenticationPrincipal UserPrincipal principal) {
 
-        UUID mockAdminId = UUID.fromString("10000000-0000-0000-0000-000000000003");
-
-        AwardResponse response = awardService.grantAward(request, mockAdminId);
+        AwardResponse response = awardService.grantAward(request, principal.getUser().getUserId());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.core.config;
 
 
 import com.fpt.swp.sealhackathonbe.auth.service.JwtFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/swagger-resources/**",
             "/webjars/**",
+            "/error",
             "/",
             "/auth/login",
             "/auth/register",
@@ -76,7 +78,44 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
+<<<<<<< Updated upstream
                         .anyRequest().permitAll()
+=======
+                        .requestMatchers(SWAGGER_WHITELIST)
+                        .permitAll()
+
+                        .anyRequest()
+                        .authenticated()
+                )
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write(
+                                    "{\"status\":401,\"error\":\"Unauthorized\","
+                                            + "\"message\":\"Authorization header is missing or token was not accepted\"}"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                response.sendError(
+                                        HttpServletResponse.SC_FORBIDDEN,
+                                        "Access is denied"
+                                )
+                        )
+                )
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+>>>>>>> Stashed changes
                 );
 
         return http.build();
