@@ -7,6 +7,7 @@ import org.hibernate.validator.constraints.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class LoginResponse {
 
     private String accessToken;

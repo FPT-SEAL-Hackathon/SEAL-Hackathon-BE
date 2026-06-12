@@ -62,7 +62,7 @@ public class UserService {
 
             User user = userPrincipal.getUser();
 
-            String accessToken = jwtService.generateToken(user);
+            String accessToken = jwtService.generateAccessToken(user);
 
             String refreshToken =
                     jwtService.generateRefreshToken(user);
