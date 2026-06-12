@@ -31,7 +31,7 @@ public class JudgingServiceImpl implements JudgingService {
     private final JudgingRepository judgingRepository;
     private final UserRepository userRepository;
     private final SubmissionsRepository submissionRepository;
-    //    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
+    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final RoundCriterionRepository roundCriterionRepository;
 
@@ -40,13 +40,13 @@ public class JudgingServiceImpl implements JudgingService {
                               UserRepository userRepository,
                               SubmissionsRepository submissionRepository,
                               EventCriterionRepository eventCriterionRepository,
-//                              EvaluationAuditLogRepository evaluationAuditLogRepository,
+                              EvaluationAuditLogRepository evaluationAuditLogRepository,
                               RoundJudgeRepository roundJudgeRepository,
                               RoundCriterionRepository roundCriterionRepository) {
         this.judgingRepository = judgingRepository;
         this.userRepository = userRepository;
         this.submissionRepository = submissionRepository;
-//        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
+        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
         this.roundJudgeRepository = roundJudgeRepository;
         this.roundCriterionRepository = roundCriterionRepository;
     }
@@ -72,10 +72,10 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Round Criterion not found with ID: " + dto.getRoundCriterionId()));
 
         // 5. Validate that the score value does not exceed the maximum allowed value
-        if (dto.getScoreValue().compareTo(criterion.getEventCriterion().getMaxScore()) > 0) {
+        if (dto.getScoreValue().compareTo(criterion.getMaxScore()) > 0) {
             throw new IllegalArgumentException(String.format(
                     "Score value %s exceeds the maximum allowed value %s for criterion '%s'.",
-                    dto.getScoreValue(), criterion.getEventCriterion().getMaxScore(), criterion.getEventCriterion().getCriterionName()
+                    dto.getScoreValue(), criterion.getMaxScore(), criterion.getCriterionName()
             ));
         }
 
@@ -85,7 +85,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         // 7. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
-                .findBySubmissionIdAndRoundJudgeIdAndRoundCriterionId(
+                .findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriteriaId(
                         dto.getSubmissionId(), dto.getRoundJudgeId(), dto.getRoundCriterionId()
                 );
 
@@ -99,7 +99,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
-            actionType = "SCORE_UPDATE";
+            actionType = "SCORE_UPDATED";
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
@@ -110,7 +110,7 @@ public class JudgingServiceImpl implements JudgingService {
             }
             savedJudging = judgingRepository.save(existingJudging);
         } else {
-            actionType = "SCORE_CREATE";
+            actionType = "SCORE_CREATED";
             Judging newJudging = new Judging();
             newJudging.setSubmission(submission);
             newJudging.setRoundJudge(judge);
@@ -129,25 +129,25 @@ public class JudgingServiceImpl implements JudgingService {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
 
-//        // 9. Create and save the EvaluationAuditLog
-//        EvaluationAuditLog auditLog = new EvaluationAuditLog();
-//        auditLog.setEvent(event);
-//        auditLog.setActionType(actionType);
-//        auditLog.setActor(actor);
-//        auditLog.setScore(savedJudging);
-//        auditLog.setTeam(team);
-//        auditLog.setSubmission(submission);
-//        auditLog.setOldValue(oldValue);
-//        auditLog.setNewValue(newValue);
-//        auditLog.setReason(dto.getReason());
-//
-//        evaluationAuditLogRepository.save(auditLog);
+        // 9. Create and save the EvaluationAuditLog
+        EvaluationAuditLog auditLog = new EvaluationAuditLog();
+        auditLog.setEvent(event);
+        auditLog.setActionType(actionType);
+        auditLog.setActor(actor);
+        auditLog.setScore(savedJudging);
+        auditLog.setTeam(team);
+        auditLog.setSubmission(submission);
+        auditLog.setOldValue(oldValue);
+        auditLog.setNewValue(newValue);
+        auditLog.setReason(dto.getReason());
+
+        evaluationAuditLogRepository.save(auditLog);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<JudgingDTO> getScoresBySubmission(UUID submissionId) {
-        return judgingRepository.findBySubmissionId(submissionId)
+        return judgingRepository.findBySubmission_SubmissionId(submissionId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -156,7 +156,7 @@ public class JudgingServiceImpl implements JudgingService {
     @Override
     @Transactional(readOnly = true)
     public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
-        return judgingRepository.findByRoundJudgeId(roundJudgeId)
+        return judgingRepository.findByRoundJudge_RoundJudgeId(roundJudgeId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -178,9 +178,9 @@ public class JudgingServiceImpl implements JudgingService {
         return JudgingDTO.builder()
                 .id(judging.getId())
                 .submissionId(judging.getSubmission() != null ? judging.getSubmission().getSubmissionId() : null)
-                .roundJudgeId(judging.getRoundJudge() != null ? judging.getRoundJudge().getUserId() : null)
-                .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getUserId() : null)
-                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriterionId() : null)
+                .roundJudgeId(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getUserId() : null)
+                .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getFullName() : null)
+                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriteriaId() : null)
                 .criterionName(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getCriterionName() : null)
                 .scoreValue(judging.getScoreValue())
                 .comment(judging.getComment())
@@ -190,5 +190,24 @@ public class JudgingServiceImpl implements JudgingService {
                 .build();
     }
 
-
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
+        return evaluationAuditLogRepository.findByEvent_EventIdOrderByCreatedAtDesc(eventId)
+                .stream()
+                .map(log -> com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO.builder()
+                        .id(log.getId())
+                        .eventId(log.getEvent() != null ? log.getEvent().getEventId() : null)
+                        .actionType(log.getActionType())
+                        .actorUserId(log.getActor() != null ? log.getActor().getUserId() : null)
+                        .judgingId(log.getScore() != null ? log.getScore().getId() : null)
+                        .teamId(log.getTeam() != null ? log.getTeam().getTeamId() : null)
+                        .submissionId(log.getSubmission() != null ? log.getSubmission().getSubmissionId() : null)
+                        .oldValue(log.getOldValue())
+                        .newValue(log.getNewValue())
+                        .reason(log.getReason())
+                        .createdAt(log.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
 }
