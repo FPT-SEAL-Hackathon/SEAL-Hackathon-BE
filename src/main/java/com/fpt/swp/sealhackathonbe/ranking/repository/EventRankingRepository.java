@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface EventRankingRepository extends JpaRepository<EventRanking, UUID> {
-    List<EventRanking> findByEventIdAndCategoryId(UUID eventId, UUID categoryId);
+    List<EventRanking> findByEvent_EventIdAndCategory_CategoryId(UUID eventId, UUID categoryId);
 }

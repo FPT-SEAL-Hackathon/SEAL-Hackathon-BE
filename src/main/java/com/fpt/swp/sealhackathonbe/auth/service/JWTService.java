@@ -20,25 +20,34 @@ public class JWTService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    public String generateToken(User user) {
+    public String generateAccessToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
-        // thêm data vào payload
         claims.put("userId", user.getUserId());
-        claims.put("role", user.getUserType().getTypeName());
+        claims.put("userType", user.getUserType().getTypeName());
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(user.getEmail()) // hoặc username
-                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setSubject(user.getEmail())
+                .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + 1000L * 60 * 30)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+    public String generateRefreshToken(User user) {
 
+        return Jwts.builder()
+                .setSubject(user.getEmail())
+                .setIssuedAt(new Date())
+                .setExpiration(
+                        new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24)
+                )
+                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
 
     private Key getKey() {
         byte[] keyBytes = secretKey.getBytes();
