@@ -12,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,6 +44,7 @@ public class UserService {
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
 
+
     public LoginResponse verify(LoginRequest request) {
 
         Authentication authentication =
@@ -60,14 +62,41 @@ public class UserService {
 
             User user = userPrincipal.getUser();
 
-            String token = jwtService.generateToken(user);
+            String accessToken = jwtService.generateToken(user);
 
-            return new LoginResponse(token);
+            String refreshToken =
+                    jwtService.generateRefreshToken(user);
+
+            String studentCode =
+                    user.getFptStudentCode() != null
+                            ? user.getFptStudentCode()
+                            : user.getExternalStudentCode();
+
+            UserResponse userResponse =
+                    UserResponse.builder()
+                            .id(user.getUserId())
+                            .email(user.getEmail())
+                            .fullName(user.getFullName())
+                            .userType(user.getUserType().getTypeName())
+                            .studentCode(studentCode)
+                            .universityName(user.getUniversityName())
+                            .phone(user.getPhone())
+                            .accountStatus(
+                                    user.getAccountStatus().getStatusName()
+                            )
+                            .createdAt(user.getCreatedAt())
+                            .build();
+
+            return LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .user(userResponse)
+                    .build();
         }
 
         throw new RuntimeException("Invalid email or password");
     }
-
+    @Transactional
     public UserResponse register(RegisterRequest request) {
 
         try {
