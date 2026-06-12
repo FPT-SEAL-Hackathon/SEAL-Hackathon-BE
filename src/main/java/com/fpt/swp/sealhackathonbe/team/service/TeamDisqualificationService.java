@@ -6,6 +6,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import java.util.UUID;
 
 public interface TeamDisqualificationService {
+    // Admin loại team khỏi cuộc thi và lưu lý do loại vào bảng Disqualifications.
     DisqualificationResponse disqualifyTeam(
             UUID teamId,
             DisqualifyTeamRequest request,

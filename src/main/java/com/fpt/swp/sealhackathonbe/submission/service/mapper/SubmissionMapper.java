@@ -8,6 +8,7 @@ public class SubmissionMapper {
     }
 
     public static SubmissionResponse toSubmissionResponse(Submissions submission) {
+        // Ranh gioi mapping: JPA entity nam trong service layer, DTO duoc tra ve controller/client.
         if (submission == null) {
             return null;
         }
@@ -15,9 +16,13 @@ public class SubmissionMapper {
         SubmissionResponse response = new SubmissionResponse();
 
         response.setSubmissionId(submission.getSubmissionId());
-        response.setTeamId(submission.getTeamId());
+        response.setTeamId(submission.getTeam() != null
+                ? submission.getTeam().getTeamId()
+                : submission.getTeamId());
         response.setRoundId(submission.getRoundId());
-        response.setSubmissionStatusId(submission.getSubmissionStatusId());
+        response.setSubmissionStatusId(submission.getSubmissionStatus() != null
+                ? submission.getSubmissionStatus().getStatusId()
+                : submission.getSubmissionStatusId());
 
         response.setRepositoryUrl(submission.getRepositoryUrl());
         response.setDemoUrl(submission.getDemoUrl());
@@ -31,7 +36,9 @@ public class SubmissionMapper {
 
         response.setSubmittedAt(submission.getSubmittedAt());
         response.setLastUpdatedAt(submission.getLastUpdatedAt());
-        response.setSubmittedByUserId(submission.getSubmittedByUserId());
+        response.setSubmittedByUserId(submission.getSubmittedByUser() != null
+                ? submission.getSubmittedByUser().getUserId()
+                : submission.getSubmittedByUserId());
         response.setNotes(submission.getNotes());
 
         return response;

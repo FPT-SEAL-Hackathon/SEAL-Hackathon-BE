@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TeamMembers {
 
+  // Entity ánh xạ quan hệ user-team; khi rời team chỉ set IsActive=false và ghi LeftAt.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamMemberID")
@@ -25,8 +27,16 @@ public class TeamMembers {
   @Column(name = "TeamID", nullable = false)
   private UUID teamId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
+  private Teams team;
+
   @Column(name = "UserID", nullable = false)
   private UUID userId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "UserID", nullable = false, insertable = false, updatable = false)
+  private User user;
 
   @Column(name = "JoinedAt", nullable = false)
   private LocalDateTime joinedAt;

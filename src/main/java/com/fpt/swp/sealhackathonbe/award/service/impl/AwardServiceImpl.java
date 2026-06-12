@@ -8,9 +8,11 @@ import com.fpt.swp.sealhackathonbe.award.entity.AwardTier;
 import com.fpt.swp.sealhackathonbe.award.repository.AwardRepository;
 import com.fpt.swp.sealhackathonbe.award.repository.AwardTierRepository;
 import com.fpt.swp.sealhackathonbe.award.service.AwardService;
-import com.fpt.swp.sealhackathonbe.event.entity.Category;
+import com.fpt.swp.sealhackathonbe.category.entity.Category;
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.event.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
@@ -99,10 +101,9 @@ public class AwardServiceImpl implements AwardService {
     @Override
     @Transactional(readOnly = true)
     public List<AwardResponse> getAwardsByEvent(UUID eventId) {
-        // Bạn có thể viết thêm hàm findByEventId ở AwardRepository để gọi chỗ này
-        // Tạm thời trả về danh sách convert mẫu
-        return awardRepository.findAll().stream()
-                .filter(a -> a.getEvent().getId().equals(eventId))
+        List<Award> awards = awardRepository.findByEventId(eventId);
+
+        return awards.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -111,9 +112,9 @@ public class AwardServiceImpl implements AwardService {
     private AwardResponse convertToResponse(Award award) {
         AwardResponse response = new AwardResponse();
         response.setId(award.getId());
-        response.setEventId(award.getEvent().getId());
+        response.setEventId(award.getEvent().getEventId());
         response.setEventName(award.getEvent().getEventName());
-        response.setTeamId(award.getTeam().getId());
+        response.setTeamId(award.getTeam().getTeamId());
         response.setTeamName(award.getTeam().getTeamName());
         response.setAwardTierId(award.getAwardTier().getId());
         response.setAwardTierName(award.getAwardTier().getTierName());
@@ -127,7 +128,7 @@ public class AwardServiceImpl implements AwardService {
         response.setPublishedAt(award.getPublishedAt());
 
         if (award.getCategory() != null) {
-            response.setCategoryId(award.getCategory().getId());
+            response.setCategoryId(award.getCategory().getCategoryId());
             response.setCategoryName(award.getCategory().getCategoryName());
         }
         return response;
@@ -138,7 +139,7 @@ public class AwardServiceImpl implements AwardService {
     @Transactional(readOnly = true)
     public List<HallOfFameResponse> getHallOfFameData() {
         // Lấy danh sách Entity
-        List<Award> publishedAwards = awardRepository.findPublishedAwardsForHallOfFame();
+        List<Award> publishedAwards = awardRepository.findByIsPublishedTrueOrderByAwardedAtDesc();
 
         // Map sang DTO
         return publishedAwards.stream().map(award -> {
@@ -155,9 +156,6 @@ public class AwardServiceImpl implements AwardService {
             response.setTeamName(award.getTeam().getTeamName());
             response.setAwardTierName(award.getAwardTier().getTierName());
             response.setAwardTitle(award.getAwardTitle());
-
-            // Lấy tên đội trưởng (Leader) từ quan hệ Team -> User
-            response.setLeaderName(award.getTeam().getLeaderUserID().toString()); // Đoạn này khi ráp Entity Team của TV3, bạn gọi .getFullName() là đẹp nhất
 
             return response;
         }).collect(Collectors.toList());
