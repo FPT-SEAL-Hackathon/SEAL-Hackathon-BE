@@ -14,13 +14,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
-
-import com.fpt.swp.sealhackathonbe.criteria.entity.EventCriteria;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 
 @Entity
-@Table(name = "judging")
+@Table(name = "Judging")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,10 +41,10 @@ public class Judging {
     @JoinColumn(name = "RoundCriterionID", nullable = false)
     private RoundCriteria roundCriterion;
 
-    @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
+    @Column(name = "ScoreValue", nullable = false, precision = 10, scale = 2)
     private BigDecimal scoreValue;
 
-    @Column(name = "comment", columnDefinition = "TEXT")
+    @Column(name = "Comment", columnDefinition = "TEXT")
     private String comment;
 
     @Column(name = "IsCalibration")

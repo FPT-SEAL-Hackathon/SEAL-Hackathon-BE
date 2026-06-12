@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.submission.dto;
+package com.fpt.swp.sealhackathonbe.team.dto;
 
 import lombok.Data;
 
@@ -6,10 +6,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class DisqualifiedSubmissionResponse {
-    // DTO cho man hinh admin: tra ID bai nop cung ly do, nguoi va thoi diem bi loai.
+public class DisqualifiedTeamResponse {
+    // DTO cho man hinh admin: tra ve team ID, ly do va nguoi thuc hien loai.
     private UUID disqualificationId;
-    private UUID submissionId;
+    private UUID teamId;
     private String reason;
     private UUID disqualifiedById;
     private LocalDateTime disqualifiedAt;

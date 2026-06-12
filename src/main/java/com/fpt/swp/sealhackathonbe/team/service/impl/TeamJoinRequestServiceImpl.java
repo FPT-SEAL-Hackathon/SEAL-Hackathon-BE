@@ -137,6 +137,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     }
 
     private void validateTeamCanReceiveJoinRequest(Teams team) {
+        // Team da bi loai/rut lui khong duoc nhan don moi; team hop le van phai con cho.
         if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
                 || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
             throw new RuntimeException("Cannot join this team");
@@ -158,6 +159,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     }
 
     private Event requireActiveEvent(Event event) {
+        // Join request chi duoc xu ly khi event cua team van ton tai.
         if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
             throw new RuntimeException("Event not found");
         }

@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.judging.controller;
 
+import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
@@ -39,5 +40,11 @@ public class JudgingController {
     public ResponseEntity<List<JudgingDTO>> getJudgngByJudgeId(@PathVariable UUID judgeUserId) {
         List<JudgingDTO> scores = judgingService.getScoresByJudgeId(judgeUserId);
         return ResponseEntity.ok(scores);
+    }
+
+    @GetMapping("/judging/audit-logs/event/{eventId}")
+    public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {
+        List<EvaluationAuditLogDTO> logs = judgingService.getEvaluationAuditLogsByEvent(eventId);
+        return ResponseEntity.ok(logs);
     }
 }
