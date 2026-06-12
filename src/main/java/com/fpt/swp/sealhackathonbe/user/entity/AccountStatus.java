@@ -1,14 +1,10 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Nationalized;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +22,6 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Component
 public class AccountStatus {
 
     @Id
@@ -37,7 +32,7 @@ public class AccountStatus {
     @Column(name = "StatusName", nullable = false, length = 50)
     private String statusName;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "accountStatus")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "accountStatus")
     private List<User> userAccountStatusList = new ArrayList<>();
 
     //tránh lỗi dữ liệu không đồng bộ (bị null)========
@@ -56,7 +51,6 @@ public class AccountStatus {
         return "AccountStatus{" +
                 "statusId=" + statusId +
                 ", statusName='" + statusName + '\'' +
-                ", userAccountStatusList=" + userAccountStatusList +
                 '}';
     }
 }
