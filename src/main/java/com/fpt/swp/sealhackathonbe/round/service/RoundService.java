@@ -16,4 +16,5 @@ public interface RoundService {
     RoundResponse update(UUID roundId, UpdateRoundRequest request);
     void delete(UUID roundId);
     RoundResponse getFinalRound(UUID categoryId);
+    Integer getAdvancementTopN(UUID roundId);
 }

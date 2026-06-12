@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.core.exception;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -25,5 +26,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<?> handleParseError(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body("Invalid JSON format");
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<?> handleAuthentication(AuthenticationException ex) {
+        return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
     }
 }

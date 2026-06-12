@@ -6,10 +6,12 @@ import com.fpt.swp.sealhackathonbe.notification.Repository.NotificationRepositor
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationPushEvent;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationResponse;
 import com.fpt.swp.sealhackathonbe.notification.entity.Notification;
+import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationRealtimeService;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -31,18 +34,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final NotificationRealtimeService notificationRealtimeService;
+    private final EmailService emailService;
 
-    public NotificationServiceImpl(
-            NotificationRepository notificationRepository,
-            UserRepository userRepository,
-            EventRepository eventRepository,
-            NotificationRealtimeService notificationRealtimeService
-    ) {
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
-        this.eventRepository = eventRepository;
-        this.notificationRealtimeService = notificationRealtimeService;
-    }
 
     @Override
     @Deprecated
@@ -103,7 +96,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .collect(Collectors.toList());
 
         return notificationRepository.saveAll(notifications).stream()
-                .map(this::publishAndConvert)
+                .map(this::dispatchAndConvert)
                 .collect(Collectors.toList());
     }
 
@@ -165,7 +158,7 @@ public class NotificationServiceImpl implements NotificationService {
             String body
     ) {
         Notification notification = notificationRepository.save(createNotificationEntity(recipient, sender, event, title, body));
-        publishNotification(notification);
+        dispatchNotification(notification);
         return notification;
     }
 
@@ -227,12 +220,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
     }
 
-    private NotificationResponse publishAndConvert(Notification notification) {
-        publishNotification(notification);
+    private NotificationResponse dispatchAndConvert(Notification notification) {
+        dispatchNotification(notification);
         return NotificationResponse.from(notification);
     }
 
-    private void publishNotification(Notification notification) {
+    private void dispatchNotification(Notification notification) {
         User recipient = notification.getRecipientUserID();
         if (recipient == null) {
             return;
@@ -241,5 +234,6 @@ public class NotificationServiceImpl implements NotificationService {
         long unreadCount = notificationRepository.countByRecipientUserIDAndIsReadFalse(recipient);
         NotificationPushEvent event = new NotificationPushEvent(NotificationResponse.from(notification), unreadCount);
         notificationRealtimeService.publish(recipient.getUserId(), event);
+        emailService.sendEmail(recipient.getEmail(), notification.getTitle(), notification.getBody());
     }
 }

@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,7 +22,6 @@ import java.util.UUID;
                 @UniqueConstraint(columnNames = "Email")
         }
 )
-@Component
 public class User {
     @Id
     @Column(name = "UserID", nullable = false, updatable = false)
@@ -99,20 +97,7 @@ public class User {
         return "User{" +
                 "userId=" + userId +
                 ", email='" + email + '\'' +
-                ", passwordHash='" + passwordHash + '\'' +
                 ", fullName='" + fullName + '\'' +
-                ", phone='" + phone + '\'' +
-                ", userType=" + userType +
-                ", accountStatus=" + accountStatus +
-                ", fptStudentCode='" + fptStudentCode + '\'' +
-                ", externalStudentCode='" + externalStudentCode + '\'' +
-                ", universityName='" + universityName + '\'' +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                ", approvedAt=" + approvedAt +
-                ", approvedBy=" + approvedBy +
-                ", accountExpiresAt=" + accountExpiresAt +
-                ", isDeleted=" + isDeleted +
                 '}';
     }
 }
