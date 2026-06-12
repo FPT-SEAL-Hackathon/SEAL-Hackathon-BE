@@ -17,7 +17,7 @@ public interface TeamService {
     TeamResponse getById(UUID teamId);
 
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
-    TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId);
+    TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
     void removeMember(UUID userId, UUID currentUserId);

@@ -1,14 +1,10 @@
 package com.fpt.swp.sealhackathonbe.team.controller;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
-import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
-import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
-import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
-import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -37,7 +33,6 @@ public class TeamController {
     // Controller chi nhan request, lay user hien tai va chuyen xu ly nghiep vu cho service.
     private final TeamService teamService;
     private final TeamJoinRequestService teamJoinRequestService;
-    private final TeamDisqualificationService teamDisqualificationService;
     private final UserRepository userRepository;
 
     @PostMapping("/teams")
@@ -67,10 +62,15 @@ public class TeamController {
     @GetMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<TeamMemberDetailResponse> getTeamMemberDetail(
             @PathVariable UUID teamId,
-            @PathVariable UUID userId
+            @PathVariable UUID userId,
+            Authentication authentication
     ) {
-        // Xac nhan user la member active cua team truoc khi tra thong tin ho so.
-        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, userId);
+        // Chi member active cua cung team moi duoc xem thong tin chi tiet thanh vien.
+        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(
+                teamId,
+                userId,
+                currentUserId(authentication)
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -116,29 +116,6 @@ public class TeamController {
         // Service phan biet leader kick member va member tu roi team.
         teamService.removeMember(userId, currentUserId(authentication));
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/admin/teams/{teamId}/disqualify")
-    public ResponseEntity<DisqualificationResponse> disqualifyTeam(
-            @PathVariable UUID teamId,
-            @Valid @RequestBody DisqualifyTeamRequest request,
-            Authentication authentication
-    ) {
-        // Admin loai team, doi status va ghi lai ly do trong Disqualifications.
-        DisqualificationResponse response =
-                teamDisqualificationService.disqualifyTeam(teamId, request, currentUserId(authentication));
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/admin/rounds/{roundId}/categories/{categoryId}/teams/disqualified")
-    public ResponseEntity<List<DisqualifiedTeamResponse>> getDisqualifiedTeams(
-            @PathVariable UUID roundId,
-            @PathVariable UUID categoryId
-    ) {
-        // Tra team bi loai thuoc category va co bai nop trong round duoc chon.
-        return ResponseEntity.ok(
-                teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
-        );
     }
 
     private UUID currentUserId(Authentication authentication) {

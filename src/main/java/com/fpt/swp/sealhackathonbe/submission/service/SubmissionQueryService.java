@@ -10,7 +10,7 @@ public interface SubmissionQueryService {
     SubmissionResponse getSubmissionById(UUID submissionId);
 
     // TeamID + RoundID la khoa duy nhat nghiep vu cua mot submission.
-    SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId);
+    SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId);
 
     // Lay tat ca bai nop trong mot round cho man hinh review/cham diem.
     List<SubmissionResponse> getSubmissionsByRound(UUID roundId);
