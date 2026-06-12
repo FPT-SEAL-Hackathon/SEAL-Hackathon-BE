@@ -13,14 +13,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoundCriteria {
+public class RoundCriterion {
     @Id
     @Column(name = "RoundCriterionID")
-    private UUID roundCriteriaId;
+    private UUID roundCriterionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RoundID")
-    private Round roundId;
+    private Round round;
 
     @Column(name = "EventCriterionID")
     private UUID eventCriterionId;
