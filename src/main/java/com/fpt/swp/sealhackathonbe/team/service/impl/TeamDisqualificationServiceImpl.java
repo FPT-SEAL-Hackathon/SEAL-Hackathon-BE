@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,10 +33,21 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             DisqualifyTeamRequest request,
             UUID adminUserId
     ) {
-        // Luồng dữ liệu: admin chọn team -> đổi trạng thái team thành DISQUALIFIED
-        // -> lưu lý do vào bảng Disqualifications -> map ra DisqualificationResponse.
+        // Luong du lieu:
+        // 1. Admin chon team can loai.
+        // 2. Kiem tra team chua co disqualification active de tranh tao trung.
+        // 3. Doi trang thai team thanh DISQUALIFIED.
+        // 4. Ghi Disqualifications voi TeamID co gia tri va SubmissionID = null.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
+
+        boolean alreadyDisqualified = disqualificationsRepository.findByTeamId(teamId)
+                .stream()
+                .anyMatch(disqualification -> !Boolean.TRUE.equals(disqualification.getReversed()));
+
+        if (alreadyDisqualified) {
+            throw new RuntimeException("Team is already disqualified");
+        }
 
         team.setTeamStatusId(TEAM_STATUS_DISQUALIFIED);
         team.setUpdatedAt(LocalDateTime.now());
@@ -50,5 +63,15 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
 
         Disqualifications saved = disqualificationsRepository.save(disqualification);
         return TeamMapper.toDisqualificationResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId) {
+        // Luong du lieu: RoundID + CategoryID -> disqualification active -> DTO.
+        return disqualificationsRepository.findActiveTeamDisqualifications(roundId, categoryId)
+                .stream()
+                .map(TeamMapper::toDisqualifiedTeamResponse)
+                .toList();
     }
 }
