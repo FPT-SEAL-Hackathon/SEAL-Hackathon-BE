@@ -11,13 +11,14 @@ public class AuthenticationService {
 
     public User getCurrentUser() {
 
-        Authentication auth =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        UserPrincipal principal =
-                (UserPrincipal) auth.getPrincipal();
+        if (auth == null || !auth.isAuthenticated()
+                || auth.getPrincipal().equals("anonymousUser")) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
         return principal.getUser();
     }
