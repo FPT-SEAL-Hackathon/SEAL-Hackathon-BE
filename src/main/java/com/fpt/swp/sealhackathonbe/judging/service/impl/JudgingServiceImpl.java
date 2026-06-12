@@ -7,7 +7,7 @@ import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
-import com.fpt.swp.sealhackathonbe.round.entity.RoundCriteria;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
@@ -68,7 +68,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Actor User not found with ID: " + dto.getActorId()));
 
         // 4. Fetch & validate that the event criterion exists
-        RoundCriteria criterion = roundCriterionRepository.findById(dto.getRoundCriterionId())
+        RoundCriterion criterion = roundCriterionRepository.findById(dto.getRoundCriterionId())
                 .orElseThrow(() -> new EntityNotFoundException("Round Criterion not found with ID: " + dto.getRoundCriterionId()));
 
         // 5. Validate that the score value does not exceed the maximum allowed value
@@ -85,7 +85,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         // 7. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
-                .findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriteriaId(
+                .findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriterionId(
                         dto.getSubmissionId(), dto.getRoundJudgeId(), dto.getRoundCriterionId()
                 );
 
@@ -180,7 +180,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .submissionId(judging.getSubmission() != null ? judging.getSubmission().getSubmissionId() : null)
                 .roundJudgeId(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getUserId() : null)
                 .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getFullName() : null)
-                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriteriaId() : null)
+                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriterionId() : null)
                 .criterionName(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getCriterionName() : null)
                 .scoreValue(judging.getScoreValue())
                 .comment(judging.getComment())
