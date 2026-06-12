@@ -22,9 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +31,7 @@ public class JudgingServiceImpl implements JudgingService {
     private final JudgingRepository judgingRepository;
     private final UserRepository userRepository;
     private final SubmissionsRepository submissionRepository;
-    //    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
+    private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final RoundCriterionRepository roundCriterionRepository;
 
@@ -42,13 +40,13 @@ public class JudgingServiceImpl implements JudgingService {
                               UserRepository userRepository,
                               SubmissionsRepository submissionRepository,
                               EventCriterionRepository eventCriterionRepository,
-//                              EvaluationAuditLogRepository evaluationAuditLogRepository,
+                              EvaluationAuditLogRepository evaluationAuditLogRepository,
                               RoundJudgeRepository roundJudgeRepository,
                               RoundCriterionRepository roundCriterionRepository) {
         this.judgingRepository = judgingRepository;
         this.userRepository = userRepository;
         this.submissionRepository = submissionRepository;
-//        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
+        this.evaluationAuditLogRepository = evaluationAuditLogRepository;
         this.roundJudgeRepository = roundJudgeRepository;
         this.roundCriterionRepository = roundCriterionRepository;
     }
@@ -101,7 +99,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
-            actionType = "SCORE_UPDATE";
+            actionType = "SCORE_UPDATED";
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
@@ -112,7 +110,7 @@ public class JudgingServiceImpl implements JudgingService {
             }
             savedJudging = judgingRepository.save(existingJudging);
         } else {
-            actionType = "SCORE_CREATE";
+            actionType = "SCORE_CREATED";
             Judging newJudging = new Judging();
             newJudging.setSubmission(submission);
             newJudging.setRoundJudge(judge);
@@ -131,19 +129,19 @@ public class JudgingServiceImpl implements JudgingService {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
 
-//        // 9. Create and save the EvaluationAuditLog
-//        EvaluationAuditLog auditLog = new EvaluationAuditLog();
-//        auditLog.setEvent(event);
-//        auditLog.setActionType(actionType);
-//        auditLog.setActor(actor);
-//        auditLog.setScore(savedJudging);
-//        auditLog.setTeam(team);
-//        auditLog.setSubmission(submission);
-//        auditLog.setOldValue(oldValue);
-//        auditLog.setNewValue(newValue);
-//        auditLog.setReason(dto.getReason());
-//
-//        evaluationAuditLogRepository.save(auditLog);
+        // 9. Create and save the EvaluationAuditLog
+        EvaluationAuditLog auditLog = new EvaluationAuditLog();
+        auditLog.setEvent(event);
+        auditLog.setActionType(actionType);
+        auditLog.setActor(actor);
+        auditLog.setScore(savedJudging);
+        auditLog.setTeam(team);
+        auditLog.setSubmission(submission);
+        auditLog.setOldValue(oldValue);
+        auditLog.setNewValue(newValue);
+        auditLog.setReason(dto.getReason());
+
+        evaluationAuditLogRepository.save(auditLog);
     }
 
     @Override
@@ -164,7 +162,18 @@ public class JudgingServiceImpl implements JudgingService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public Map<UUID, List<Judging>> getJudgingsGroupedBySubmissionIds(List<UUID> submissionIds) {
 
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Judging> allJudgings = judgingRepository.findBySubmission_SubmissionIdIn(submissionIds);
+
+        return allJudgings.stream()
+                .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
+    }
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
@@ -181,5 +190,24 @@ public class JudgingServiceImpl implements JudgingService {
                 .build();
     }
 
-
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
+        return evaluationAuditLogRepository.findByEvent_EventIdOrderByCreatedAtDesc(eventId)
+                .stream()
+                .map(log -> com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO.builder()
+                        .id(log.getId())
+                        .eventId(log.getEvent() != null ? log.getEvent().getEventId() : null)
+                        .actionType(log.getActionType())
+                        .actorUserId(log.getActor() != null ? log.getActor().getUserId() : null)
+                        .judgingId(log.getScore() != null ? log.getScore().getId() : null)
+                        .teamId(log.getTeam() != null ? log.getTeam().getTeamId() : null)
+                        .submissionId(log.getSubmission() != null ? log.getSubmission().getSubmissionId() : null)
+                        .oldValue(log.getOldValue())
+                        .newValue(log.getNewValue())
+                        .reason(log.getReason())
+                        .createdAt(log.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
 }
