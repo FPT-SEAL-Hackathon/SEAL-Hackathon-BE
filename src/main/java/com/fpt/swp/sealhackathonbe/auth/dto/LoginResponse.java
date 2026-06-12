@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.auth.dto;
 
 import lombok.*;
+import org.hibernate.validator.constraints.UUID;
 
 @Getter
 @Setter
@@ -8,5 +9,11 @@ import lombok.*;
 @AllArgsConstructor
 public class LoginResponse {
 
-    private String token;
+    private String accessToken;
+
+    private String refreshToken;
+
+    private UserResponse user;
+
+
 }
