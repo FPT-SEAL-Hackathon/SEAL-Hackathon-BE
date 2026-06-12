@@ -6,7 +6,6 @@ import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
-import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
@@ -25,7 +24,6 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             UUID.fromString("60000000-0000-0000-0000-000000000003");
 
     private final TeamsRepository teamsRepository;
-    private final TeamMembersRepository teamMembersRepository;
     private final DisqualificationsRepository disqualificationsRepository;
 
     @Override
@@ -70,13 +68,10 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
     @Override
     @Transactional(readOnly = true)
     public List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId) {
-        // Luong du lieu: RoundID + CategoryID -> disqualification active -> Team -> member active -> DTO.
+        // Luong du lieu: RoundID + CategoryID -> disqualification active -> DTO.
         return disqualificationsRepository.findActiveTeamDisqualifications(roundId, categoryId)
                 .stream()
-                .map(disqualification -> TeamMapper.toDisqualifiedTeamResponse(
-                        disqualification,
-                        teamMembersRepository.findByTeamIdAndActiveTrue(disqualification.getTeamId())
-                ))
+                .map(TeamMapper::toDisqualifiedTeamResponse)
                 .toList();
     }
 }

@@ -95,14 +95,10 @@ public class TeamMapper {
         return response;
     }
 
-    public static DisqualifiedTeamResponse toDisqualifiedTeamResponse(
-            Disqualifications disqualification,
-            List<TeamMembers> members
-    ) {
-        // Ghep du lieu tu ban ghi loai va team; mapper khong tu truy van database.
+    public static DisqualifiedTeamResponse toDisqualifiedTeamResponse(Disqualifications disqualification) {
         DisqualifiedTeamResponse response = new DisqualifiedTeamResponse();
         response.setDisqualificationId(disqualification.getDisqualificationId());
-        response.setTeam(toTeamResponse(disqualification.getTeam(), members));
+        response.setTeamId(disqualification.getTeamId());
         response.setReason(disqualification.getReason());
         response.setDisqualifiedById(disqualification.getDisqualifiedById());
         response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
