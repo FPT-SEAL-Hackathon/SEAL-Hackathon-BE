@@ -22,7 +22,8 @@ import org.springframework.context.annotation.Configuration;
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,
         scheme = "bearer",
-        bearerFormat = "JWT"
+        bearerFormat = "JWT",
+        description = "Paste the accessToken only. Swagger UI adds the Bearer prefix automatically."
 )
 public class OpenApiConfig {
 
