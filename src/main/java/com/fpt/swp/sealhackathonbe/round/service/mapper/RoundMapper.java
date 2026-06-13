@@ -1,9 +1,13 @@
 package com.fpt.swp.sealhackathonbe.round.service.mapper;
 
+import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundCriterionResponse;
+import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,6 +39,25 @@ public class RoundMapper {
                 .weight(roundCriterion.getWeight())
                 .maxScore(roundCriterion.getMaxScore())
                 .sortOrder(roundCriterion.getSortOrder())
+                .build();
+    }
+
+    public RoundJudgeResponse toRoundJudgeResponse(RoundJudge roundJudge) {
+        return RoundJudgeResponse.builder()
+                .roundJudgeId(roundJudge.getRoundJudgeId())
+                .roundId(roundJudge.getRound().getRoundId())
+                .judgeId(roundJudge.getJudge().getUserId())
+                .assignedAt(roundJudge.getAssignedAt())
+                .assignedById(roundJudge.getAssignedBy().getUserId())
+                .build();
+    }
+
+    public JudgeResponse toJudgeResponse(User judge) {
+        return JudgeResponse.builder()
+                .judgeId(judge.getUserId())
+                .fullName(judge.getFullName())
+                .email(judge.getEmail())
+                .phone(judge.getPhone())
                 .build();
     }
 }
