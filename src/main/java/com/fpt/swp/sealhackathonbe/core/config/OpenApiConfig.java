@@ -26,4 +26,5 @@ import org.springframework.context.annotation.Configuration;
         description = "Paste the accessToken only. Swagger UI adds the Bearer prefix automatically."
 )
 public class OpenApiConfig {
+
 }

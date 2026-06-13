@@ -7,7 +7,7 @@ import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
-import com.fpt.swp.sealhackathonbe.round.entity.RoundCriteria;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
@@ -68,7 +68,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Actor User not found with ID: " + dto.getActorId()));
 
         // 4. Fetch & validate that the event criterion exists
-        RoundCriteria criterion = roundCriterionRepository.findById(dto.getRoundCriterionId())
+        RoundCriterion criterion = roundCriterionRepository.findById(dto.getRoundCriterionId())
                 .orElseThrow(() -> new EntityNotFoundException("Round Criterion not found with ID: " + dto.getRoundCriterionId()));
 
         // 5. Validate that the score value does not exceed the maximum allowed value
@@ -81,11 +81,11 @@ public class JudgingServiceImpl implements JudgingService {
 
         // 6. Get Criterion weight
         BigDecimal weight = criterion.getWeight() != null ? criterion.getWeight() : BigDecimal.ONE;
-        BigDecimal weightedScore = dto.getScoreValue().multiply(weight);
+        BigDecimal scoreValue = dto.getScoreValue();
 
         // 7. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
-                .findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriteriaId(
+                .findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriterionId(
                         dto.getSubmissionId(), dto.getRoundJudgeId(), dto.getRoundCriterionId()
                 );
 
@@ -95,7 +95,7 @@ public class JudgingServiceImpl implements JudgingService {
         Judging savedJudging;
 
         String formattedNewComment = dto.getComment() != null ? dto.getComment().replace("\"", "\\\"") : "";
-        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", weightedScore, formattedNewComment);
+        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", scoreValue, formattedNewComment);
 
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
@@ -103,7 +103,7 @@ public class JudgingServiceImpl implements JudgingService {
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
-            existingJudging.setScoreValue(weightedScore);
+            existingJudging.setScoreValue(scoreValue);
             existingJudging.setComment(dto.getComment());
             if (dto.getIsCalibration() != null) {
                 existingJudging.setIsCalibration(dto.getIsCalibration());
@@ -115,7 +115,7 @@ public class JudgingServiceImpl implements JudgingService {
             newJudging.setSubmission(submission);
             newJudging.setRoundJudge(judge);
             newJudging.setRoundCriterion(criterion);
-            newJudging.setScoreValue(weightedScore);
+            newJudging.setScoreValue(scoreValue);
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
             savedJudging = judgingRepository.save(newJudging);
@@ -180,7 +180,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .submissionId(judging.getSubmission() != null ? judging.getSubmission().getSubmissionId() : null)
                 .roundJudgeId(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getUserId() : null)
                 .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getFullName() : null)
-                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriteriaId() : null)
+                .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriterionId() : null)
                 .criterionName(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getCriterionName() : null)
                 .scoreValue(judging.getScoreValue())
                 .comment(judging.getComment())

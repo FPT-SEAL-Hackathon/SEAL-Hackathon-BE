@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -31,6 +32,7 @@ public class RankingController {
      * Compute rankings for an event.
      */
     @PostMapping("/admin/events/{id}/compute-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<EventRankingDTO>> computeEventRankings(
             @PathVariable("id") UUID eventId,
             @RequestParam UUID categoryId) {
@@ -43,6 +45,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/rounds/{roundId}/compute-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<RoundRankingDTO>> computeRoundRankings(
             @PathVariable("roundId") UUID roundId,
             @RequestParam UUID categoryId

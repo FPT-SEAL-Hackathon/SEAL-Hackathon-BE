@@ -34,6 +34,9 @@ BEGIN TRY
     DECLARE @GreenMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000015';
     DECLARE @ApplicantId uniqueidentifier = 'A1000000-0000-0000-0000-000000000016';
     DECLARE @GuestJudgeId uniqueidentifier = 'A1000000-0000-0000-0000-000000000017';
+    DECLARE @JoinMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000018';
+    DECLARE @JoinLeaderId uniqueidentifier = 'A1000000-0000-0000-0000-000000000019';
+    DECLARE @JoinGuestId uniqueidentifier = 'A1000000-0000-0000-0000-000000000020';
 
     DECLARE @LiveEventId uniqueidentifier = 'B1000000-0000-0000-0000-000000000001';
     DECLARE @PastEventId uniqueidentifier = 'B1000000-0000-0000-0000-000000000002';
@@ -243,6 +246,36 @@ BEGIN TRY
              '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', N'SE200016',
              N'FPT University', '2026-05-03T09:00:00', '2026-05-03T09:00:00', '2026-05-03T10:00:00', @OrganizerId, 0);
 
+    -- Clean accounts for testing POST /api/v1/teams/{teamId}/join.
+    -- They intentionally have no TeamMembers or TeamJoinRequests rows.
+    IF NOT EXISTS (SELECT 1 FROM Users WHERE UserID = @JoinMemberId OR Email = N'api.join.member@seal.test')
+        INSERT INTO Users
+            (UserID, Email, PasswordHash, FullName, Phone, UserTypeID, AccountStatusID, FPTStudentCode,
+             UniversityName, CreatedAt, UpdatedAt, ApprovedAt, ApprovedByUserID, IsDeleted)
+        VALUES
+            (@JoinMemberId, N'api.join.member@seal.test', @PasswordHash, N'API Join Test Member', N'0910000018',
+             '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', N'SE200018',
+             N'FPT University', '2026-05-03T09:10:00', '2026-05-03T09:10:00', '2026-05-03T10:10:00', @OrganizerId, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM Users WHERE UserID = @JoinLeaderId OR Email = N'api.join.leader@seal.test')
+        INSERT INTO Users
+            (UserID, Email, PasswordHash, FullName, Phone, UserTypeID, AccountStatusID, FPTStudentCode,
+             UniversityName, CreatedAt, UpdatedAt, ApprovedAt, ApprovedByUserID, IsDeleted)
+        VALUES
+            (@JoinLeaderId, N'api.join.leader@seal.test', @PasswordHash, N'API Join Test Leader', N'0910000019',
+             '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', N'SE200019',
+             N'FPT University', '2026-05-03T09:20:00', '2026-05-03T09:20:00', '2026-05-03T10:20:00', @OrganizerId, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM Users WHERE UserID = @JoinGuestId OR Email = N'api.join.guest@seal.test')
+        INSERT INTO Users
+            (UserID, Email, PasswordHash, FullName, Phone, UserTypeID, AccountStatusID,
+             CreatedAt, UpdatedAt, ApprovedAt, ApprovedByUserID, AccountExpiresAt, IsDeleted)
+        VALUES
+            (@JoinGuestId, N'api.join.guest@seal.test', @PasswordHash, N'API Join Test Guest', N'0900000020',
+             '10000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000005',
+             '2026-05-03T09:30:00', '2026-05-03T09:30:00', '2026-05-03T10:30:00', @OrganizerId,
+             '2026-12-31T23:59:59', 0);
+
     -- Events and categories.
     IF NOT EXISTS (SELECT 1 FROM Events WHERE EventID = @LiveEventId)
         INSERT INTO Events
@@ -364,29 +397,41 @@ BEGIN TRY
 
     -- Every round receives a snapshot of its event criteria.
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000001')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000001', @AiQualifierId, @LiveInnovationId, 0.40, 'Innovation', 'Originality and user value.', 10.00, 1);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000001', @AiQualifierId, @LiveInnovationId, 0.40, N'Innovation', 'Originality and user value.', 10.00, 1);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000002')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000002', @AiQualifierId, @LiveTechnicalId, 0.35, 'Technical Quality', 'Implementation quality.', 10.00, 2);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000002', @AiQualifierId, @LiveTechnicalId, 0.35, N'Technical Quality', 'Implementation quality.', 10.00, 2);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000003')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000003', @AiQualifierId, @LivePresentationId, 0.25, 'Presentation', 'Demo and pitch quality.', 10.00, 3);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000003', @AiQualifierId, @LivePresentationId, 0.25, N'Presentation', 'Demo and pitch quality.', 10.00, 3);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000011')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000011', @AiFinalId, @LiveInnovationId, 0.40, 'Innovation', 'Originality and user value.', 10.00, 1);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000011', @AiFinalId, @LiveInnovationId, 0.40, N'Innovation', 'Originality and user value.', 10.00, 1);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000012')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000012', @AiFinalId, @LiveTechnicalId, 0.35, 'Technical Quality', 'Implementation quality.', 10.00, 2);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000012', @AiFinalId, @LiveTechnicalId, 0.35, N'Technical Quality', 'Implementation quality.', 10.00, 2);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000013')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000013', @AiFinalId, @LivePresentationId, 0.25, 'Presentation', 'Demo and pitch quality.', 10.00, 3);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000013', @AiFinalId, @LivePresentationId, 0.25, N'Presentation', 'Demo and pitch quality.', 10.00, 3);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000021')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000021', @GreenQualifierId, @LiveInnovationId, 0.40, 'Innovation', 'Originality and user value.', 10.00, 1);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000021', @GreenQualifierId, @LiveInnovationId, 0.40, N'Innovation', 'Originality and user value.', 10.00, 1);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000022')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000022', @GreenQualifierId, @LiveTechnicalId, 0.35, 'Technical Quality', 'Implementation quality.', 10.00, 2);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000022', @GreenQualifierId, @LiveTechnicalId, 0.35, N'Technical Quality', 'Implementation quality.', 10.00, 2);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000023')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000023', @GreenQualifierId, @LivePresentationId, 0.25, 'Presentation', 'Demo and pitch quality.', 10.00, 3);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000023', @GreenQualifierId, @LivePresentationId, 0.25, N'Presentation', 'Demo and pitch quality.', 10.00, 3);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000031')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000031', @PastFinalId, @PastInnovationId, 0.40, 'Innovation', 'Originality and user value.', 10.00, 1);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000031', @PastFinalId, @PastInnovationId, 0.40, N'Innovation', 'Originality and user value.', 10.00, 1);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000032')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000032', @PastFinalId, @PastTechnicalId, 0.35, 'Technical Quality', 'Implementation quality.', 10.00, 2);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000032', @PastFinalId, @PastTechnicalId, 0.35, N'Technical Quality', 'Implementation quality.', 10.00, 2);
     IF NOT EXISTS (SELECT 1 FROM RoundCriteria WHERE RoundCriterionID = 'D2000000-0000-0000-0000-000000000033')
-        INSERT INTO RoundCriteria VALUES ('D2000000-0000-0000-0000-000000000033', @PastFinalId, @PastPresentationId, 0.25, 'Presentation', 'Demo and pitch quality.', 10.00, 3);
+        INSERT INTO RoundCriteria (RoundCriterionID, RoundID, EventCriterionID, Weight, criterionName, description, MaxScore, SortOrder)
+        VALUES ('D2000000-0000-0000-0000-000000000033', @PastFinalId, @PastPresentationId, 0.25, N'Presentation', 'Demo and pitch quality.', 10.00, 3);
 
     -- Teams and members. No user is active in two teams in the same event.
     IF NOT EXISTS (SELECT 1 FROM Teams WHERE TeamID = @AlphaTeamId)
@@ -599,7 +644,8 @@ BEGIN TRY
     WHERE UserID IN
         (@OrganizerId, @JudgeOneId, @JudgeTwoId, @MentorId, @GuestJudgeId,
          @AlphaLeaderId, @AlphaMemberId, @BetaLeaderId, @BetaMemberId,
-         @GreenLeaderId, @GreenMemberId, @ApplicantId)
+         @GreenLeaderId, @GreenMemberId, @ApplicantId,
+         @JoinMemberId, @JoinLeaderId, @JoinGuestId)
     ORDER BY Email;
 
     SELECT EventID, EventName FROM Events WHERE EventID IN (@LiveEventId, @PastEventId);
