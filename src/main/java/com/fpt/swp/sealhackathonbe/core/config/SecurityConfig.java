@@ -78,9 +78,6 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-<<<<<<< Updated upstream
-                        .anyRequest().permitAll()
-=======
                         .requestMatchers(SWAGGER_WHITELIST)
                         .permitAll()
 
@@ -115,7 +112,6 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class
->>>>>>> Stashed changes
                 );
 
         return http.build();
