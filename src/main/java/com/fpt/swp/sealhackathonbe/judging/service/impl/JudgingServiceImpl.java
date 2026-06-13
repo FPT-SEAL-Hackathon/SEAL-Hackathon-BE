@@ -81,7 +81,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         // 6. Get Criterion weight
         BigDecimal weight = criterion.getWeight() != null ? criterion.getWeight() : BigDecimal.ONE;
-        BigDecimal weightedScore = dto.getScoreValue().multiply(weight);
+        BigDecimal scoreValue = dto.getScoreValue();
 
         // 7. Check if a score already exists for this submission, judge, and criterion
         Optional<Judging> existingScoreOpt = judgingRepository
@@ -95,7 +95,7 @@ public class JudgingServiceImpl implements JudgingService {
         Judging savedJudging;
 
         String formattedNewComment = dto.getComment() != null ? dto.getComment().replace("\"", "\\\"") : "";
-        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", weightedScore, formattedNewComment);
+        newValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", scoreValue, formattedNewComment);
 
         if (existingScoreOpt.isPresent()) {
             Judging existingJudging = existingScoreOpt.get();
@@ -103,7 +103,7 @@ public class JudgingServiceImpl implements JudgingService {
             String formattedOldComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
             oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", existingJudging.getScoreValue(), formattedOldComment);
 
-            existingJudging.setScoreValue(weightedScore);
+            existingJudging.setScoreValue(scoreValue);
             existingJudging.setComment(dto.getComment());
             if (dto.getIsCalibration() != null) {
                 existingJudging.setIsCalibration(dto.getIsCalibration());
@@ -115,7 +115,7 @@ public class JudgingServiceImpl implements JudgingService {
             newJudging.setSubmission(submission);
             newJudging.setRoundJudge(judge);
             newJudging.setRoundCriterion(criterion);
-            newJudging.setScoreValue(weightedScore);
+            newJudging.setScoreValue(scoreValue);
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
             savedJudging = judgingRepository.save(newJudging);
