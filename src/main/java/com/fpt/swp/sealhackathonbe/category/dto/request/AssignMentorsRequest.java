@@ -4,14 +4,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
 @Setter
 @Builder
-public class UpdateCategoryRequest {
-    private String categoryName;
-    private String description;
-    private Integer sortOrder;
-    private Boolean isActive;
+public class AssignMentorsRequest {
+    private List<UUID> mentorIds;
 }

@@ -65,8 +65,7 @@ public class UserService {
 
             String accessToken = jwtService.generateAccessToken(user);
 
-            String refreshToken =
-                    jwtService.generateRefreshToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
 
             String studentCode =
                     user.getFptStudentCode() != null
