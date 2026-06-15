@@ -9,7 +9,7 @@ import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
-import com.fpt.swp.sealhackathonbe.user.repo.UserRepo;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,13 +23,13 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final CategoryRepository categoryRepository;
     private final CategoryMentorRepository categoryMentorRepository;
     private final CategoryMapper categoryMapper;
-    private final UserRepo userRepo;
+    private final UserRepository userRepository;
 
     @Override
     public List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
-        List<User> mentors = userRepo.findAllById(request.getMentorIds());
+        List<User> mentors = userRepository.findAllById(request.getMentorIds());
         if (mentors.isEmpty()) {
             throw new IllegalArgumentException("No any mentors found");
         }
