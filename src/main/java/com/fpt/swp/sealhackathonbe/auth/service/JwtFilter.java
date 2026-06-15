@@ -98,7 +98,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
         );
     }
-}
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 
