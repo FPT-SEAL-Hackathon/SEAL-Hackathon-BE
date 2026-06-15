@@ -125,7 +125,7 @@ public class NotificationController {
             description = "Create and send a notification to a specific user.",
             operationId = "sendNotificationToUser"
     )
-    @PostMapping
+    @PostMapping("/sendNotificationToUser")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
