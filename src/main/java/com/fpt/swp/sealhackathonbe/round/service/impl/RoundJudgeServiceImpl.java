@@ -10,7 +10,7 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
-import com.fpt.swp.sealhackathonbe.user.repo.UserRepo;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +23,7 @@ import java.util.UUID;
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
-    private final UserRepo userRepo;
+    private final UserRepository userRepo;
     private final RoundMapper roundMapper;
 
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
