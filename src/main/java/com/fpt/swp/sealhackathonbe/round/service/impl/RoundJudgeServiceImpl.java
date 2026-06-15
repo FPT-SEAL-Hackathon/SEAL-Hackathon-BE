@@ -23,14 +23,14 @@ import java.util.UUID;
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
-    private final UserRepository userRepo;
+    private final UserRepository userRepository;
     private final RoundMapper roundMapper;
 
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
                 .findById(roundId)
                 .orElseThrow(() -> new RuntimeException("Round not found"));
-        List<User> judges = userRepo.findAllById(request.getUserIds());
+        List<User> judges = userRepository.findAllById(request.getUserIds());
         if (judges.isEmpty()) {
             throw new IllegalArgumentException("Judges not found");
         }
