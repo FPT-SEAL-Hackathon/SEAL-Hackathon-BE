@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.entity;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -53,8 +54,9 @@ public class Event {
     @Column(name = "MinTeamSize")
     private Integer minTeamSize;
 
-    @Column(name = "CreatedByID")
-    private UUID createdById;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CreatedByID")
+    private User createdBy;
 
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt;
