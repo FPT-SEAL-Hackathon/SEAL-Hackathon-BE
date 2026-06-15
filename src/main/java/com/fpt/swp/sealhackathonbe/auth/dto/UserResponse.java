@@ -20,7 +20,11 @@ public class UserResponse {
 
     private String phone;
 
+    private UUID userTypeId;
+
     private String userType;
+
+    private UUID accountStatusId;
 
     private String accountStatus;
 

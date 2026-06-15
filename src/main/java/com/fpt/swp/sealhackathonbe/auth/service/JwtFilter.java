@@ -1,8 +1,6 @@
 package com.fpt.swp.sealhackathonbe.auth.service;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +11,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -36,9 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String path = request.getServletPath();
-
-        if (path.equals("/auth/login") || path.equals("/auth/register")) {
+        if (isPublicAuthEndpoint(request.getServletPath())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -51,38 +47,25 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-
-            // 🔥 ONLY 1 TIME PARSE
             String username = jwtService.extractUserName(token);
             String role = jwtService.extractRole(token);
 
-            if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(username);
-
-                if (jwtService.validateToken(token, userDetails)) {
-
-                    // 🔥 SAFE ROLE HANDLING
+                if (jwtService.validateToken(token, userDetails, JWTService.TOKEN_TYPE_ACCESS)) {
                     List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority(
-                                    "ROLE_" + (role != null ? role : "USER")
-                            )
+                            new SimpleGrantedAuthority("ROLE_" + JWTService.normalizeRole(role))
                     );
 
                     UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    authorities
-                            );
+                            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
 
-        } catch (JwtException e) {
+        } catch (JwtException | UsernameNotFoundException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -90,15 +73,12 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(
-                "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
-        );
+    private boolean isPublicAuthEndpoint(String path) {
+        return path.equals("/auth/login")
+                || path.equals("/auth/register")
+                || path.equals("/auth/refresh");
     }
-}
+
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 

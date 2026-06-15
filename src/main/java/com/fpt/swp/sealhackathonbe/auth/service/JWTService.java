@@ -9,59 +9,52 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class JWTService {
 
+    public static final String TOKEN_TYPE_ACCESS = "ACCESS";
+    public static final String TOKEN_TYPE_REFRESH = "REFRESH";
+
     @Value("${jwt.secret}")
     private String secretKey;
 
-    // 🔥 ACCESS TOKEN
     public String generateAccessToken(User user) {
-
         Map<String, Object> claims = new HashMap<>();
-
         claims.put("userId", user.getUserId());
+        claims.put("tokenType", TOKEN_TYPE_ACCESS);
+        claims.put("jti", UUID.randomUUID().toString());
+        claims.put("role", normalizeRole(user.getUserType().getTypeName()));
 
-        // 🔥 ADD ROLE (QUAN TRỌNG)
-        String role = user.getUserType()
-                .getTypeName()
-                .replace(" ", "_")
-                .toUpperCase();
+        return Jwts.builder()
+                .setClaims(claims)// payload
+                .setSubject(user.getEmail())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 30))
+                .signWith(getKey(), SignatureAlgorithm.HS256)// header và signature
+                .compact();
+    }
 
-        claims.put("role", role);
+    public String generateRefreshToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getUserId());
+        claims.put("tokenType", TOKEN_TYPE_REFRESH);
+        claims.put("jti", UUID.randomUUID().toString());
 
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
-                .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000L * 60 * 30)
-                )
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
-
-    // 🔥 REFRESH TOKEN (giữ nhẹ, không cần role)
-    public String generateRefreshToken(User user) {
-
-        return Jwts.builder()
-                .setSubject(user.getEmail())
-                .setIssuedAt(new Date())
-                .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24)
-                )
-                .signWith(getKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
-
-    // =========================
-    // PARSE JWT
-    // =========================
 
     public String extractUserName(String token) {
         return extractAllClaims(token).getSubject();
@@ -71,8 +64,29 @@ public class JWTService {
         return extractAllClaims(token).get("role", String.class);
     }
 
+    public String extractTokenType(String token) {
+        return extractAllClaims(token).get("tokenType", String.class);
+    }
+
     public Date extractExpiration(String token) {
         return extractAllClaims(token).getExpiration();
+    }
+
+    public boolean validateToken(String token, UserDetails userDetails) {
+        return validateToken(token, userDetails, TOKEN_TYPE_ACCESS);
+    }
+
+    public boolean validateToken(String token, UserDetails userDetails, String expectedTokenType) {
+        String username = extractUserName(token);
+        String tokenType = extractTokenType(token);
+
+        return username.equals(userDetails.getUsername())
+                && expectedTokenType.equals(tokenType)
+                && !isTokenExpired(token);
+    }
+
+    public static String normalizeRole(String role) {
+        return role == null ? "USER" : role.trim().replace(" ", "_").toUpperCase();
     }
 
     private Claims extractAllClaims(String token) {
@@ -87,19 +101,8 @@ public class JWTService {
         return extractExpiration(token).before(new Date());
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUserName(token);
-
-        return username.equals(userDetails.getUsername())
-                && !isTokenExpired(token);
-    }
-
-    // =========================
-    // KEY
-    // =========================
-
     private Key getKey() {
-        byte[] keyBytes = secretKey.getBytes();
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
