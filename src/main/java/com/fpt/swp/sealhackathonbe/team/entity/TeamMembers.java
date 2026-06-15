@@ -1,13 +1,24 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "TeamMembers")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class TeamMembers {
 
+  // Entity ánh xạ quan hệ user-team; khi rời team chỉ set IsActive=false và ghi LeftAt.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamMemberID")
@@ -16,8 +27,16 @@ public class TeamMembers {
   @Column(name = "TeamID", nullable = false)
   private UUID teamId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
+  private Teams team;
+
   @Column(name = "UserID", nullable = false)
   private UUID userId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "UserID", nullable = false, insertable = false, updatable = false)
+  private User user;
 
   @Column(name = "JoinedAt", nullable = false)
   private LocalDateTime joinedAt;
@@ -27,52 +46,4 @@ public class TeamMembers {
 
   @Column(name = "IsActive", nullable = false)
   private Boolean active;
-
-  public UUID getTeamMemberId() {
-    return teamMemberId;
-  }
-
-  public void setTeamMemberId(UUID teamMemberId) {
-    this.teamMemberId = teamMemberId;
-  }
-
-  public UUID getTeamId() {
-    return teamId;
-  }
-
-  public void setTeamId(UUID teamId) {
-    this.teamId = teamId;
-  }
-
-  public UUID getUserId() {
-    return userId;
-  }
-
-  public void setUserId(UUID userId) {
-    this.userId = userId;
-  }
-
-  public LocalDateTime getJoinedAt() {
-    return joinedAt;
-  }
-
-  public void setJoinedAt(LocalDateTime joinedAt) {
-    this.joinedAt = joinedAt;
-  }
-
-  public LocalDateTime getLeftAt() {
-    return leftAt;
-  }
-
-  public void setLeftAt(LocalDateTime leftAt) {
-    this.leftAt = leftAt;
-  }
-
-  public Boolean getActive() {
-    return active;
-  }
-
-  public void setActive(Boolean active) {
-    this.active = active;
-  }
 }

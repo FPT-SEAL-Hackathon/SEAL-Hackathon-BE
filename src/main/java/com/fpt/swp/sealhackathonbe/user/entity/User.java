@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,7 +22,6 @@ import java.util.UUID;
                 @UniqueConstraint(columnNames = "Email")
         }
 )
-
 public class User {
     @Id
     @Column(name = "UserID", nullable = false, updatable = false)
@@ -84,26 +84,20 @@ public class User {
     @Column(name = "IsDeleted", nullable = false)
     private Boolean isDeleted = false;
 
+    public UserType getUserType() {
+        return userType;
+    }
+
+    public void setUserType(UserType userType) {
+        this.userType = userType;
+    }
 
     @Override
     public String toString() {
         return "User{" +
                 "userId=" + userId +
                 ", email='" + email + '\'' +
-                ", passwordHash='" + passwordHash + '\'' +
                 ", fullName='" + fullName + '\'' +
-                ", phone='" + phone + '\'' +
-                ", userType=" + userType +
-                ", accountStatus=" + accountStatus +
-                ", fptStudentCode='" + fptStudentCode + '\'' +
-                ", externalStudentCode='" + externalStudentCode + '\'' +
-                ", universityName='" + universityName + '\'' +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                ", approvedAt=" + approvedAt +
-                ", approvedBy=" + approvedBy +
-                ", accountExpiresAt=" + accountExpiresAt +
-                ", isDeleted=" + isDeleted +
                 '}';
     }
 }

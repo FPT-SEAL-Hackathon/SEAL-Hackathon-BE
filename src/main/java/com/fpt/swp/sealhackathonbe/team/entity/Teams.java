@@ -1,13 +1,26 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fpt.swp.sealhackathonbe.category.entity.Category;
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "Teams")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Teams {
 
+  // Entity ánh xạ bảng Teams; service cập nhật trạng thái và leaderUserId, không chứa logic nghiệp vụ.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "TeamID")
@@ -16,8 +29,16 @@ public class Teams {
   @Column(name = "EventID", nullable = false)
   private UUID eventId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "EventID", nullable = false, insertable = false, updatable = false)
+  private Event event;
+
   @Column(name = "CategoryID", nullable = false)
   private UUID categoryId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "CategoryID", nullable = false, insertable = false, updatable = false)
+  private Category category;
 
   @Column(name = "TeamName", nullable = false, length = 300)
   private String teamName;
@@ -25,76 +46,20 @@ public class Teams {
   @Column(name = "TeamStatusID", nullable = false)
   private UUID teamStatusId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "TeamStatusID", nullable = false, insertable = false, updatable = false)
+  private TeamStatus teamStatus;
+
   @Column(name = "LeaderUserID", nullable = false)
   private UUID leaderUserId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "LeaderUserID", nullable = false, insertable = false, updatable = false)
+  private User leaderUser;
 
   @Column(name = "CreatedAt", nullable = false)
   private LocalDateTime createdAt;
 
   @Column(name = "UpdatedAt", nullable = false)
   private LocalDateTime updatedAt;
-
-  public UUID getTeamId() {
-    return teamId;
-  }
-
-  public void setTeamId(UUID teamId) {
-    this.teamId = teamId;
-  }
-
-  public UUID getEventId() {
-    return eventId;
-  }
-
-  public void setEventId(UUID eventId) {
-    this.eventId = eventId;
-  }
-
-  public UUID getCategoryId() {
-    return categoryId;
-  }
-
-  public void setCategoryId(UUID categoryId) {
-    this.categoryId = categoryId;
-  }
-
-  public String getTeamName() {
-    return teamName;
-  }
-
-  public void setTeamName(String teamName) {
-    this.teamName = teamName;
-  }
-
-  public UUID getTeamStatusId() {
-    return teamStatusId;
-  }
-
-  public void setTeamStatusId(UUID teamStatusId) {
-    this.teamStatusId = teamStatusId;
-  }
-
-  public UUID getLeaderUserId() {
-    return leaderUserId;
-  }
-
-  public void setLeaderUserId(UUID leaderUserId) {
-    this.leaderUserId = leaderUserId;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
-  }
-
-  public LocalDateTime getUpdatedAt() {
-    return updatedAt;
-  }
-
-  public void setUpdatedAt(LocalDateTime updatedAt) {
-    this.updatedAt = updatedAt;
-  }
 }

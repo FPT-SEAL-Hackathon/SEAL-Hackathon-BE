@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.notification.entity;
 
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -10,6 +11,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -17,9 +19,9 @@ import java.time.Instant;
 @Table(name = "Notifications")
 public class Notification {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ColumnDefault("newid()")
     @Column(name = "NotificationID", nullable = false)
-    private Long id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "EventID")
