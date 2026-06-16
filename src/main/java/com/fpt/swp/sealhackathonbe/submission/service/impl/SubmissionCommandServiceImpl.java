@@ -6,6 +6,7 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
+import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityManager;
@@ -50,13 +51,13 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     @Transactional
     public SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId) {
         // Luong ghi:
-        // 1. Kiem tra user hien tai la member active cua team.
+        // 1. Kiem tra user hien tai la leader active cua team.
         // 2. Kiem tra team chua bi disqualified/withdrawn.
         // 3. Kiem tra round chua qua deadline nop bai.
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
-        validateUserBelongsToTeam(request.getTeamId(), currentUserId);
-        validateTeamCanSubmit(request.getTeamId());
+        Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
+        validateTeamCanSubmit(team);
         validateSubmissionDeadline(request.getRoundId());
 
         callUpsertSubmissionProcedure(request, currentUserId);
@@ -68,8 +69,11 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         return SubmissionMapper.toSubmissionResponse(submission);
     }
 
-    private void validateUserBelongsToTeam(UUID teamId, UUID currentUserId) {
-        // Chi member active cua team moi duoc nop hoac cap nhat bai cua team do.
+    private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
+        // Chi leader active cua team moi duoc nop hoac cap nhat bai cua team do.
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
         boolean isMember = teamMembersRepository
                 .findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
                 .isPresent();
@@ -77,13 +81,16 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         if (!isMember) {
             throw new RuntimeException("User does not belong to this team");
         }
+
+        if (!currentUserId.equals(team.getLeaderUserId())) {
+            throw new RuntimeException("Only the team leader can submit work");
+        }
+
+        return team;
     }
 
-    private void validateTeamCanSubmit(UUID teamId) {
+    private void validateTeamCanSubmit(Teams team) {
         // Team da bi loai hoac rut lui khong duoc tiep tuc nop bai.
-        var team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
-
         if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
                 || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
             throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
