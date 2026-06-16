@@ -125,7 +125,7 @@ public class NotificationController {
             description = "Create and send a notification to a specific user.",
             operationId = "sendNotificationToUser"
     )
-    @PostMapping
+    @PostMapping("/sendNotificationToUser")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
@@ -151,7 +151,7 @@ public class NotificationController {
             description = "Create and send the same notification to multiple users.",
             operationId = "sendBroadcastNotification"
     )
-    @PostMapping("/broadcast")
+    @PostMapping("/sendBroadcastNotification")
     public ResponseEntity<Map<String, Object>> sendBroadcastNotification(
             @Valid @RequestBody BroadcastNotificationRequest request,
             Authentication authentication

@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -19,7 +20,10 @@ public class EventResponse {
 
     private UUID eventStatusId;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationStart;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;
@@ -30,6 +34,9 @@ public class EventResponse {
 
     private UUID createdById;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 }
