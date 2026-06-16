@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(
@@ -70,6 +71,32 @@ public class SubmissionController {
                         currentUserId()
                 );
 
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get submissions by round",
+            description = "Get all submissions in one round. Use an organizer account."
+    )
+    @GetMapping("/admin/rounds/{roundId}/submissions")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
+            @PathVariable UUID roundId
+    ) {
+        List<SubmissionResponse> response = submissionQueryService.getSubmissionsByRound(roundId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get submissions by event",
+            description = "Get all submissions from teams in one event. Use an organizer account."
+    )
+    @GetMapping("/admin/events/{eventId}/submissions")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByEvent(
+            @PathVariable UUID eventId
+    ) {
+        List<SubmissionResponse> response = submissionQueryService.findByEventId(eventId);
         return ResponseEntity.ok(response);
     }
 
