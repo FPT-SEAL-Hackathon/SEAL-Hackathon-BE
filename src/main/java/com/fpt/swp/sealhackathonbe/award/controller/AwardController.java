@@ -29,7 +29,7 @@ public class AwardController {
      * POST /api/v1/awards
      */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
-    @PostMapping
+    @PostMapping("/grandAwardToATeam")
     public ResponseEntity<AwardResponse> grantAwardToTeam(@Valid @RequestBody AwardRequest request, @AuthenticationPrincipal UserPrincipal principal) {
 
         AwardResponse response = awardService.grantAward(request, principal.getUser().getUserId());
