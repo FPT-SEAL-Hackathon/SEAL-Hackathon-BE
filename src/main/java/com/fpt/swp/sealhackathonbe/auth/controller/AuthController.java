@@ -13,6 +13,7 @@ import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
+import com.nimbusds.openid.connect.sdk.LogoutRequest;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,4 +48,21 @@ public class AuthController {
         LoginResponse response = userService.verify(request);
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        LoginResponse response = authService.refresh(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            @Valid @RequestBody LogoutRequest request) {
+
+        authService.logout(request);
+
+        return ResponseEntity.ok("Logout successful");
+    }
+
 }
