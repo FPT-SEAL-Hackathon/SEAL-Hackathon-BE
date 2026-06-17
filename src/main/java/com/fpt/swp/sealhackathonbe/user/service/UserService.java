@@ -1,6 +1,6 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
-import com.fpt.swp.sealhackathonbe.auth.service.JWTService;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
@@ -28,7 +28,7 @@ import java.util.UUID;
 public class UserService {
 
     @Autowired
-    private JWTService jwtService;
+    private JwtServiceImpl jwtServiceImpl;
 
     @Autowired
     private AuthenticationManager authManager;
@@ -63,9 +63,9 @@ public class UserService {
 
             User user = userPrincipal.getUser();
 
-            String accessToken = jwtService.generateAccessToken(user);
+            String accessToken = jwtServiceImpl.generateAccessToken(user);
 
-            String refreshToken = jwtService.generateRefreshToken(user);
+            String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
             String studentCode =
                     user.getFptStudentCode() != null

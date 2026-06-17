@@ -1,8 +1,6 @@
-package com.fpt.swp.sealhackathonbe.auth.service;
+package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +11,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -21,10 +18,10 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-public class JwtFilter extends OncePerRequestFilter {
+public class JwtFilterServiceImpl extends OncePerRequestFilter {
 
     @Autowired
-    private JWTService jwtService;
+    private JwtServiceImpl jwtServiceImpl;
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -53,8 +50,8 @@ public class JwtFilter extends OncePerRequestFilter {
         try {
 
             // 🔥 ONLY 1 TIME PARSE
-            String username = jwtService.extractUserName(token);
-            String role = jwtService.extractRole(token);
+            String username = jwtServiceImpl.extractUserName(token);
+            String role = jwtServiceImpl.extractRole(token);
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -62,7 +59,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
 
-                if (jwtService.validateToken(token, userDetails)) {
+                if (jwtServiceImpl.validateToken(token, userDetails)) {
 
                     // 🔥 SAFE ROLE HANDLING
                     List<SimpleGrantedAuthority> authorities = List.of(
