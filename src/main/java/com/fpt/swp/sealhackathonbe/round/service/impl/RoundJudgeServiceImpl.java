@@ -11,7 +11,10 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,11 +32,22 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
                 .findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         List<User> judges = userRepository.findAllById(request.getUserIds());
         if (judges.isEmpty()) {
             throw new IllegalArgumentException("Judges not found");
         }
+
+        //Get current user
+        Authentication authentication = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new EntityNotFoundException("Current user not found");
+        }
+
         List<RoundJudge> roundJudges = judges
                 .stream()
                 .map(judge -> RoundJudge.builder()
@@ -41,7 +55,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .round(round)
                         .judge(judge)
                         .assignedAt(LocalDateTime.now())
-                        .assignedBy(null)
+                        .assignedBy(user)
                         .build()
                 )
                 .toList();
@@ -54,7 +68,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     @Override
     public List<JudgeResponse> getJudgesByRound(UUID roundId) {
         if (!roundRepository.existsById(roundId)) {
-            throw new RuntimeException("Round not found");
+            throw new EntityNotFoundException("Round not found");
         }
 
         return roundJudgeRepository.findJudgesByRoundRoundId(roundId)
@@ -66,7 +80,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     @Override
     public void removeJudge(UUID roundJudgeId) {
         RoundJudge roundJudge = roundJudgeRepository.findById(roundJudgeId)
-                .orElseThrow(() -> new RuntimeException("Round judge not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
         //Add constraints before delete later
         roundJudgeRepository.delete(roundJudge);
     }
