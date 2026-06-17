@@ -47,14 +47,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<?> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                "status", HttpStatus.FORBIDDEN.value(),
-                "error", "Forbidden",
-                "message", ex.getMessage()
-        ));
-    }
 
     // --- Error Handlers cho Ranking & Judging ---
     
