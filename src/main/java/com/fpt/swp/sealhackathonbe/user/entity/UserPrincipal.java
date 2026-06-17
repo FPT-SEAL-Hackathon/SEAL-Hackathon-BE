@@ -1,13 +1,12 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
-import com.fpt.swp.sealhackathonbe.auth.service.impl.JWTServiceImpl;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class UserPrincipal implements UserDetails {
     private User user;
@@ -18,9 +17,10 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(
-                new SimpleGrantedAuthority("ROLE_" + JWTServiceImpl.normalizeRole(user.getUserType().getTypeName()))
-        );
+        String role = user.getUserType() != null && user.getUserType().getTypeName() != null 
+                ? user.getUserType().getTypeName().replace(" ", "_").toUpperCase() 
+                : "USER";
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     @Override
@@ -35,14 +35,12 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return user.getAccountExpiresAt() == null
-                || user.getAccountExpiresAt().isAfter(LocalDateTime.now());
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        String status = getStatusName();
-        return !"LOCKED".equals(status) && !"BANNED".equals(status);
+        return true;
     }
 
     public User getUser() {
@@ -60,15 +58,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return !Boolean.TRUE.equals(user.getIsDeleted())
-                && "ACTIVE".equals(getStatusName());
-    }
-
-    private String getStatusName() {
-        if (user.getAccountStatus() == null || user.getAccountStatus().getStatusName() == null) {
-            return "";
-        }
-
-        return user.getAccountStatus().getStatusName().trim().toUpperCase();
+        return true;
     }
 }

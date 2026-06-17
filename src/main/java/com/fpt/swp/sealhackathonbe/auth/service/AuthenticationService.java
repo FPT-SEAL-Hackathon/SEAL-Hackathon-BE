@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.auth.service.impl;
+package com.fpt.swp.sealhackathonbe.auth.service;
 
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;

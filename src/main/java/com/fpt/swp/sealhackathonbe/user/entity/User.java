@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
-import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,8 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -94,12 +91,6 @@ public class User {
     public void setUserType(UserType userType) {
         this.userType = userType;
     }
-
-    @OneToMany(
-            mappedBy = "user",
-            fetch = FetchType.LAZY
-    )
-    private List<RefreshToken> refreshTokens = new ArrayList<>();
 
     @Override
     public String toString() {

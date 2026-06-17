@@ -1,8 +1,5 @@
 package com.fpt.swp.sealhackathonbe.core.exception;
 
-import com.fpt.swp.sealhackathonbe.core.exception.ExceptionPrivate.AccountNotVerifiedException;
-import com.fpt.swp.sealhackathonbe.core.exception.ExceptionPrivate.InvalidTokenException;
-import com.fpt.swp.sealhackathonbe.core.exception.ExceptionPrivate.TokenExpiredException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
@@ -78,40 +75,4 @@ public class GlobalExceptionHandler {
                 "message", ex.getMessage() != null ? ex.getMessage() : "Đã xảy ra lỗi không xác định"
         ));
     }
-    //--------------------cho user và auth---------------------------------------------
-    @ExceptionHandler(AccountNotVerifiedException.class)
-    public ResponseEntity<?> handleAccountNotVerified(
-            AccountNotVerifiedException ex) {
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of(
-                        "status", HttpStatus.FORBIDDEN.value(),
-                        "error", "Forbidden",
-                        "message", ex.getMessage()
-                ));
-    }
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<?> handleInvalidToken(
-            InvalidTokenException ex) {
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", HttpStatus.BAD_REQUEST.value(),
-                        "error", "Bad Request",
-                        "message", ex.getMessage()
-                ));
-    }
-    @ExceptionHandler(TokenExpiredException.class)
-    public ResponseEntity<?> handleTokenExpired(
-            TokenExpiredException ex) {
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", HttpStatus.BAD_REQUEST.value(),
-                        "error", "Bad Request",
-                        "message", ex.getMessage()
-                ));
-    }
-    //--------------------cho user và auth---------------------------------------------
-
 }

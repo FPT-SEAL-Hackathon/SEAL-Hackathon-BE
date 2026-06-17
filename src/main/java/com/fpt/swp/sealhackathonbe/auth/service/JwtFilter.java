@@ -1,6 +1,8 @@
-package com.fpt.swp.sealhackathonbe.auth.service.impl;
+package com.fpt.swp.sealhackathonbe.auth.service;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,7 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,7 +24,7 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
-    private JWTServiceImpl jwtServiceImpl;
+    private JWTService jwtService;
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -34,7 +36,9 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        if (isPublicAuthEndpoint(request.getServletPath())) {
+        String path = request.getServletPath();
+
+        if (path.equals("/auth/login") || path.equals("/auth/register")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -47,25 +51,38 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-            String username = jwtServiceImpl.extractUserName(token);
-            String role = jwtServiceImpl.extractRole(token);
 
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            // 🔥 ONLY 1 TIME PARSE
+            String username = jwtService.extractUserName(token);
+            String role = jwtService.extractRole(token);
 
-                if (jwtServiceImpl.validateToken(token, userDetails, JWTServiceImpl.TOKEN_TYPE_ACCESS)) {
+            if (username != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(username);
+
+                if (jwtService.validateToken(token, userDetails)) {
+
+                    // 🔥 SAFE ROLE HANDLING
                     List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + JWTServiceImpl.normalizeRole(role))
+                            new SimpleGrantedAuthority(
+                                    "ROLE_" + (role != null ? role : "USER")
+                            )
                     );
 
                     UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    authorities
+                            );
 
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
 
-        } catch (JwtException | UsernameNotFoundException e) {
+        } catch (JwtException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -73,12 +90,14 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isPublicAuthEndpoint(String path) {
-        return path.equals("/auth/login")
-                || path.equals("/auth/register")
-                || path.equals("/auth/refresh");
+    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(
+                "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
+        );
     }
-
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 
