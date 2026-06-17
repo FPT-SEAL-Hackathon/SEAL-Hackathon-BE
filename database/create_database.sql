@@ -559,6 +559,14 @@ CREATE TABLE Awards (
 );
 GO
 
+CREATE TABLE Certificates (
+                              CertificateID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                              AwardID UNIQUEIDENTIFIER NOT NULL UNIQUE REFERENCES Awards(AwardID),
+                              CertificateCode NVARCHAR(100) NOT NULL UNIQUE,
+                              GeneratedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
 CREATE TABLE Notifications (
                                NotificationID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
                                EventID UNIQUEIDENTIFIER NULL REFERENCES Events(EventID),
