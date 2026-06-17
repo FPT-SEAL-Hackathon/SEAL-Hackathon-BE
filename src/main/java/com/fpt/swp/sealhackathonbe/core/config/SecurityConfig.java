@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.core.config;
 
 
-import com.fpt.swp.sealhackathonbe.auth.service.JwtFilter;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

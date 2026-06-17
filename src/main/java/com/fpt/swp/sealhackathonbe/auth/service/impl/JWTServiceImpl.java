@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.auth.service;
+package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import io.jsonwebtoken.Claims;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class JWTService {
+public class JWTServiceImpl {
 
     public static final String TOKEN_TYPE_ACCESS = "ACCESS";
     public static final String TOKEN_TYPE_REFRESH = "REFRESH";

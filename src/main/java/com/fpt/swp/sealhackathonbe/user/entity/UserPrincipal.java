@@ -1,6 +1,6 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
-import com.fpt.swp.sealhackathonbe.auth.service.JWTService;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JWTServiceImpl;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,7 +19,7 @@ public class UserPrincipal implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singleton(
-                new SimpleGrantedAuthority("ROLE_" + JWTService.normalizeRole(user.getUserType().getTypeName()))
+                new SimpleGrantedAuthority("ROLE_" + JWTServiceImpl.normalizeRole(user.getUserType().getTypeName()))
         );
     }
 

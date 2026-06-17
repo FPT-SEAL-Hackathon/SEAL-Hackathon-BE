@@ -6,6 +6,7 @@ import com.fpt.swp.sealhackathonbe.auth.dto.LogoutRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 
 public interface AuthService {
 
@@ -16,5 +17,7 @@ public interface AuthService {
     UserResponse register(RegisterRequest request);
 
     void logout(LogoutRequest request);
+    void sendVerificationEmail(User user, String token);
+
 
 }

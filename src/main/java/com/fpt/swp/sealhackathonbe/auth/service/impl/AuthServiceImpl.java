@@ -2,9 +2,12 @@ package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
 import com.fpt.swp.sealhackathonbe.auth.dto.*;
 import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
-import com.fpt.swp.sealhackathonbe.auth.service.JWTService;
+import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.AuthService;
+import com.fpt.swp.sealhackathonbe.core.exception.ExceptionPrivate.AccountNotVerifiedException;
+import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
@@ -21,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,8 +39,8 @@ public class AuthServiceImpl implements AuthService {
     private static final UUID FPT_STUDENT_ID = UUID.fromString(
             "10000000-0000-0000-0000-000000000001"
     );
-    private static final UUID ACCOUNT_STATUS_PENDING_APPROVAL_ID = UUID.fromString(
-            "20000000-0000-0000-0000-000000000001"
+    private static final UUID ACCOUNT_STATUS_UNVERIFIED_ID = UUID.fromString(
+            "20000000-0000-0000-0000-000000000006"
     );
 
     @Autowired
@@ -51,7 +53,7 @@ public class AuthServiceImpl implements AuthService {
     private AuthenticationManager authManager;
 
     @Autowired
-    private JWTService jwtService;
+    private JWTServiceImpl jwtServiceImpl;
 
     @Autowired
     private UserRepository userRepo;
@@ -65,9 +67,15 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private VerificationTokenServiceImpl verificationTokenServiceImpl;
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
+
         Authentication authentication = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         normalizeEmail(request.getEmail()),
@@ -75,8 +83,20 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        return issueTokens(userPrincipal.getUser());
+        UserPrincipal userPrincipal =
+                (UserPrincipal) authentication.getPrincipal();
+
+        User user = userPrincipal.getUser();
+
+        if ("UNVERIFIED".equalsIgnoreCase(
+                user.getUserType().getTypeName())) {
+
+            throw new AccountNotVerifiedException(
+                    "Please verify your email first"
+            );
+        }
+
+        return issueTokens(user);
     }
 
     @Override
@@ -110,7 +130,7 @@ public class AuthServiceImpl implements AuthService {
                 .findById(request.getUserTypeId())
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "User type not found"));
         AccountStatus accountStatus = accountStatusRepo
-                .findById(ACCOUNT_STATUS_PENDING_APPROVAL_ID)
+                .findById(ACCOUNT_STATUS_UNVERIFIED_ID)
                 .orElseThrow(() -> new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Account status not found"));
 
         User user = new User();
@@ -131,7 +151,29 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userRepo.save(user);
+        VerificationToken token =
+                verificationTokenServiceImpl.createToken(savedUser);
+
+        sendVerificationEmail(savedUser, token.getTokenHash());
         return toUserResponse(savedUser);
+    }
+    @Override
+    public void sendVerificationEmail(User user, String token) {
+
+        String verifyUrl =
+                "http://localhost:8080/api/auth/verify-email?token="
+                        + token;
+
+        String content =
+                "Welcome!\n\n"
+                        + "Please verify your email by clicking link below:\n"
+                        + verifyUrl;
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Verify your account",
+                content
+        );
     }
 
     @Transactional
@@ -150,8 +192,8 @@ public class AuthServiceImpl implements AuthService {
     private LoginResponse issueTokens(User user) {
         ensureUserCanUseAuth(user);
 
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        String accessToken = jwtServiceImpl.generateAccessToken(user);
+        String refreshToken = jwtServiceImpl.generateRefreshToken(user);
         saveRefreshToken(user, refreshToken);
 
         return LoginResponse.builder()
@@ -163,7 +205,7 @@ public class AuthServiceImpl implements AuthService {
 
     private User validateRefreshToken(String rawRefreshToken) {
         try {
-            String email = normalizeEmail(jwtService.extractUserName(rawRefreshToken));
+            String email = normalizeEmail(jwtServiceImpl.extractUserName(rawRefreshToken));
             if (email == null) {
                 throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
@@ -175,7 +217,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             UserDetails userDetails = new UserPrincipal(user);
-            if (!jwtService.validateToken(rawRefreshToken, userDetails, JWTService.TOKEN_TYPE_REFRESH)) {
+            if (!jwtServiceImpl.validateToken(rawRefreshToken, userDetails, JWTServiceImpl.TOKEN_TYPE_REFRESH)) {
                 throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
             }
 
@@ -199,7 +241,7 @@ public class AuthServiceImpl implements AuthService {
         refreshToken.setTokenHash(tokenHashUtil.hash(rawRefreshToken));
         refreshToken.setIssuedAt(LocalDateTime.now());
         refreshToken.setExpiresAt(
-                LocalDateTime.ofInstant(jwtService.extractExpiration(rawRefreshToken).toInstant(), ZoneId.systemDefault())
+                LocalDateTime.ofInstant(jwtServiceImpl.extractExpiration(rawRefreshToken).toInstant(), ZoneId.systemDefault())
         );
 
         refreshTokenRepository.save(refreshToken);

@@ -1,8 +1,6 @@
-package com.fpt.swp.sealhackathonbe.auth.service;
+package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +22,7 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
-    private JWTService jwtService;
+    private JWTServiceImpl jwtServiceImpl;
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -49,15 +47,15 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-            String username = jwtService.extractUserName(token);
-            String role = jwtService.extractRole(token);
+            String username = jwtServiceImpl.extractUserName(token);
+            String role = jwtServiceImpl.extractRole(token);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtService.validateToken(token, userDetails, JWTService.TOKEN_TYPE_ACCESS)) {
+                if (jwtServiceImpl.validateToken(token, userDetails, JWTServiceImpl.TOKEN_TYPE_ACCESS)) {
                     List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + JWTService.normalizeRole(role))
+                            new SimpleGrantedAuthority("ROLE_" + JWTServiceImpl.normalizeRole(role))
                     );
 
                     UsernamePasswordAuthenticationToken auth =
