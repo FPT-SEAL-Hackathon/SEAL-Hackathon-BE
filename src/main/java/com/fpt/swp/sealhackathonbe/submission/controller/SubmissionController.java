@@ -79,7 +79,7 @@ public class SubmissionController {
             description = "Get all submissions in one round. Use an organizer account."
     )
     @GetMapping("/admin/rounds/{roundId}/submissions")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
