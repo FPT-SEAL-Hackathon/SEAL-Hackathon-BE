@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.ranking.entity.EventRanking;
 import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.EventRankingRepository;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 
 
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
@@ -47,6 +48,7 @@ public class RankingServiceImpl implements RankingService {
     private final SubmissionQueryService submissionQueryService;
     private final EntityManager entityManager;
     private final RoundService roundService;
+    private final CategoryRepository categoryRepository;
 
 
     @Override
@@ -166,87 +168,103 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
-    public List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId) {
-        List<EventRanking> rankings = new ArrayList<>();
-
+    public List<EventRankingDTO> computeEventRankings(UUID eventId) {
         Event eventRef = entityManager.find(Event.class, eventId);
         if (eventRef == null) throw new IllegalArgumentException("Event ID không tồn tại: " + eventId);
         
-        Category categoryRef = entityManager.find(Category.class, categoryId);
-        if (categoryRef == null) throw new IllegalArgumentException("Category ID không tồn tại: " + categoryId);
-        RoundResponse finalRound = roundService.getFinalRound(categoryId);
+        List<Category> categories = categoryRepository.findByEventEventId(eventId);
+        List<EventRankingDTO> allComputedRankings = new ArrayList<>();
 
-        List<UUID> teamIds = entityManager.createQuery(
-                "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
-                .setParameter("categoryId", categoryId)
-                .setParameter("eventId", eventId)
-                .getResultList();
+        for (Category categoryRef : categories) {
+            UUID categoryId = categoryRef.getCategoryId();
+            List<EventRanking> rankings = new ArrayList<>();
 
-        List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId)
-                .stream()
-                .map(DisqualifiedTeamResponse:: getTeamId)
-                .toList();
-        
-        // Lấy danh sách ranking hiện có của Event & Category để update thay vì insert mới
-        List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
-        Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
-                .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
+            RoundResponse finalRound = roundService.getFinalRound(categoryId);
 
-        Map<UUID, BigDecimal> teamFinalRoundScores = new HashMap<>();
+            if (finalRound == null) {
+                throw new IllegalStateException("Không tìm thấy vòng chung kết cho category: " + categoryRef.getCategoryName());
+            }
 
-        if (finalRound != null) {
+            UUID completedStatusId = UUID.fromString("40000000-0000-0000-0000-000000000004");
+            if (!completedStatusId.equals(finalRound.getRoundStatusId())) {
+                throw new IllegalStateException("Vòng chung kết chưa hoàn thành (Completed) cho category: " + categoryRef.getCategoryName());
+            }
+
+            List<UUID> teamIds = entityManager.createQuery(
+                    "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
+                    .setParameter("categoryId", categoryId)
+                    .setParameter("eventId", eventId)
+                    .getResultList();
+
+            List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId)
+                    .stream()
+                    .map(DisqualifiedTeamResponse:: getTeamId)
+                    .toList();
+            
+            // Lấy danh sách ranking hiện có của Event & Category để update thay vì insert mới
+            List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
+            Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
+                    .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
+
             List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
-            teamFinalRoundScores = finalRoundRankings.stream()
+            
+            if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
+                throw new IllegalStateException("Điểm xếp hạng vòng chung kết chưa được tính cho category: " + categoryRef.getCategoryName());
+            }
+
+            Map<UUID, BigDecimal> teamFinalRoundScores = finalRoundRankings.stream()
                     .collect(Collectors.toMap(
                             r -> r.getTeam().getTeamId(),
                             RoundRanking::getTotalScore
                     ));
-        }
 
-        for (UUID teamId : teamIds) {
-            Teams teamRef = entityManager.getReference(Teams.class, teamId);
-            BigDecimal finalScore = BigDecimal.ZERO;
+            for (UUID teamId : teamIds) {
+                Teams teamRef = entityManager.getReference(Teams.class, teamId);
+                BigDecimal finalScore = BigDecimal.ZERO;
 
-            // Nếu Đội không bị tước tư cách -> Lấy điểm từ Vòng Chung Kết
-            if (!disqualifiedTeamIds.contains(teamId)) {
-                finalScore = teamFinalRoundScores.getOrDefault(teamId, BigDecimal.ZERO);
+                // Nếu Đội không bị tước tư cách -> Lấy điểm từ Vòng Chung Kết
+                if (!disqualifiedTeamIds.contains(teamId)) {
+                    finalScore = teamFinalRoundScores.getOrDefault(teamId, BigDecimal.ZERO);
+                }
+
+                // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
+                EventRanking ranking = existingRankingMap.getOrDefault(teamId, new EventRanking());
+                ranking.setEvent(eventRef);
+                ranking.setCategory(categoryRef); // Ranking phân chia chuẩn theo Category
+                ranking.setTeam(teamRef);
+                ranking.setFinalScore(finalScore);
+                ranking.setRankPosition(0);
+
+                rankings.add(ranking);
             }
 
-            // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
-            EventRanking ranking = existingRankingMap.getOrDefault(teamId, new EventRanking());
-            ranking.setEvent(eventRef);
-            ranking.setCategory(categoryRef); // Ranking phân chia chuẩn theo Category
-            ranking.setTeam(teamRef);
-            ranking.setFinalScore(finalScore);
-            ranking.setRankPosition(0);
+            // Sort and Rank
+            rankings.sort((r1, r2) -> r2.getFinalScore().compareTo(r1.getFinalScore()));
 
-            rankings.add(ranking);
-        }
-
-        // Sort and Rank
-        rankings.sort((r1, r2) -> r2.getFinalScore().compareTo(r1.getFinalScore()));
-
-        int currentRank = 1;
-        for (int i = 0; i < rankings.size(); i++) {
-            // Nếu điểm đội hiện tại nhỏ hơn đội đứng trước -> Rớt hạng
-            if (i > 0 && rankings.get(i).getFinalScore().compareTo(rankings.get(i - 1).getFinalScore()) < 0) {
-                currentRank = i + 1;
+            int currentRank = 1;
+            for (int i = 0; i < rankings.size(); i++) {
+                // Nếu điểm đội hiện tại nhỏ hơn đội đứng trước -> Rớt hạng
+                if (i > 0 && rankings.get(i).getFinalScore().compareTo(rankings.get(i - 1).getFinalScore()) < 0) {
+                    currentRank = i + 1;
+                }
+                rankings.get(i).setRankPosition(currentRank);
             }
-            rankings.get(i).setRankPosition(currentRank);
+
+            List<EventRanking> savedRankings = eventRankingRepository.saveAll(rankings);
+
+            allComputedRankings.addAll(savedRankings.stream().map(r -> EventRankingDTO.builder()
+                    .id(r.getId())
+                    .eventId(eventId)
+                    .categoryId(categoryId)
+                    .teamId(r.getTeam().getTeamId())
+                    .finalScore(r.getFinalScore())
+                    .rankPosition(r.getRankPosition())
+                    .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                    .build()
+            ).collect(Collectors.toList()));
         }
 
-        List<EventRanking> savedRankings = eventRankingRepository.saveAll(rankings);
-
-        return savedRankings.stream().map(r -> EventRankingDTO.builder()
-                .id(r.getId())
-                .eventId(eventId)
-                .categoryId(categoryId)
-                .teamId(r.getTeam().getTeamId())
-                .finalScore(r.getFinalScore())
-                .rankPosition(r.getRankPosition())
-                .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
-                .build()
-        ).collect(Collectors.toList());
+        return allComputedRankings;
     }
 
     @Override
