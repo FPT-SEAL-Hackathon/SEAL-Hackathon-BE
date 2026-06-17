@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Service
 public interface RoundService {
-    RoundResponse create(CreateRoundRequest request);
+    RoundResponse create(UUID categoryId, CreateRoundRequest request);
     RoundResponse getById(UUID roundId);
     List<RoundResponse> getByCategory(UUID categoryId);
     RoundResponse update(UUID roundId, UpdateRoundRequest request);

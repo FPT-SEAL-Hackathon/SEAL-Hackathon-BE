@@ -14,39 +14,39 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/v1/rounds")
+@RequestMapping("api/v1")
 @RequiredArgsConstructor
 public class RoundController {
     private final RoundService roundService;
 
-    @PostMapping("/{categoryId}")
+    @PostMapping("/round/{categoryId}")
     public RoundResponse create(@PathVariable UUID categoryId,
                                 @Valid @RequestBody CreateRoundRequest request) {
-        return roundService.create(request);
+        return roundService.create(categoryId, request);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/round/{id}")
     public RoundResponse getById(@PathVariable UUID id) {
         return roundService.getById(id);
     }
 
-    @GetMapping("/{categoryId}")
+    @GetMapping("/rounds/{categoryId}")
     public List<RoundResponse> getByCategory(@PathVariable UUID categoryId) {
         return roundService.getByCategory(categoryId);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/round/{id}")
     public RoundResponse update(@PathVariable UUID id,
                                 @Valid @RequestBody UpdateRoundRequest request) {
         return roundService.update(id, request);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/round/{id}")
     public void delete(@PathVariable UUID id) {
         roundService.delete(id);
     }
 
-    @GetMapping("/final/{categoryId}")
+    @GetMapping("/round/final/{categoryId}")
     public RoundResponse getFinalRound(@PathVariable UUID categoryId) {
         return roundService.getFinalRound(categoryId);
     }
