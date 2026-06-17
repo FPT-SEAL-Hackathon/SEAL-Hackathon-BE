@@ -13,11 +13,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.HttpStatus;
 
 import jakarta.persistence.EntityNotFoundException;
+
+import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<String> handleAccessDeniedException(AccessDeniedException ex) {
+
+        // Trả về đúng mã 403 FORBIDDEN kèm thông báo
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("You dont have permission to do this.");
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {

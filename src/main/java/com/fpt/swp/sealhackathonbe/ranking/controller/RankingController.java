@@ -20,12 +20,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class RankingController {
 
     private final RankingService rankingService;
-    private final SubmissionQueryService submissionQueryService;
 
     @Autowired
-    public RankingController(RankingService rankingService, SubmissionQueryService submissionQueryService) {
+    public RankingController(RankingService rankingService) {
         this.rankingService = rankingService;
-        this.submissionQueryService = submissionQueryService;
     }
 
     /**
@@ -34,13 +32,12 @@ public class RankingController {
     @PostMapping("/admin/events/{id}/compute-rankings")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<EventRankingDTO>> computeEventRankings(
-            @PathVariable("id") UUID eventId,
-            @RequestParam UUID categoryId) {
+            @PathVariable("id") UUID eventId) {
 
         // MOCKED: Fetch teamIds for the event. In a real scenario, call EventService/SubmissionService.
         List<UUID> teamIds = new ArrayList<>();
 
-        List<EventRankingDTO> rankings = rankingService.computeEventRankings(eventId, categoryId);
+        List<EventRankingDTO> rankings = rankingService.computeEventRankings(eventId);
         return ResponseEntity.ok(rankings);
     }
 

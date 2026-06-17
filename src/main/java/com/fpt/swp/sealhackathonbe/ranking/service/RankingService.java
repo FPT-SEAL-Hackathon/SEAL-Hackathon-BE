@@ -19,10 +19,9 @@ public interface RankingService {
     /**
      * Compute final event rankings.
      * @param eventId The ID of the event.
-     * @param categoryId The ID of the category.
      * @return List of computed event rankings.
      */
-    List<EventRankingDTO> computeEventRankings(UUID eventId, UUID categoryId);
+    List<EventRankingDTO> computeEventRankings(UUID eventId);
 
     List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId);
 }
