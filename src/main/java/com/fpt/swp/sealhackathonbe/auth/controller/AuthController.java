@@ -8,11 +8,15 @@
  */
 package com.fpt.swp.sealhackathonbe.auth.controller;
 
-import com.fpt.swp.sealhackathonbe.auth.dto.*;
-import com.fpt.swp.sealhackathonbe.auth.service.mapper.AuthService;
+import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
+import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
+import com.fpt.swp.sealhackathonbe.user.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,14 +29,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    private UserService userService;
     // API đăng ký tài khoản mới
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
         System.out.println("REGISTER CALLED");
-        UserResponse response = authService.register(request);
+        UserResponse response = userService.register(request);
         return ResponseEntity.ok(response);
     }
 
@@ -40,24 +44,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
     ){
-        LoginResponse response = authService.login(request);
+        LoginResponse response = userService.verify(request);
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/refresh")
-    public ResponseEntity<LoginResponse> refresh(
-            @Valid @RequestBody RefreshTokenRequest request
-    ) {
-        LoginResponse response = authService.refresh(request);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(
-            @Valid @RequestBody LogoutRequest request) {
-
-        authService.logout(request);
-
-        return ResponseEntity.ok("Logout successful");
     }
 }

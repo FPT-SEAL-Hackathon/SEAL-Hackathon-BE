@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.user.service.impl;
+package com.fpt.swp.sealhackathonbe.user.service;
 
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
@@ -17,8 +17,9 @@ public class MyUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmailIgnoreCase(email);
+        User user = userRepository.findByEmail(email);
         if (user == null) {
+            System.out.println("User Not Found");
             throw new UsernameNotFoundException("user not found");
         }
 
