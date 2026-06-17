@@ -21,6 +21,9 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String senderEmail;
 
+    @Value("${app.notification.mail.sender-name:SEAL Hackathon}")
+    private String senderName;
+
     @Async
     public void sendEmail(String recipient, String subject, String content) {
         if (!mailEnabled) {
@@ -33,7 +36,7 @@ public class EmailService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         if (senderEmail != null && !senderEmail.isBlank()) {
-            message.setFrom(senderEmail);
+            message.setFrom(senderName + " <" + senderEmail + ">");
         }
         message.setTo(recipient);
         message.setSubject(subject);
