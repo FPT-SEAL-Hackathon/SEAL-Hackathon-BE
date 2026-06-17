@@ -41,7 +41,6 @@ public class SecurityConfig {
             "/",
             "/auth/login",
             "/auth/register",
-            "/auth/logout",
             "/api/v1/public/**"
     };
 

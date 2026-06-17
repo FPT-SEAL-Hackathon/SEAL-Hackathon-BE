@@ -92,6 +92,16 @@ public class UserService {
                             .createdAt(user.getCreatedAt())
                             .build();
 
+            RefreshToken tokenEntity = RefreshToken.builder()
+                    .user(user)
+                    .tokenHash(refreshToken)   // ⚠️ LƯU REFRESH TOKEN (KHÔNG PHẢI ACCESS)
+                    .issuedAt(LocalDateTime.now())
+                    .expiresAt(LocalDateTime.now().plusDays(7))
+                    .revokedAt(null)
+                    .deviceInfo("WEB")
+                    .build();
+
+            refreshTokenRepository.save(tokenEntity);
             return LoginResponse.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
@@ -107,9 +117,11 @@ public class UserService {
         RefreshToken token = refreshTokenRepository
                 .findByTokenHash(refreshToken)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Refresh token not found"));
+                        new RuntimeException("Token not found"));
 
-        refreshTokenRepository.delete(token);
+        token.setRevokedAt(LocalDateTime.now());
+
+        refreshTokenRepository.save(token); // 🔥 nên thêm
     }
     @Transactional
     public UserResponse register(RegisterRequest request) {

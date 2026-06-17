@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
+import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,6 +28,9 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -35,8 +40,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        if (path.equals("/auth/login") || path.equals("/auth/register") ||
-                path.equals("/auth/logout")) {
+        if (path.equals("/auth/login") || path.equals("/auth/register")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -47,7 +51,13 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        RefreshToken tokenEntity =
+                refreshTokenRepository.findByTokenHash(token).orElse(null);
 
+        if (tokenEntity != null && tokenEntity.getRevokedAt() != null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
         try {
 
             // 🔥 ONLY 1 TIME PARSE
@@ -105,4 +115,5 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
 
         return null;
     }
+
 }

@@ -46,11 +46,14 @@ public class RefreshToken {
     @Column(name = "DeviceInfo", length = 500)
     private String deviceInfo;
 
-    public boolean isRevoked() {
-        return revokedAt != null;
+    public boolean isActive() {
+        return revokedAt == null
+                && expiresAt != null
+                && expiresAt.isAfter(LocalDateTime.now());
     }
 
-    public boolean isActive() {
-        return revokedAt == null && expiresAt.isAfter(LocalDateTime.now());
+    // token đã bị logout
+    public boolean isRevoked() {
+        return revokedAt != null;
     }
 }
