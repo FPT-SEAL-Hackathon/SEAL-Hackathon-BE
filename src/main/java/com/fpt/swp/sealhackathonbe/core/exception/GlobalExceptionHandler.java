@@ -37,7 +37,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
     }
 
-
     // --- Error Handlers cho Ranking & Judging ---
     
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
