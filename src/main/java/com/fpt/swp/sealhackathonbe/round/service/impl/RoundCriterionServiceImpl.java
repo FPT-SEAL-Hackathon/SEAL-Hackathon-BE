@@ -13,6 +13,7 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.round.service.RoundCriterionService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,16 +31,17 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     @Override
     public List<RoundCriterionResponse> importCriteriaFromEvent(UUID roundId, ImportCriteriaFromEventRequest request) {
         Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         List<EventCriteria> eventCriteria = eventCriterionRepository.findAllById(request.getEventCriterionIds());
 
         if (eventCriteria.isEmpty()) {
-            throw new RuntimeException("Event criteria not found");
+            throw new EntityNotFoundException("Event criteria not found");
         }
 
         List<RoundCriterion> roundCriteria = eventCriteria
                 .stream()
                 .map(eventCriterion -> RoundCriterion.builder()
+                        .roundCriterionId(UUID.randomUUID())
                         .round(round)
                         .eventCriterionId(eventCriterion.getEventCriterionId())
                         .criterionName(eventCriterion.getCriterionName())
@@ -62,7 +64,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     public RoundCriterionResponse updateImportedCriterion(UUID roundCriterionId, UpdateImportedCriterionRequest request) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
-                .orElseThrow(() -> new RuntimeException("Round criterion not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round criterion not found"));
 
         roundCriterion.setWeight(request.getWeight());
         roundCriterion.setMaxScore(request.getMaxScore());
@@ -89,7 +91,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     public RoundCriterionResponse updateSpecificCriterion(UUID roundCriterionId, UpdateSpecificCriterionRequest request) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
-                .orElseThrow(() -> new RuntimeException("Round criterion not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round criterion not found"));
 
         roundCriterion.setCriterionName(request.getCriterionName());
         roundCriterion.setDescription(request.getDescription());
@@ -104,7 +106,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     public void delete(UUID roundCriterionId) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
-                .orElseThrow(() -> new RuntimeException("Round criterion not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round criterion not found"));
 
         if (!"Upcoming".equalsIgnoreCase(roundCriterion.getRound().getRoundStatus().getStatusName())) {
             throw new IllegalArgumentException("Only delete criterion of round at status 'Upcoming'");
@@ -119,7 +121,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     public RoundCriterionResponse getById(UUID roundCriterionId) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
-                .orElseThrow(() -> new RuntimeException("Round criterion not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round criterion not found"));
         return roundMapper.toRoundCriterionResponse(roundCriterion);
     }
 
