@@ -15,6 +15,8 @@ import java.util.UUID;
 
 @Repository
 public interface RoundRepository extends JpaRepository<Round, UUID> {
+    boolean existsByCategoryCategoryId(UUID categoryId);
+
     List<Round> findByCategoryCategoryIdOrderByRoundOrderAsc(UUID categoryId);
 
     //Find max roundOrder by Category
