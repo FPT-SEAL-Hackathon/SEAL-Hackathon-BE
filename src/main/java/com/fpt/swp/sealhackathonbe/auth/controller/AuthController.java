@@ -8,10 +8,7 @@
  */
 package com.fpt.swp.sealhackathonbe.auth.controller;
 
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
-import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
+import com.fpt.swp.sealhackathonbe.auth.dto.*;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
 import com.nimbusds.openid.connect.sdk.LogoutRequest;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
