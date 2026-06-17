@@ -7,7 +7,9 @@ import com.fpt.swp.sealhackathonbe.certificate.repository.CertificateRepository;
 import com.fpt.swp.sealhackathonbe.certificate.service.CertificateService;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
@@ -32,13 +34,13 @@ public class CertificateServiceImpl implements CertificateService {
     @Transactional
     public byte[] generateCertificatePdf(UUID awardId, UUID currentUserId) {
         Award award = awardRepository.findByIdAndIsPublishedTrue(awardId)
-                .orElseThrow(() -> new RuntimeException("Published award not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Published award not found"));
 
         boolean canDownload = teamMembersRepository
                 .findByTeamIdAndUserIdAndActiveTrue(award.getTeam().getTeamId(), currentUserId)
                 .isPresent();
         if (!canDownload) {
-            throw new RuntimeException("You are not allowed to download this certificate");
+            throw new AccessDeniedException("You are not allowed to download this certificate");
         }
 
         Certificate certificate = certificateRepository.findByAwardId(awardId)

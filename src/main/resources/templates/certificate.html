@@ -57,17 +57,17 @@
     </style>
 </head>
 <body>
-<div class="title">GIẤY CHỨNG NHẬN</div>
-<div class="subtitle">Ban tổ chức cuộc thi trân trọng trao tặng cho Đội thi:</div>
+<div class="title">Certificate</div>
+<div class="subtitle">The contest organizers are proudly presenting this to the team:</div>
 
 <div class="team-name" th:text="${teamName}">Tên Đội Thi</div>
-<div class="award-title" th:text="${'Đã xuất sắc đạt giải: ' + awardTitle}">Tên Giải Thưởng</div>
+<div class="award-title" th:text="${'Has excellently won the award: ' + awardTitle}">Tên Giải Thưởng</div>
 
-<div class="event-name" th:text="${'Tại sự kiện: ' + eventName}">Tên Sự Kiện</div>
+<div class="event-name" th:text="${'Event: ' + eventName}">Tên Sự Kiện</div>
 
 <div class="footer">
-    <span th:text="${'Mã số: ' + certCode}">Mã số: CERT-001</span> |
-    <span th:text="${'Ngày cấp: ' + issuedDate}">Ngày cấp</span>
+    <span th:text="${'Certificate ID: ' + certCode}">Mã số: CERT-001</span> |
+    <span th:text="${'Issued Date: ' + issuedDate}">Ngày cấp</span>
 </div>
 </body>
 </html>

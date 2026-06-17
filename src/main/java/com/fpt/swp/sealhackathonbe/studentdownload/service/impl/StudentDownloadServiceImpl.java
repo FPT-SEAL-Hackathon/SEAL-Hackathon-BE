@@ -12,21 +12,58 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
 public class StudentDownloadServiceImpl implements StudentDownloadService {
     private static final String CSV_CONTENT_TYPE = "text/csv; charset=UTF-8";
+    private static final String ZIP_CONTENT_TYPE = "application/zip";
 
     private final RoundRepository roundRepository;
     private final TeamMembersRepository teamMembersRepository;
 
     @Override
     @Transactional(readOnly = true)
+    public DownloadFileResponse downloadRoundProblem(UUID roundId, UUID currentUserId, String type) {
+        String normalizedType = type == null || type.isBlank() ? "csv" : type.trim().toLowerCase();
+
+        return switch (normalizedType) {
+            case "csv" -> buildRoundProblemCsv(roundId, currentUserId);
+            case "zip" -> buildRoundProblemZip(roundId, currentUserId);
+            default -> throw new IllegalArgumentException("Unsupported download type: " + type);
+        };
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public DownloadFileResponse downloadRoundProblemCsv(UUID roundId, UUID currentUserId) {
+        return buildRoundProblemCsv(roundId, currentUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DownloadFileResponse downloadRoundProblemZip(UUID roundId, UUID currentUserId) {
+        return buildRoundProblemZip(roundId, currentUserId);
+    }
+
+    private DownloadFileResponse buildRoundProblemZip(UUID roundId, UUID currentUserId) {
+        DownloadFileResponse csvFile = buildRoundProblemCsv(roundId, currentUserId);
+        byte[] zipContent = writeZip(csvFile.getFilename(), csvFile.getContent());
+
+        return new DownloadFileResponse(
+                csvFile.getFilename().replace(".csv", ".zip"),
+                ZIP_CONTENT_TYPE,
+                zipContent
+        );
+    }
+
+    private DownloadFileResponse buildRoundProblemCsv(UUID roundId, UUID currentUserId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new RuntimeException("Round not found"));
         Category category = round.getCategory();
@@ -75,6 +112,19 @@ public class StudentDownloadServiceImpl implements StudentDownloadService {
                 CSV_CONTENT_TYPE,
                 content
         );
+    }
+
+    private byte[] writeZip(String entryName, byte[] entryContent) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
+            zipOutputStream.putNextEntry(new ZipEntry(entryName));
+            zipOutputStream.write(entryContent);
+            zipOutputStream.closeEntry();
+            zipOutputStream.finish();
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate ZIP file", e);
+        }
     }
 
     private byte[] writeCsv(String[] header, String[] row) {

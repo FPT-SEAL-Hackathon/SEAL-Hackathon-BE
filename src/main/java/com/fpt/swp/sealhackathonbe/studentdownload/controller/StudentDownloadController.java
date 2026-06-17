@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -25,6 +26,25 @@ public class StudentDownloadController {
     private final StudentDownloadService studentDownloadService;
 
     @Operation(
+            summary = "Download round problem",
+            description = "Download round problem information for an authenticated student. Supported type values: csv, zip.",
+            operationId = "downloadRoundProblem"
+    )
+    @GetMapping("/rounds/{roundId}/problem")
+    public ResponseEntity<byte[]> downloadRoundProblem(
+            @PathVariable UUID roundId,
+            @RequestParam(defaultValue = "csv") String type,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        DownloadFileResponse file = studentDownloadService.downloadRoundProblem(
+                roundId,
+                principal.getUser().getUserId(),
+                type
+        );
+        return buildDownloadResponse(file);
+    }
+
+    @Operation(
             summary = "Download round problem CSV",
             description = "Download round problem information as a UTF-8 CSV file for an authenticated student in the same event category.",
             operationId = "downloadRoundProblemCsv"
@@ -35,6 +55,23 @@ public class StudentDownloadController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         DownloadFileResponse file = studentDownloadService.downloadRoundProblemCsv(
+                roundId,
+                principal.getUser().getUserId()
+        );
+        return buildDownloadResponse(file);
+    }
+
+    @Operation(
+            summary = "Download round problem ZIP",
+            description = "Download round problem information as a ZIP file containing the UTF-8 CSV for an authenticated student in the same event category.",
+            operationId = "downloadRoundProblemZip"
+    )
+    @GetMapping(value = "/rounds/{roundId}/problem-zip", produces = "application/zip")
+    public ResponseEntity<byte[]> downloadRoundProblemZip(
+            @PathVariable UUID roundId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        DownloadFileResponse file = studentDownloadService.downloadRoundProblemZip(
                 roundId,
                 principal.getUser().getUserId()
         );
