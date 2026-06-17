@@ -68,7 +68,7 @@ public class NotificationController {
             description = "Get a paginated list of notifications for the authenticated user.",
             operationId = "getMyNotifications"
     )
-    @GetMapping("/getMyNotifications")
+    @GetMapping
     public ResponseEntity<Map<String, Object>> getMyNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -214,7 +214,7 @@ public class NotificationController {
             description = "Delete a specific notification belonging to the authenticated user.",
             operationId = "deleteNotification"
     )
-    @DeleteMapping("/deleteNotification/{notificationId}")
+    @DeleteMapping("/{notificationId}")
     public ResponseEntity<Map<String, Object>> deleteNotification(
             @PathVariable UUID notificationId,
             Authentication authentication

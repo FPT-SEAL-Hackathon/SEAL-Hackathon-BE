@@ -10,4 +10,5 @@ import java.util.UUID;
 @Setter
 public class ImportCriteriaToEventRequest {
     private List<UUID> templateIds;
+
 }

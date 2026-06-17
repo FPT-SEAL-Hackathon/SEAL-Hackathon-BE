@@ -10,7 +10,6 @@ import com.fpt.swp.sealhackathonbe.criteria.service.EventCriterionService;
 import com.fpt.swp.sealhackathonbe.criteria.service.mapper.Mapper;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +30,7 @@ public class EventCriterionServiceImpl implements EventCriterionService {
     public List<EventCriterionResponse> importCriteriaToEvent(UUID eventId, ImportCriteriaToEventRequest request) {
         //Get Event
         Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new RuntimeException("Event not found"));
         //Get list of templates to import
         List<CriterionTemplate> templates = templateRepository.findAllById(request.getTemplateIds());
         if (templates.isEmpty()) {
@@ -44,7 +43,6 @@ public class EventCriterionServiceImpl implements EventCriterionService {
         for (CriterionTemplate template : templates) {
             count++;
             EventCriteria eventCriterion = EventCriteria.builder()
-                    .eventCriterionId(UUID.randomUUID())
                     .event(event)
                     .criterionName(template.getCriterionName())
                     .description(template.getDescription())

@@ -1218,50 +1218,6 @@ CREATE NONCLUSTERED INDEX IX_Rounds_Categories ON Rounds(CategoryID);
 CREATE NONCLUSTERED INDEX IX_Categories_Event ON Categories(EventID);
 GO
 
-CREATE OR ALTER TRIGGER trg_EnforceSubmissionStatusRules
-ON Submissions
-AFTER INSERT, UPDATE
-                                  AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @SS_DRAFT UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000001';
-    DECLARE @SS_SUBMITTED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000002';
-    DECLARE @SS_DISQUALIFIED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000004';
-
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        JOIN deleted d ON d.SubmissionID = i.SubmissionID
-        WHERE d.SubmissionStatusID = @SS_DISQUALIFIED
-          AND i.SubmissionStatusID <> @SS_DISQUALIFIED
-    )
-BEGIN
-ROLLBACK TRANSACTION;
-THROW 53001, N'DB error: Cannot change a disqualified submission back to another status.', 1;
-END
-
-    ;WITH DesiredStatus AS (
-        SELECT i.SubmissionID,
-               CASE
-                   WHEN i.SubmissionStatusID = @SS_DISQUALIFIED THEN @SS_DISQUALIFIED
-                   WHEN NULLIF(LTRIM(RTRIM(COALESCE(i.RepositoryURL, N''))), N'') IS NOT NULL
-                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.DemoURL, N''))), N'') IS NOT NULL
-                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.ReportURL, N''))), N'') IS NOT NULL
-                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.SlideURL, N''))), N'') IS NOT NULL
-                       THEN @SS_SUBMITTED
-                   ELSE @SS_DRAFT
-                   END AS StatusID
-        FROM inserted i
-    )
-UPDATE s
-SET SubmissionStatusID = ds.StatusID
-FROM Submissions s
-JOIN DesiredStatus ds ON ds.SubmissionID = s.SubmissionID
-WHERE s.SubmissionStatusID <> ds.StatusID;
-END;
-GO
-
 CREATE OR ALTER TRIGGER trg_EnforceOneTeamPerEvent
 ON TeamMembers
 AFTER INSERT, UPDATE

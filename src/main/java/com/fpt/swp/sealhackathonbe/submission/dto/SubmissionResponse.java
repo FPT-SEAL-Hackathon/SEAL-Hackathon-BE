@@ -13,7 +13,6 @@ public class SubmissionResponse {
     private UUID teamId;
     private UUID roundId;
     private UUID submissionStatusId;
-    private String submissionStatusName;
 
     private String repositoryUrl;
     private String demoUrl;

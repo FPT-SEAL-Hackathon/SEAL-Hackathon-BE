@@ -12,11 +12,8 @@ public class CategoryMapper {
     public CategoryResponse toCategoryResponse(Category category) {
         return CategoryResponse.builder()
                 .categoryId(category.getCategoryId())
-                .eventId(category.getEvent().getEventId())
                 .categoryName(category.getCategoryName())
                 .description(category.getDescription())
-                .sortOrder(category.getSortOrder())
-                .isActive(category.getIsActive())
                 .build();
     }
 

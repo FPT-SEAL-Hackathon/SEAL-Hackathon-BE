@@ -26,9 +26,8 @@ public class Mapper {
 
     public EventCriterionResponse toEventCriterionResponse(EventCriteria eventCriteria) {
         return EventCriterionResponse.builder()
-                .eventCriterionId(eventCriteria.getEventCriterionId())
                 .templateId(eventCriteria.getTemplateId())
-                .eventId(eventCriteria.getEvent().getEventId())
+                .eventId(eventCriteria.getTemplateId())
                 .criterionName(eventCriteria.getCriterionName())
                 .description(eventCriteria.getDescription())
                 .weight(eventCriteria.getWeight())
