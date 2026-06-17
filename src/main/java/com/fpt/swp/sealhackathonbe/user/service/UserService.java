@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
+import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
@@ -41,6 +43,9 @@ public class UserService {
 
     @Autowired
     private AccountStatusRepository accountStatusRepo;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
@@ -95,6 +100,16 @@ public class UserService {
         }
 
         throw new RuntimeException("Invalid email or password");
+    }
+    @Transactional
+    public void logout(String refreshToken) {
+
+        RefreshToken token = refreshTokenRepository
+                .findByTokenHash(refreshToken)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Refresh token not found"));
+
+        refreshTokenRepository.delete(token);
     }
     @Transactional
     public UserResponse register(RegisterRequest request) {

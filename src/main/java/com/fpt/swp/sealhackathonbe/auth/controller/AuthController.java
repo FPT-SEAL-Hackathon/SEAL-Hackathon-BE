@@ -57,7 +57,7 @@ public class AuthController {
     public ResponseEntity<String> logout(
             @Valid @RequestBody LogoutRequest request) {
 
-        authService.logout(request);
+        userService.logout(request);
 
         return ResponseEntity.ok("Logout successful");
     }
