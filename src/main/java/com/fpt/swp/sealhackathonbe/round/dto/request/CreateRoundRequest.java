@@ -9,10 +9,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
 public class CreateRoundRequest {
-    private UUID roundId;
-    private UUID categoryId;
     private String roundName;
     private String description;
     private Integer roundOrder;

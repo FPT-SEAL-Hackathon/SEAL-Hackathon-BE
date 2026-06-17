@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/v1/rounds/judges")
+@RequestMapping("api/v1/rounds")
 @RequiredArgsConstructor
 public class RoundJudgeController {
     private final RoundJudgeService roundJudgeService;
 
-    @PostMapping("/{roundId}")
+    @PostMapping("/judges/{roundId}")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
             @Valid @RequestBody AssignJudgesRequest request
@@ -25,12 +25,12 @@ public class RoundJudgeController {
         return roundJudgeService.assignJudges(roundId, request);
     }
 
-    @GetMapping("/{roundId}")
+    @GetMapping("/judges/{roundId}")
     public List<JudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
         return roundJudgeService.getJudgesByRound(roundId);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/judge/{id}")
     public void removeJudge(@PathVariable UUID id) {
         roundJudgeService.removeJudge(id);
     }
