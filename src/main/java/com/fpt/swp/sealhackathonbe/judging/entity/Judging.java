@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.judging.entity;
 
 
-import com.fpt.swp.sealhackathonbe.round.entity.RoundCriteria;
+import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,13 +14,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
-
-import com.fpt.swp.sealhackathonbe.criteria.entity.EventCriteria;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 
 @Entity
-@Table(name = "judging")
+@Table(name = "Judging")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,12 +39,12 @@ public class Judging {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RoundCriterionID", nullable = false)
-    private RoundCriteria roundCriterion;
+    private RoundCriterion roundCriterion;
 
-    @Column(name = "score_value", nullable = false, precision = 10, scale = 2)
+    @Column(name = "ScoreValue", nullable = false, precision = 10, scale = 2)
     private BigDecimal scoreValue;
 
-    @Column(name = "comment", columnDefinition = "TEXT")
+    @Column(name = "Comment", columnDefinition = "TEXT")
     private String comment;
 
     @Column(name = "IsCalibration")

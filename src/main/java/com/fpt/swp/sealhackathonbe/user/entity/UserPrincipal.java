@@ -17,7 +17,10 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority("USER"));
+        String role = user.getUserType() != null && user.getUserType().getTypeName() != null 
+                ? user.getUserType().getTypeName().replace(" ", "_").toUpperCase() 
+                : "USER";
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     @Override
@@ -38,6 +41,14 @@ public class UserPrincipal implements UserDetails {
     @Override
     public boolean isAccountNonLocked() {
         return true;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     @Override

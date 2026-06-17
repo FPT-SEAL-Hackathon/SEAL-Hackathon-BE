@@ -90,6 +90,19 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TeamResponse> getByEventId(UUID eventId) {
+        return teamsRepository.findByEventId(eventId)
+                .stream()
+                .map(team -> {
+                    List<TeamMembers> members =
+                            teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+                    return TeamMapper.toTeamResponse(team, members);
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TeamResponse getById(UUID teamId) {
         // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
         Teams team = teamsRepository.findById(teamId)
@@ -101,9 +114,12 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId) {
+    public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId) {
         // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
         // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
+        teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
+                .orElseThrow(() -> new RuntimeException("You do not belong to this team"));
+
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
@@ -142,11 +158,13 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private Event getActiveEvent(UUID eventId) {
+        // Team chi duoc tao trong event ton tai va chua bi soft delete.
         return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
 
     private void validateTeamSizeConfig(Event event) {
+        // Chan cau hinh event khong hop le truoc khi ap dung gioi han thanh vien.
         Integer minTeamSize = event.getMinTeamSize();
         Integer maxTeamSize = event.getMaxTeamSize();
 
@@ -177,6 +195,7 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private Event requireActiveEvent(Event event) {
+        // Quan he lazy co the null; nghiep vu team khong xu ly event da bi soft delete.
         if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
             throw new RuntimeException("Event not found");
         }

@@ -23,6 +23,9 @@ public class SubmissionMapper {
         response.setSubmissionStatusId(submission.getSubmissionStatus() != null
                 ? submission.getSubmissionStatus().getStatusId()
                 : submission.getSubmissionStatusId());
+        response.setSubmissionStatusName(submission.getSubmissionStatus() != null
+                ? submission.getSubmissionStatus().getStatusName()
+                : null);
 
         response.setRepositoryUrl(submission.getRepositoryUrl());
         response.setDemoUrl(submission.getDemoUrl());

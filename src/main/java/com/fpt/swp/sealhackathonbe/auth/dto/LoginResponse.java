@@ -1,11 +1,20 @@
 package com.fpt.swp.sealhackathonbe.auth.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.*;
+import org.hibernate.validator.constraints.UUID;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class LoginResponse {
 
-    private String token;
+    private String accessToken;
+
+    private String refreshToken;
+
+    private UserResponse user;
+
+
 }
