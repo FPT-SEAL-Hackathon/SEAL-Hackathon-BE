@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -16,4 +17,6 @@ public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
 
     @Query("SELECT rj.judge FROM RoundJudge rj WHERE rj.round.roundId = :roundId")
     List<User> findJudgesByRoundRoundId(@Param("roundId") UUID roundId);
+
+    Optional<RoundJudge> findByJudge_UserIdAndRound_RoundId(UUID userId, UUID roundId);
 }
