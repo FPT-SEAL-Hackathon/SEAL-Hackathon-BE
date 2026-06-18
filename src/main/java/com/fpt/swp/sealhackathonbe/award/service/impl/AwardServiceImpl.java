@@ -59,21 +59,21 @@ public class AwardServiceImpl implements AwardService {
     @Transactional
     public AwardResponse grantAward(AwardRequest request, UUID adminId) {
         Event event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay su kien voi ID: " + request.getEventId()));
+                .orElseThrow(() -> new EntityNotFoundException("Event not found with ID: " + request.getEventId()));
 
         Teams team = teamsRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay doi thi voi ID: " + request.getTeamId()));
+                .orElseThrow(() -> new EntityNotFoundException("Team not found with ID: " + request.getTeamId()));
 
         AwardTier tier = awardTierRepository.findById(request.getAwardTierId())
-                .orElseThrow(() -> new EntityNotFoundException("Hang giai thuong khong hop le."));
+                .orElseThrow(() -> new EntityNotFoundException("Invalid award tier."));
 
         User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new EntityNotFoundException("Tai khoan nguoi thuc hien khong ton tai."));
+                .orElseThrow(() -> new EntityNotFoundException("Executor account does not exist."));
 
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("Khong tim thay hang muc thi dau."));
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found."));
         }
 
         Award award = new Award();
@@ -96,7 +96,7 @@ public class AwardServiceImpl implements AwardService {
     @Transactional(readOnly = true)
     public AwardResponse getAwardById(UUID awardId) {
         Award award = awardRepository.findById(awardId)
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay du lieu giai thuong."));
+                .orElseThrow(() -> new EntityNotFoundException("Award data not found."));
         return convertToResponse(award);
     }
 
@@ -117,7 +117,7 @@ public class AwardServiceImpl implements AwardService {
                     response.setEventName(award.getEvent().getEventName());
                     response.setCategoryName(award.getCategory() != null
                             ? award.getCategory().getCategoryName()
-                            : "Giai Toan Su Kien");
+                            : "Event-wide Award");
                     response.setTeamName(award.getTeam().getTeamName());
                     response.setAwardTierName(award.getAwardTier().getTierName());
                     response.setAwardTitle(award.getAwardTitle());
@@ -194,12 +194,12 @@ public class AwardServiceImpl implements AwardService {
         Category category = getCategory(categoryId);
         Event event = category.getEvent();
         User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new EntityNotFoundException("Tai khoan nguoi thuc hien khong ton tai."));
+                .orElseThrow(() -> new EntityNotFoundException("Executor account does not exist."));
         Round round = resolveRound(categoryId, roundId);
 
         List<RoundRanking> rankings = getTop10Rankings(round.getRoundId(), categoryId);
         if (rankings.isEmpty()) {
-            throw new IllegalStateException("Chua co ranking top 10 cho category/round nay.");
+            throw new IllegalStateException("No top 10 ranking exists for this category/round.");
         }
 
         Map<Integer, AwardPattern> patternByRank = awardPatternRepository
@@ -257,21 +257,21 @@ public class AwardServiceImpl implements AwardService {
 
     private Category getCategory(UUID categoryId) {
         return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay category voi ID: " + categoryId));
+                .orElseThrow(() -> new EntityNotFoundException("Category not found with ID: " + categoryId));
     }
 
     private Round resolveRound(UUID categoryId, UUID roundId) {
         if (roundId != null) {
             Round round = roundRepository.findById(roundId)
-                    .orElseThrow(() -> new EntityNotFoundException("Khong tim thay round voi ID: " + roundId));
+                    .orElseThrow(() -> new EntityNotFoundException("Round not found with ID: " + roundId));
             if (!round.getCategory().getCategoryId().equals(categoryId)) {
-                throw new IllegalArgumentException("Round khong thuoc category da chon.");
+                throw new IllegalArgumentException("Round does not belong to the selected category.");
             }
             return round;
         }
 
         return roundRepository.findTopByCategoryCategoryIdOrderByRoundOrderDesc(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("Category nay chua co round de lay ranking."));
+                .orElseThrow(() -> new EntityNotFoundException("This category has no round available for ranking retrieval."));
     }
 
     private List<RoundRanking> getTop10Rankings(UUID roundId, UUID categoryId) {

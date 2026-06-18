@@ -28,7 +28,7 @@ public class AwardController {
     private final AwardService awardService;
 
     /**
-     * API Trao giải thưởng cho một đội thi (Dành cho Event Coordinator / Admin)
+     * API for granting an award to a team (for Event Coordinator / Admin)
      * POST /api/v1/awards
      */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
@@ -40,7 +40,7 @@ public class AwardController {
     }
 
     /**
-     * API Lấy chi tiết một giải thưởng cụ thể
+     * API for getting the details of a specific award
      * GET /api/v1/awards/{id}
      */
     @Operation(summary = "Get award details", description = "Get the details of a specific award by its ID.", operationId = "getAwardById")
@@ -51,7 +51,7 @@ public class AwardController {
     }
 
     /**
-     * API Lấy toàn bộ danh sách giải thưởng của một sự kiện cụ thể
+     * API for getting all awards of a specific event
      * GET /api/v1/awards/events/{eventId}
      */
     @Operation(summary = "Get awards by event", description = "Get all awards belonging to a specific event.", operationId = "getAwardsByEvent")

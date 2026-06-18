@@ -13,25 +13,25 @@ import java.util.UUID;
 @Setter
 public class AwardRequest {
 
-    @NotNull(message = "Event ID không được để trống")
+    @NotNull(message = "Event ID must not be empty")
     private UUID eventId;
 
-    private UUID categoryId; // Có thể null nếu là giải toàn sự kiện
+    private UUID categoryId; // Can be null for event-wide awards
 
-    @NotNull(message = "Team ID không được để trống")
+    @NotNull(message = "Team ID must not be empty")
     private UUID teamId;
 
-    @NotNull(message = "Award Tier ID không được để trống")
+    @NotNull(message = "Award Tier ID must not be empty")
     private UUID awardTierId;
 
-    @NotBlank(message = "Tên giải thưởng không được để trống")
-    @Size(max = 300, message = "Tên giải thưởng không được quá 300 ký tự")
+    @NotBlank(message = "Award title must not be empty")
+    @Size(max = 300, message = "Award title must not exceed 300 characters")
     private String awardTitle;
 
     private String description;
 
     private BigDecimal prizeValue;
 
-    @Size(max = 3, message = "Đơn vị tiền tệ tối đa 3 ký tự")
-    private String prizeCurrency; // Nếu trống, tầng Service sẽ tự gán mặc định là "VND"
+    @Size(max = 3, message = "Prize currency must not exceed 3 characters")
+    private String prizeCurrency; // If empty, the service layer defaults it to "VND"
 }
