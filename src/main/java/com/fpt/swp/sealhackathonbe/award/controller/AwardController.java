@@ -62,53 +62,55 @@ public class AwardController {
     }
 
     @Operation(
-            summary = "Create or update top 10 award pattern",
-            description = "Configure award title, tier, description, and prize for ranks 1-10 in a category.",
-            operationId = "saveTop10AwardPattern"
+            summary = "Create or update award patterns",
+            description = "Configure award title, tier, description, and prize by rank in a category.",
+            operationId = "saveAwardPatterns"
     )
-    @PostMapping("/categories/{categoryId}/top10-pattern")
-    public ResponseEntity<List<AwardPatternResponse>> saveTop10Pattern(
+    @PostMapping("/categories/{categoryId}/award-patterns")
+    public ResponseEntity<List<AwardPatternResponse>> saveAwardPatterns(
             @PathVariable UUID categoryId,
             @Valid @RequestBody AwardPatternRequest request
     ) {
-        return ResponseEntity.ok(awardService.saveTop10Pattern(categoryId, request));
+        return ResponseEntity.ok(awardService.saveAwardPatterns(categoryId, request));
     }
 
     @Operation(
-            summary = "Get top 10 award pattern",
-            description = "Get active award pattern for ranks 1-10 in a category.",
-            operationId = "getTop10AwardPattern"
+            summary = "Get award patterns",
+            description = "Get active award patterns in a category.",
+            operationId = "getAwardPatterns"
     )
-    @GetMapping("/categories/{categoryId}/top10-pattern")
-    public ResponseEntity<List<AwardPatternResponse>> getTop10Pattern(@PathVariable UUID categoryId) {
-        return ResponseEntity.ok(awardService.getTop10Pattern(categoryId));
+    @GetMapping("/categories/{categoryId}/award-patterns")
+    public ResponseEntity<List<AwardPatternResponse>> getAwardPatterns(@PathVariable UUID categoryId) {
+        return ResponseEntity.ok(awardService.getAwardPatterns(categoryId));
     }
 
     @Operation(
-            summary = "Get top 10 ranking by category",
-            description = "Get top 10 teams from RoundRankings by category. If roundId is omitted, the latest round of the category is used.",
-            operationId = "getTop10RankingByCategory"
+            summary = "Get top ranking by category",
+            description = "Get top ranked teams from RoundRankings by category. If roundId is omitted, the latest round of the category is used.",
+            operationId = "getTopRankingByCategory"
     )
-    @GetMapping("/categories/{categoryId}/rankings/top10")
-    public ResponseEntity<List<RankingAwardCandidateResponse>> getTop10RankingByCategory(
-            @PathVariable UUID categoryId,
-            @RequestParam(required = false) UUID roundId
-    ) {
-        return ResponseEntity.ok(awardService.getTop10RankingByCategory(categoryId, roundId));
-    }
-
-    @Operation(
-            summary = "Auto grant top 10 awards by pattern",
-            description = "Read top 10 ranking in a category and publish awards based on the configured top 10 pattern.",
-            operationId = "autoGrantTop10Awards"
-    )
-    @PostMapping("/categories/{categoryId}/auto-grant-top10")
-    public ResponseEntity<List<AwardResponse>> autoGrantTop10Awards(
+    @GetMapping("/categories/{categoryId}/rankings/top")
+    public ResponseEntity<List<RankingAwardCandidateResponse>> getTopRankingByCategory(
             @PathVariable UUID categoryId,
             @RequestParam(required = false) UUID roundId,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ResponseEntity.ok(awardService.getTopRankingByCategory(categoryId, roundId, limit));
+    }
+
+    @Operation(
+            summary = "Auto grant top awards by pattern",
+            description = "Read top ranking in a category and publish awards based on configured award patterns.",
+            operationId = "autoGrantTopAwards"
+    )
+    @PostMapping("/categories/{categoryId}/auto-grant-top")
+    public ResponseEntity<List<AwardResponse>> autoGrantTopAwards(
+            @PathVariable UUID categoryId,
+            @RequestParam(required = false) UUID roundId,
+            @RequestParam(defaultValue = "10") int limit,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(awardService.autoGrantTop10Awards(categoryId, roundId, principal.getUser().getUserId()));
+                .body(awardService.autoGrantTopAwards(categoryId, roundId, principal.getUser().getUserId(), limit));
     }
 }

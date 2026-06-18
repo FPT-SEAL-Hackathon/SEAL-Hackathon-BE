@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.award.dto;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,8 +15,7 @@ import java.util.UUID;
 public class AwardPatternItemRequest {
 
     @NotNull(message = "Rank position must not be empty")
-    @Min(value = 1, message = "Rank position must be between 1 and 10")
-    @Max(value = 10, message = "Rank position must be between 1 and 10")
+    @Min(value = 1, message = "Rank position must be at least 1")
     private Integer rankPosition;
 
     @NotNull(message = "Award tier ID must not be empty")

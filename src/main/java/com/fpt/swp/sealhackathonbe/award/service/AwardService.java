@@ -19,11 +19,11 @@ public interface AwardService {
 
     List<HallOfFameResponse> getHallOfFameData();
 
-    List<AwardPatternResponse> saveTop10Pattern(UUID categoryId, AwardPatternRequest request);
+    List<AwardPatternResponse> saveAwardPatterns(UUID categoryId, AwardPatternRequest request);
 
-    List<AwardPatternResponse> getTop10Pattern(UUID categoryId);
+    List<AwardPatternResponse> getAwardPatterns(UUID categoryId);
 
-    List<RankingAwardCandidateResponse> getTop10RankingByCategory(UUID categoryId, UUID roundId);
+    List<RankingAwardCandidateResponse> getTopRankingByCategory(UUID categoryId, UUID roundId, int limit);
 
-    List<AwardResponse> autoGrantTop10Awards(UUID categoryId, UUID roundId, UUID adminId);
+    List<AwardResponse> autoGrantTopAwards(UUID categoryId, UUID roundId, UUID adminId, int limit);
 }

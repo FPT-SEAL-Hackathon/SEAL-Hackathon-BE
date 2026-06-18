@@ -28,6 +28,7 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,7 +129,7 @@ public class AwardServiceImpl implements AwardService {
 
     @Override
     @Transactional
-    public List<AwardPatternResponse> saveTop10Pattern(UUID categoryId, AwardPatternRequest request) {
+    public List<AwardPatternResponse> saveAwardPatterns(UUID categoryId, AwardPatternRequest request) {
         Category category = getCategory(categoryId);
         Event event = category.getEvent();
 
@@ -168,12 +169,12 @@ public class AwardServiceImpl implements AwardService {
             awardPatternRepository.save(pattern);
         }
 
-        return getTop10Pattern(categoryId);
+        return getAwardPatterns(categoryId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AwardPatternResponse> getTop10Pattern(UUID categoryId) {
+    public List<AwardPatternResponse> getAwardPatterns(UUID categoryId) {
         return awardPatternRepository.findByCategoryCategoryIdAndIsActiveTrueOrderByRankPositionAsc(categoryId).stream()
                 .map(this::convertToPatternResponse)
                 .collect(Collectors.toList());
@@ -181,25 +182,25 @@ public class AwardServiceImpl implements AwardService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RankingAwardCandidateResponse> getTop10RankingByCategory(UUID categoryId, UUID roundId) {
+    public List<RankingAwardCandidateResponse> getTopRankingByCategory(UUID categoryId, UUID roundId, int limit) {
         Round round = resolveRound(categoryId, roundId);
-        return getTop10Rankings(round.getRoundId(), categoryId).stream()
+        return getTopRankings(round.getRoundId(), categoryId, limit).stream()
                 .map(this::convertToRankingCandidate)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public List<AwardResponse> autoGrantTop10Awards(UUID categoryId, UUID roundId, UUID adminId) {
+    public List<AwardResponse> autoGrantTopAwards(UUID categoryId, UUID roundId, UUID adminId, int limit) {
         Category category = getCategory(categoryId);
         Event event = category.getEvent();
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new EntityNotFoundException("Executor account does not exist."));
         Round round = resolveRound(categoryId, roundId);
 
-        List<RoundRanking> rankings = getTop10Rankings(round.getRoundId(), categoryId);
+        List<RoundRanking> rankings = getTopRankings(round.getRoundId(), categoryId, limit);
         if (rankings.isEmpty()) {
-            throw new IllegalStateException("No top 10 ranking exists for this category/round.");
+            throw new IllegalStateException("No ranking exists for this category/round.");
         }
 
         Map<Integer, AwardPattern> patternByRank = awardPatternRepository
@@ -210,6 +211,7 @@ public class AwardServiceImpl implements AwardService {
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
+        validateAwardPatternsExist(rankings, patternByRank);
 
         return rankings.stream()
                 .map(ranking -> grantRankingAward(event, category, admin, ranking, patternByRank))
@@ -274,9 +276,34 @@ public class AwardServiceImpl implements AwardService {
                 .orElseThrow(() -> new EntityNotFoundException("This category has no round available for ranking retrieval."));
     }
 
-    private List<RoundRanking> getTop10Rankings(UUID roundId, UUID categoryId) {
+    private List<RoundRanking> getTopRankings(UUID roundId, UUID categoryId, int limit) {
+        validateLimit(limit);
         return roundRankingRepository
-                .findTop10ByRoundRoundIdAndCategoryCategoryIdOrderByRankPositionAsc(roundId, categoryId);
+                .findByRoundRoundIdAndCategoryCategoryIdOrderByRankPositionAsc(
+                        roundId,
+                        categoryId,
+                        PageRequest.of(0, limit)
+                );
+    }
+
+    private void validateLimit(int limit) {
+        if (limit < 1) {
+            throw new IllegalArgumentException("Award limit must be greater than 0.");
+        }
+    }
+
+    private void validateAwardPatternsExist(
+            List<RoundRanking> rankings,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        List<Integer> missingRanks = rankings.stream()
+                .map(RoundRanking::getRankPosition)
+                .filter(rank -> !patternByRank.containsKey(rank))
+                .collect(Collectors.toList());
+
+        if (!missingRanks.isEmpty()) {
+            throw new IllegalStateException("Award pattern has not been configured for ranks: " + missingRanks);
+        }
     }
 
     private AwardResponse convertToResponse(Award award) {
