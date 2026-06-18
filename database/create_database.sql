@@ -542,6 +542,22 @@ GO
 -- SECTION 12: AWARDS & NOTIFICATIONS
 -- ============================================================
 
+CREATE TABLE AwardPatterns (
+                        PatternID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                        EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
+                        CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+                        RankPosition INT NOT NULL,
+                        AwardTierID UNIQUEIDENTIFIER NOT NULL REFERENCES AwardTier(TierID),
+                        AwardTitle NVARCHAR(300) NOT NULL,
+                        Description NVARCHAR(MAX) NULL,
+                        PrizeValue DECIMAL(12,2) NULL,
+                        PrizeCurrency NCHAR(3) NULL DEFAULT 'VND',
+                        IsActive BIT NOT NULL DEFAULT 1,
+                        CONSTRAINT UQ_AwardPatterns_Category_Rank UNIQUE (CategoryID, RankPosition),
+                        CONSTRAINT CK_AwardPatterns_RankPosition CHECK (RankPosition BETWEEN 1 AND 10)
+);
+GO
+
 CREATE TABLE Awards (
                         AwardID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
                         EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
