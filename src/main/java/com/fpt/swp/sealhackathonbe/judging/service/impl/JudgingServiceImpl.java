@@ -1,11 +1,9 @@
 package com.fpt.swp.sealhackathonbe.judging.service.impl;
 
-import com.fpt.swp.sealhackathonbe.auth.service.AuthenticationService;
-import com.fpt.swp.sealhackathonbe.criteria.repository.EventCriterionRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
-import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
@@ -13,19 +11,15 @@ import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
-import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
-import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,7 +31,7 @@ public class JudgingServiceImpl implements JudgingService {
     private final SubmissionsRepository submissionRepository;
     private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundCriterionRepository roundCriterionRepository;
-    private final AuthenticationService authenticationService;
+    private final AuthenticationServiceImpl authenticationServiceImpl;
     private final com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService roundJudgeService;
     private final com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository roundJudgeRepository;
 
@@ -57,7 +51,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + firstDto.getSubmissionId()));
 
         // 2. Fetch & validate that the actor (audit user) exists
-        User actor = authenticationService.getCurrentUser();
+        User actor = authenticationServiceImpl.getCurrentUser();
         if (actor == null) {
             throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
         }
@@ -147,7 +141,7 @@ public class JudgingServiceImpl implements JudgingService {
         }
 
         // 1. Fetch & validate that the actor exists
-        User actor = authenticationService.getCurrentUser();
+        User actor = authenticationServiceImpl.getCurrentUser();
         if (actor == null) {
             throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
         }
