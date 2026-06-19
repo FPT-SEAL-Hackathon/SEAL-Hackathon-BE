@@ -12,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundStatusRepository;
 import com.fpt.swp.sealhackathonbe.round.service.RoundService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,14 +29,14 @@ public class RoundServiceImpl implements RoundService {
     private final RoundMapper roundMapper;
 
     @Override
-    public RoundResponse create(CreateRoundRequest request) {
+    public RoundResponse create(UUID categoryId, CreateRoundRequest request) {
         Category category = categoryRepository
-                .findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         RoundStatus status = roundStatusRepository
                 .findById(request.getRoundStatusId())
-                .orElseThrow(() -> new RuntimeException("Round status not found"));
-        int currentRound = roundRepository.findMaxRoundOrderByCategory(request.getCategoryId());
+                .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
+        int currentRound = roundRepository.findMaxRoundOrderByCategory(categoryId);
         int nextRound = currentRound + 1;
         Round round = Round.builder()
                 .roundId(UUID.randomUUID())
@@ -58,7 +59,7 @@ public class RoundServiceImpl implements RoundService {
     public RoundResponse getById(UUID roundId) {
         Round round = roundRepository
                 .findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         return roundMapper.toRoundResponse(round);
     }
 
@@ -73,9 +74,9 @@ public class RoundServiceImpl implements RoundService {
     @Override
     public RoundResponse update(UUID roundId, UpdateRoundRequest request) {
         Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         RoundStatus roundStatus = roundStatusRepository.findById(request.getRoundStatusId())
-                        .orElseThrow(() -> new RuntimeException("Round status not found"));
+                        .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
 
         round.setRoundName(request.getRoundName());
         round.setDescription(request.getDescription());
@@ -94,7 +95,7 @@ public class RoundServiceImpl implements RoundService {
     @Override
     public void delete(UUID roundId) {
         Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
 
         if (!"Upcoming".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
             throw new IllegalArgumentException("Only delete round at status 'Upcoming'");
@@ -111,7 +112,7 @@ public class RoundServiceImpl implements RoundService {
     @Override
     public RoundResponse getFinalRound(UUID categoryId) {
         if (!categoryRepository.existsById(categoryId)) {
-            throw new RuntimeException("Category not found");
+            throw new EntityNotFoundException("Category not found");
         }
         return roundRepository.findTopByCategoryCategoryIdOrderByRoundOrderDesc(categoryId)
                 .map(roundMapper::toRoundResponse)
@@ -122,7 +123,7 @@ public class RoundServiceImpl implements RoundService {
     public Integer getAdvancementTopN(UUID roundId) {
         Round round = roundRepository
                 .findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         return round.getAdvancementTopN();
     }
 

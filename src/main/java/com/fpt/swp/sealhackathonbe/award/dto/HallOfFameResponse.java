@@ -9,7 +9,7 @@ public class HallOfFameResponse {
     private String eventName;
     private String categoryName;
     private String teamName;
-    private String awardTierName; // VD: Giải Nhất, Giải Nhì
-    private String awardTitle;    // VD: Quán quân Hackathon 2026
-    private String leaderName;    // Tên đội trưởng để vinh danh
+    private String awardTierName; // Example: First Prize, Second Prize
+    private String awardTitle;    // Example: Hackathon 2026 Champion
+    private String leaderName;    // Team leader name for recognition
 }

@@ -12,6 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class EventCriterionResponse {
+    private UUID eventCriterionId;
     private UUID templateId;
     private UUID eventId;
     private String criterionName;

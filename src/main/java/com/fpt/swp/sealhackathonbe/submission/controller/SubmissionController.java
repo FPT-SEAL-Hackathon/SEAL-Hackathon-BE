@@ -1,6 +1,6 @@
 package com.fpt.swp.sealhackathonbe.submission.controller;
 
-import com.fpt.swp.sealhackathonbe.auth.service.AuthenticationService;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
@@ -36,7 +36,7 @@ public class SubmissionController {
     private final SubmissionCommandService submissionCommandService;
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
-    private final AuthenticationService authenticationService;
+    private final AuthenticationServiceImpl authenticationServiceImpl;
 
     @Operation(
             summary = "Submit work",
@@ -79,7 +79,7 @@ public class SubmissionController {
             description = "Get all submissions in one round. Use an organizer account."
     )
     @GetMapping("/admin/rounds/{roundId}/submissions")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
@@ -121,6 +121,6 @@ public class SubmissionController {
     }
 
     private UUID currentUserId() {
-        return authenticationService.getCurrentUser().getUserId();
+        return authenticationServiceImpl.getCurrentUser().getUserId();
     }
 }

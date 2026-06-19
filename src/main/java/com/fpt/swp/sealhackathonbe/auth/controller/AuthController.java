@@ -8,20 +8,14 @@
  */
 package com.fpt.swp.sealhackathonbe.auth.controller;
 
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
-import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
+import com.fpt.swp.sealhackathonbe.auth.dto.*;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -47,4 +41,28 @@ public class AuthController {
         LoginResponse response = userService.verify(request);
         return ResponseEntity.ok(response);
     }
+//    @PostMapping("/refresh")
+//    public ResponseEntity<LoginResponse> refresh(
+//            @Valid @RequestBody RefreshTokenRequest request
+//    ) {
+//        LoginResponse response = authService.refresh(request);
+//        return ResponseEntity.ok(response);
+//    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            @RequestBody LogoutRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+
+        String accessToken = authHeader.substring(7);
+
+        userService.logout(request.getRefreshToken());
+
+        return ResponseEntity.ok("Logout successful");
+    }
+//        @PostMapping("/logout")
+//        public ResponseEntity<String> logout() {
+//            return ResponseEntity.ok("Logout successful");
+//        }
+
 }

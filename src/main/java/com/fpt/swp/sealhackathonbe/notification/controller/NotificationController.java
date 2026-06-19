@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 @Tag(name = "Notification Management", description = "APIs for sending and managing notifications")
 public class NotificationController {
@@ -68,7 +68,7 @@ public class NotificationController {
             description = "Get a paginated list of notifications for the authenticated user.",
             operationId = "getMyNotifications"
     )
-    @GetMapping
+    @GetMapping("/getMyNotifications")
     public ResponseEntity<Map<String, Object>> getMyNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -214,7 +214,7 @@ public class NotificationController {
             description = "Delete a specific notification belonging to the authenticated user.",
             operationId = "deleteNotification"
     )
-    @DeleteMapping("/{notificationId}")
+    @DeleteMapping("/deleteNotification/{notificationId}")
     public ResponseEntity<Map<String, Object>> deleteNotification(
             @PathVariable UUID notificationId,
             Authentication authentication

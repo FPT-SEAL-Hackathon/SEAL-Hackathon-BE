@@ -542,6 +542,22 @@ GO
 -- SECTION 12: AWARDS & NOTIFICATIONS
 -- ============================================================
 
+CREATE TABLE AwardPatterns (
+                        PatternID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                        EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
+                        CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+                        RankPosition INT NOT NULL,
+                        AwardTierID UNIQUEIDENTIFIER NOT NULL REFERENCES AwardTier(TierID),
+                        AwardTitle NVARCHAR(300) NOT NULL,
+                        Description NVARCHAR(MAX) NULL,
+                        PrizeValue DECIMAL(12,2) NULL,
+                        PrizeCurrency NCHAR(3) NULL DEFAULT 'VND',
+                        IsActive BIT NOT NULL DEFAULT 1,
+                        CONSTRAINT UQ_AwardPatterns_Category_Rank UNIQUE (CategoryID, RankPosition),
+                        CONSTRAINT CK_AwardPatterns_RankPosition CHECK (RankPosition BETWEEN 1 AND 10)
+);
+GO
+
 CREATE TABLE Awards (
                         AwardID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
                         EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
@@ -556,6 +572,14 @@ CREATE TABLE Awards (
                         AwardedByID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
                         IsPublished BIT NOT NULL DEFAULT 0,
                         PublishedAt DATETIME2 NULL
+);
+GO
+
+CREATE TABLE Certificates (
+                              CertificateID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                              AwardID UNIQUEIDENTIFIER NOT NULL UNIQUE REFERENCES Awards(AwardID),
+                              CertificateCode NVARCHAR(100) NOT NULL UNIQUE,
+                              GeneratedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
 );
 GO
 
@@ -1216,6 +1240,50 @@ CREATE NONCLUSTERED INDEX IX_RoundRankings_Round_Cat ON RoundRankings(RoundID, C
 CREATE NONCLUSTERED INDEX IX_EventRankings_Event_Cat ON EventRankings(EventID, CategoryID);
 CREATE NONCLUSTERED INDEX IX_Rounds_Categories ON Rounds(CategoryID);
 CREATE NONCLUSTERED INDEX IX_Categories_Event ON Categories(EventID);
+GO
+
+CREATE OR ALTER TRIGGER trg_EnforceSubmissionStatusRules
+ON Submissions
+AFTER INSERT, UPDATE
+                                  AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @SS_DRAFT UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000001';
+    DECLARE @SS_SUBMITTED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000002';
+    DECLARE @SS_DISQUALIFIED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000004';
+
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN deleted d ON d.SubmissionID = i.SubmissionID
+        WHERE d.SubmissionStatusID = @SS_DISQUALIFIED
+          AND i.SubmissionStatusID <> @SS_DISQUALIFIED
+    )
+BEGIN
+ROLLBACK TRANSACTION;
+THROW 53001, N'DB error: Cannot change a disqualified submission back to another status.', 1;
+END
+
+    ;WITH DesiredStatus AS (
+        SELECT i.SubmissionID,
+               CASE
+                   WHEN i.SubmissionStatusID = @SS_DISQUALIFIED THEN @SS_DISQUALIFIED
+                   WHEN NULLIF(LTRIM(RTRIM(COALESCE(i.RepositoryURL, N''))), N'') IS NOT NULL
+                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.DemoURL, N''))), N'') IS NOT NULL
+                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.ReportURL, N''))), N'') IS NOT NULL
+                     OR NULLIF(LTRIM(RTRIM(COALESCE(i.SlideURL, N''))), N'') IS NOT NULL
+                       THEN @SS_SUBMITTED
+                   ELSE @SS_DRAFT
+                   END AS StatusID
+        FROM inserted i
+    )
+UPDATE s
+SET SubmissionStatusID = ds.StatusID
+FROM Submissions s
+JOIN DesiredStatus ds ON ds.SubmissionID = s.SubmissionID
+WHERE s.SubmissionStatusID <> ds.StatusID;
+END;
 GO
 
 CREATE OR ALTER TRIGGER trg_EnforceOneTeamPerEvent

@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-@Builder
 public class UpdateImportedCriterionRequest {
     private BigDecimal weight;
     private BigDecimal maxScore;
