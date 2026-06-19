@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.award.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -11,17 +12,13 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class AwardRequest {
+public class AwardPatternItemRequest {
 
-    @NotNull(message = "Event ID must not be empty")
-    private UUID eventId;
+    @NotNull(message = "Rank position must not be empty")
+    @Min(value = 1, message = "Rank position must be at least 1")
+    private Integer rankPosition;
 
-    private UUID categoryId; // Can be null for event-wide awards
-
-    @NotNull(message = "Team ID must not be empty")
-    private UUID teamId;
-
-    @NotNull(message = "Award Tier ID must not be empty")
+    @NotNull(message = "Award tier ID must not be empty")
     private UUID awardTierId;
 
     @NotBlank(message = "Award title must not be empty")
@@ -33,5 +30,5 @@ public class AwardRequest {
     private BigDecimal prizeValue;
 
     @Size(max = 3, message = "Prize currency must not exceed 3 characters")
-    private String prizeCurrency; // If empty, the service layer defaults it to "VND"
+    private String prizeCurrency;
 }
