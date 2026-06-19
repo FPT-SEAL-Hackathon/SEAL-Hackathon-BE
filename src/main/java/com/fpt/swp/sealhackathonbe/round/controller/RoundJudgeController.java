@@ -3,9 +3,11 @@ package com.fpt.swp.sealhackathonbe.round.controller;
 import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
+import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
 import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,12 +15,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/v1/rounds")
+@RequestMapping("api/v1")
 @RequiredArgsConstructor
 public class RoundJudgeController {
     private final RoundJudgeService roundJudgeService;
 
-    @PostMapping("/judges/{roundId}")
+    @PostMapping("/round/judges/{roundId}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
@@ -27,12 +29,17 @@ public class RoundJudgeController {
         return roundJudgeService.assignJudges(roundId, request);
     }
 
-    @GetMapping("/judges/{roundId}")
+    @GetMapping("/round/judges/{roundId}")
     public List<JudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
         return roundJudgeService.getJudgesByRound(roundId);
     }
 
-    @DeleteMapping("/judge/{id}")
+    @GetMapping("/judge/rounds/{judgeId}")
+    public ResponseEntity<List<RoundResponse>> getRoundsByJudge(@PathVariable UUID judgeId) {
+        return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
+    }
+
+    @DeleteMapping("/round/judge/{id}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void removeJudge(@PathVariable UUID id) {
         roundJudgeService.removeJudge(id);
