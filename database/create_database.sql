@@ -15,6 +15,7 @@ DECLARE @AS_ACTIVE            UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000
 DECLARE @AS_REJECTED          UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000003';
 DECLARE @AS_SUSPENDED         UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000004';
 DECLARE @AS_TEMPORARY         UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000005';
+DECLARE @AS_UNVERIFIED        UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000006';
 
 -- EventStatus
 DECLARE @ES_DRAFT             UNIQUEIDENTIFIER = '30000000-0000-0000-0000-000000000001';
@@ -74,7 +75,9 @@ INSERT INTO AccountStatus (StatusID, StatusName) VALUES
                                                      (@AS_ACTIVE, N'Active'),
                                                      (@AS_REJECTED, N'Rejected'),
                                                      (@AS_SUSPENDED, N'Suspended'),
-                                                     (@AS_TEMPORARY, N'Temporary');
+                                                     (@AS_TEMPORARY, N'Temporary'),
+                                                     (@AS_UNVERIFIED, N'Unverified');
+
 
 CREATE TABLE EventStatus (
                              StatusID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
