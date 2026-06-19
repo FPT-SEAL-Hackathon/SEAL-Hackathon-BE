@@ -82,6 +82,13 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get teams by event")
+    @GetMapping("/events/{eventId}/teams")
+    public ResponseEntity<List<TeamResponse>> getTeamsByEvent(@PathVariable UUID eventId) {
+        List<TeamResponse> response = teamService.getByEventId(eventId);
+        return ResponseEntity.ok(response);
+    }
+
     // Quyen hien tai: chi tai khoan dang la member active cua teamId.
     // userId duoc xem cung phai la member active cua chinh team do.
     // Seed test Alpha: dang nhap api.alpha.leader@seal.test hoac api.alpha.member@seal.test.

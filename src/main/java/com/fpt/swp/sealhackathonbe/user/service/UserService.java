@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
-import com.fpt.swp.sealhackathonbe.auth.service.JWTService;
+import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
@@ -28,7 +30,7 @@ import java.util.UUID;
 public class UserService {
 
     @Autowired
-    private JWTService jwtService;
+    private JwtServiceImpl jwtServiceImpl;
 
     @Autowired
     private AuthenticationManager authManager;
@@ -41,6 +43,9 @@ public class UserService {
 
     @Autowired
     private AccountStatusRepository accountStatusRepo;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
@@ -63,9 +68,9 @@ public class UserService {
 
             User user = userPrincipal.getUser();
 
-            String accessToken = jwtService.generateAccessToken(user);
+            String accessToken = jwtServiceImpl.generateAccessToken(user);
 
-            String refreshToken = jwtService.generateRefreshToken(user);
+            String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
             String studentCode =
                     user.getFptStudentCode() != null
@@ -87,6 +92,16 @@ public class UserService {
                             .createdAt(user.getCreatedAt())
                             .build();
 
+            RefreshToken tokenEntity = RefreshToken.builder()
+                    .user(user)
+                    .tokenHash(refreshToken)   // ⚠️ LƯU REFRESH TOKEN (KHÔNG PHẢI ACCESS)
+                    .issuedAt(LocalDateTime.now())
+                    .expiresAt(LocalDateTime.now().plusDays(7))
+                    .revokedAt(null)
+                    .deviceInfo("WEB")
+                    .build();
+
+            refreshTokenRepository.save(tokenEntity);
             return LoginResponse.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
@@ -95,6 +110,18 @@ public class UserService {
         }
 
         throw new RuntimeException("Invalid email or password");
+    }
+    @Transactional
+    public void logout(String refreshToken) {
+
+        RefreshToken token = refreshTokenRepository
+                .findByTokenHash(refreshToken)
+                .orElseThrow(() ->
+                        new RuntimeException("Token not found"));
+
+        token.setRevokedAt(LocalDateTime.now());
+
+        refreshTokenRepository.save(token); // 🔥 nên thêm
     }
     @Transactional
     public UserResponse register(RegisterRequest request) {

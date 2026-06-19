@@ -9,7 +9,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
 public class AssignJudgesRequest {
     private List<UUID> userIds;
 }

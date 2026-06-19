@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-@Builder
 public class UpdateSpecificCriterionRequest {
     private String criterionName;
     private String description;

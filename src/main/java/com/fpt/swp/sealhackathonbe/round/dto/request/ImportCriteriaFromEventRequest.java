@@ -7,7 +7,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
 public class ImportCriteriaFromEventRequest {
     private List<UUID> eventCriterionIds;
 }
