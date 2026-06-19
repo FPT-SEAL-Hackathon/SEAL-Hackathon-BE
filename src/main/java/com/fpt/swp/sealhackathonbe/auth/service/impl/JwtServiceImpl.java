@@ -1,22 +1,34 @@
 package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
+import com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse;
+import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class JwtServiceImpl {
+public class JwtServiceImpl implements JwtService {
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 2;
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24;
 
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
     @Value("${jwt.secret}")
     private String secretKey;
 
@@ -40,11 +52,12 @@ public class JwtServiceImpl {
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000L * 60 * 30)
+                        new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
 
     // 🔥 REFRESH TOKEN (giữ nhẹ, không cần role)
     public String generateRefreshToken(User user) {
@@ -53,7 +66,7 @@ public class JwtServiceImpl {
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24)
+                        new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
@@ -63,6 +76,46 @@ public class JwtServiceImpl {
     // PARSE JWT
     // =========================
 
+    @Transactional
+    public TokenResponse refresh(
+            RefreshTokenRequest request) {
+
+        String refreshToken = request.getRefreshToken();
+
+        RefreshToken tokenEntity =
+                refreshTokenRepository
+                        .findByTokenHash(refreshToken)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Refresh token not found"
+                                )
+                        );
+
+        if (tokenEntity.getRevokedAt() != null) {
+            throw new RuntimeException(
+                    "Refresh token revoked"
+            );
+        }
+
+        if (tokenEntity.getExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new RuntimeException(
+                    "Refresh token expired"
+            );
+        }
+
+        User user = tokenEntity.getUser();
+
+        String newAccessToken = generateAccessToken(user);
+
+        return TokenResponse.builder()
+                .accessToken(newAccessToken)
+                .build();
+    }
+    // =========================
+    // Các Hàm phụ ở dưới
+    // =========================
     public String extractUserName(String token) {
         return extractAllClaims(token).getSubject();
     }
@@ -75,7 +128,7 @@ public class JwtServiceImpl {
         return extractAllClaims(token).getExpiration();
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
                 .build()
@@ -83,7 +136,7 @@ public class JwtServiceImpl {
                 .getBody();
     }
 
-    private boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
@@ -98,7 +151,7 @@ public class JwtServiceImpl {
     // KEY
     // =========================
 
-    private Key getKey() {
+    public Key getKey() {
         byte[] keyBytes = secretKey.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
     }

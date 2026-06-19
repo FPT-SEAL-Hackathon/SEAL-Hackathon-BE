@@ -9,6 +9,7 @@
 package com.fpt.swp.sealhackathonbe.auth.controller;
 
 import com.fpt.swp.sealhackathonbe.auth.dto.*;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -24,6 +25,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtServiceImpl jwtServiceImpl;
     // API đăng ký tài khoản mới
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
@@ -59,6 +63,14 @@ public class AuthController {
         userService.logout(request.getRefreshToken());
 
         return ResponseEntity.ok("Logout successful");
+    }
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(
+            @RequestBody RefreshTokenRequest request) {
+
+        return ResponseEntity.ok(
+                jwtServiceImpl.refresh(request)
+        );
     }
 //        @PostMapping("/logout")
 //        public ResponseEntity<String> logout() {
