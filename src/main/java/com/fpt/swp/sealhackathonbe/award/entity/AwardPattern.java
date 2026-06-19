@@ -75,7 +75,7 @@ public class AwardPattern {
 
     @Size(max = 3)
     @Nationalized
-    @ColumnDefault("'VND'")
+    @ColumnDefault("'USD'")
     @Column(name = "PrizeCurrency", length = 3)
     private String prizeCurrency;
 

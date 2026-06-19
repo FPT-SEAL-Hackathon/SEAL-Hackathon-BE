@@ -66,7 +66,7 @@ public class AwardController {
             description = "Configure award title, tier, description, and prize by rank in a category.",
             operationId = "saveAwardPatterns"
     )
-    @PostMapping("/categories/{categoryId}/award-patterns")
+    @PostMapping("/templates/categories/{categoryId}/award-patterns")
     public ResponseEntity<List<AwardPatternResponse>> saveAwardPatterns(
             @PathVariable UUID categoryId,
             @Valid @RequestBody AwardPatternRequest request
