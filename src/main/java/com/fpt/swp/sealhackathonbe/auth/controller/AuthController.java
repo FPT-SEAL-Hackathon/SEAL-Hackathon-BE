@@ -72,14 +72,9 @@ public class AuthController {
                 jwtServiceImpl.refresh(request)
         );
     }
-    @GetMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(
-            @RequestParam String token) {
+//        @PostMapping("/logout")
+//        public ResponseEntity<String> logout() {
+//            return ResponseEntity.ok("Logout successful");
+//        }
 
-        jwtServiceImpl.verifyEmail(token);
-
-        return ResponseEntity.ok(
-                "Email verified successfully"
-        );
-    }
 }

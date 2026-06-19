@@ -3,13 +3,9 @@ package com.fpt.swp.sealhackathonbe.auth.service.impl;
 import com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse;
 import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
-import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
-import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtService;
-import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
-import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -33,13 +29,6 @@ public class JwtServiceImpl implements JwtService {
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
-
-
-    @Autowired
-    private VerificationTokenRepository verificationTokenRepository;
-
-    @Autowired
-    private AccountStatusRepository accountStatusRepo;
     @Value("${jwt.secret}")
     private String secretKey;
 
@@ -165,44 +154,5 @@ public class JwtServiceImpl implements JwtService {
     public Key getKey() {
         byte[] keyBytes = secretKey.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-    @Transactional
-    public void verifyEmail(String token) {
-
-        VerificationToken verificationToken =
-                verificationTokenRepository
-                        .findByTokenHash(token)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Invalid verification token"
-                                )
-                        );
-
-        if (verificationToken.getUsedAt() != null) {
-            throw new RuntimeException(
-                    "Verification token already used"
-            );
-        }
-
-        if (verificationToken.getExpiresAt()
-                .isBefore(LocalDateTime.now())) {
-
-            throw new RuntimeException(
-                    "Verification token expired"
-            );
-        }
-
-        User user = verificationToken.getUser();
-
-        AccountStatus activeStatus =
-                accountStatusRepo
-                        .findByStatusName("ACTIVE")
-                        .orElseThrow();
-
-        user.setAccountStatus(activeStatus);
-
-        verificationToken.setUsedAt(
-                LocalDateTime.now()
-        );
     }
 }
