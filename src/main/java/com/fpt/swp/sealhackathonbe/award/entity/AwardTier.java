@@ -15,7 +15,7 @@ import java.util.UUID;
 @Table(name = "AwardTier")
 public class AwardTier {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Đã sửa lỗi Sequence
+    @GeneratedValue(strategy = GenerationType.UUID) // Fixed sequence issue
     @Column(name = "TierID", nullable = false)
     private UUID id;
 

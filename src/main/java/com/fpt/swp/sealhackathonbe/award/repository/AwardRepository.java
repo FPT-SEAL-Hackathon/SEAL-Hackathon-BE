@@ -11,4 +11,10 @@ public interface AwardRepository extends JpaRepository<Award, UUID> {
     List<Award> findAllByEventEventId(UUID eventId);
     List<Award> findByIsPublishedTrueOrderByAwardedAtDesc();
     Optional<Award> findByIdAndIsPublishedTrue(UUID id);
+    Optional<Award> findByEventEventIdAndCategoryCategoryIdAndTeamTeamIdAndAwardTitle(
+            UUID eventId,
+            UUID categoryId,
+            UUID teamId,
+            String awardTitle
+    );
 }

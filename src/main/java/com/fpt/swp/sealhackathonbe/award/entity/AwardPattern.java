@@ -2,9 +2,17 @@ package com.fpt.swp.sealhackathonbe.award.entity;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -13,37 +21,43 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "Awards")
-public class Award {
+@Table(
+        name = "AwardPatterns",
+        uniqueConstraints = @UniqueConstraint(
+                name = "UQ_AwardPatterns_Category_Rank",
+                columnNames = {"CategoryID", "RankPosition"}
+        )
+)
+public class AwardPattern {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Standard JPA UUID generation
-    @Column(name = "AwardID", nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "PatternID", nullable = false)
     private UUID id;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "EventID", nullable = false)
-    private Event event; // Standardized field name
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CategoryID")
-    private Category category; // Standardized field name
+    private Event event;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "TeamID", nullable = false)
-    private Teams team; // Standardized field name
+    @JoinColumn(name = "CategoryID", nullable = false)
+    private Category category;
+
+    @NotNull
+    @Column(name = "RankPosition", nullable = false)
+    private Integer rankPosition;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "AwardTierID", nullable = false)
-    private AwardTier awardTier; // Standardized field name
+    private AwardTier awardTier;
 
     @Size(max = 300)
     @NotNull
@@ -61,24 +75,12 @@ public class Award {
 
     @Size(max = 3)
     @Nationalized
-    @ColumnDefault("'VND'")
+    @ColumnDefault("'USD'")
     @Column(name = "PrizeCurrency", length = 3)
     private String prizeCurrency;
 
     @NotNull
-    @Column(name = "AwardedAt", nullable = false)
-    private Instant awardedAt; // Assigned in the service layer
-
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "AwardedByID", nullable = false)
-    private User awardedBy; // Standardized field name
-
-    @NotNull
-    @ColumnDefault("0")
-    @Column(name = "IsPublished", nullable = false)
-    private Boolean isPublished = false; // Default value assigned in Java code
-
-    @Column(name = "PublishedAt")
-    private Instant publishedAt;
+    @ColumnDefault("1")
+    @Column(name = "IsActive", nullable = false)
+    private Boolean isActive = true;
 }
