@@ -20,6 +20,7 @@ public class CategoryController {
     @PostMapping("/{eventId}")
     public CategoryResponse createCategory(@PathVariable UUID eventId,
                                            @Valid @RequestBody CreateCategoryRequest request) {
+        request.setEventId(eventId);
         return categoryService.create(request);
     }
 
