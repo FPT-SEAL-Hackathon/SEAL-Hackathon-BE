@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.auth.service;
+package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import io.jsonwebtoken.Claims;
@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class JWTService {
+public class JwtServiceImpl {
 
     @Value("${jwt.secret}")
     private String secretKey;

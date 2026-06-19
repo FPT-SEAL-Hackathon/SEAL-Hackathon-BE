@@ -90,6 +90,19 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TeamResponse> getByEventId(UUID eventId) {
+        return teamsRepository.findByEventId(eventId)
+                .stream()
+                .map(team -> {
+                    List<TeamMembers> members =
+                            teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+                    return TeamMapper.toTeamResponse(team, members);
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TeamResponse getById(UUID teamId) {
         // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
         Teams team = teamsRepository.findById(teamId)

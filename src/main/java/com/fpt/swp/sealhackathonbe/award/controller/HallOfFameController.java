@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/public/hall-of-fame") // Đường dẫn chứa chữ "public"
+@RequestMapping("/api/v1/public/hall-of-fame") // Public route
 @RequiredArgsConstructor
 public class HallOfFameController {
 
     private final AwardService awardService;
 
     /**
-     * API xem Sảnh Danh Vọng (Không cần đăng nhập)
+     * API for viewing the Hall of Fame (no login required)
      * GET /api/v1/public/hall-of-fame
      */
     @GetMapping

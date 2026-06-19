@@ -1,8 +1,8 @@
-package com.fpt.swp.sealhackathonbe.auth.service;
+package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
-import io.jsonwebtoken.Claims;
+import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +13,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -21,13 +20,16 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-public class JwtFilter extends OncePerRequestFilter {
+public class JwtFilterServiceImpl extends OncePerRequestFilter {
 
     @Autowired
-    private JWTService jwtService;
+    private JwtServiceImpl jwtServiceImpl;
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -49,12 +51,18 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        RefreshToken tokenEntity =
+                refreshTokenRepository.findByTokenHash(token).orElse(null);
 
+        if (tokenEntity != null && tokenEntity.getRevokedAt() != null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
         try {
 
             // 🔥 ONLY 1 TIME PARSE
-            String username = jwtService.extractUserName(token);
-            String role = jwtService.extractRole(token);
+            String username = jwtServiceImpl.extractUserName(token);
+            String role = jwtServiceImpl.extractRole(token);
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -62,7 +70,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
 
-                if (jwtService.validateToken(token, userDetails)) {
+                if (jwtServiceImpl.validateToken(token, userDetails)) {
 
                     // 🔥 SAFE ROLE HANDLING
                     List<SimpleGrantedAuthority> authorities = List.of(
@@ -98,7 +106,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
         );
     }
-}
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 
@@ -108,4 +115,5 @@ public class JwtFilter extends OncePerRequestFilter {
 
         return null;
     }
+
 }

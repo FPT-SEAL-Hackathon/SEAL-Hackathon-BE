@@ -14,18 +14,18 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import org.springframework.security.access.prepost.PreAuthorize;
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "Ranking Controller", description = "APIs for computing rankings and fetching leaderboards")
 public class RankingController {
 
     private final RankingService rankingService;
-    private final SubmissionQueryService submissionQueryService;
 
     @Autowired
-    public RankingController(RankingService rankingService, SubmissionQueryService submissionQueryService) {
+    public RankingController(RankingService rankingService) {
         this.rankingService = rankingService;
-        this.submissionQueryService = submissionQueryService;
     }
 
     /**
@@ -33,19 +33,17 @@ public class RankingController {
      */
     @PostMapping("/admin/events/{id}/compute-rankings")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Compute rankings for an event", description = "Calculates the final rankings for all submissions in an event")
     public ResponseEntity<List<EventRankingDTO>> computeEventRankings(
-            @PathVariable("id") UUID eventId,
-            @RequestParam UUID categoryId) {
+            @PathVariable("id") UUID eventId) {
 
-        // MOCKED: Fetch teamIds for the event. In a real scenario, call EventService/SubmissionService.
-        List<UUID> teamIds = new ArrayList<>();
-
-        List<EventRankingDTO> rankings = rankingService.computeEventRankings(eventId, categoryId);
+        List<EventRankingDTO> rankings = rankingService.computeEventRankings(eventId);
         return ResponseEntity.ok(rankings);
     }
 
     @PostMapping("/admin/rounds/{roundId}/compute-rankings")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Compute rankings for a round", description = "Calculates the rankings for submissions in a specific round and category")
     public ResponseEntity<List<RoundRankingDTO>> computeRoundRankings(
             @PathVariable("roundId") UUID roundId,
             @RequestParam UUID categoryId
@@ -57,6 +55,7 @@ public class RankingController {
      * Public leaderboard API.
      */
     @GetMapping("/public/leaderboard/{eventId}/{categoryId}")
+    @Operation(summary = "Get public leaderboard", description = "Retrieves the public leaderboard for a specific event and category")
     public ResponseEntity<List<EventRankingDTO>> getEventLeaderboardByCategory(
             @PathVariable("eventId") UUID eventId,
             @PathVariable("categoryId") UUID categoryId) {

@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +79,13 @@ public class TeamController {
     public ResponseEntity<TeamResponse> getTeamById(@PathVariable UUID teamId) {
         // Lay thong tin team va danh sach member active theo teamId.
         TeamResponse response = teamService.getById(teamId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get teams by event")
+    @GetMapping("/events/{eventId}/teams")
+    public ResponseEntity<List<TeamResponse>> getTeamsByEvent(@PathVariable UUID eventId) {
+        List<TeamResponse> response = teamService.getByEventId(eventId);
         return ResponseEntity.ok(response);
     }
 
@@ -173,6 +181,7 @@ public class TeamController {
             description = "Mark a team as disqualified and record the reason. Use an organizer account."
     )
     @PostMapping("/admin/teams/{teamId}/disqualify")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<DisqualificationResponse> disqualifyTeam(
             @PathVariable UUID teamId,
             @Valid @RequestBody DisqualifyTeamRequest request,
