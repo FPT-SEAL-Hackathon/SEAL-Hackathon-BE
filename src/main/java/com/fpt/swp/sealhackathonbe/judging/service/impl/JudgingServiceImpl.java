@@ -219,8 +219,12 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<JudgingDTO> getScoresBySubmission(UUID submissionId) {
-        return judgingRepository.findBySubmission_SubmissionId(submissionId)
+    public List<JudgingDTO> getScoresBySubmissionAndJudgeId(UUID submissionId) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
+        }
+        return judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId())
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -229,7 +233,7 @@ public class JudgingServiceImpl implements JudgingService {
     @Override
     @Transactional(readOnly = true)
     public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
-        return judgingRepository.findByRoundJudge_RoundJudgeId(roundJudgeId)
+        return judgingRepository.findByRoundJudge_Judge_UserId(roundJudgeId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
