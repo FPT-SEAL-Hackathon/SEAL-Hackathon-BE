@@ -229,7 +229,7 @@ public class JudgingServiceImpl implements JudgingService {
     @Override
     @Transactional(readOnly = true)
     public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
-        return judgingRepository.findByRoundJudge_RoundJudgeId(roundJudgeId)
+        return judgingRepository.findByRoundJudge_Judge_UserId(roundJudgeId)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
