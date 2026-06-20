@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
+import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
@@ -44,6 +46,7 @@ public class TeamServiceImpl implements TeamService {
     private final CategoryRepository categoryRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     @Transactional
@@ -113,7 +116,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional
-    public TeamResponse activateTeam(UUID teamId) {
+    public TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId) {
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
         Event event = requireActiveEvent(team.getEvent());
@@ -126,6 +129,7 @@ public class TeamServiceImpl implements TeamService {
         team.setTeamStatusId(TEAM_STATUS_ACTIVE);
         team.setUpdatedAt(LocalDateTime.now());
         Teams savedTeam = teamsRepository.save(team);
+        saveEligibilityApprovedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
         return TeamMapper.toTeamResponse(savedTeam, members);
@@ -309,6 +313,33 @@ public class TeamServiceImpl implements TeamService {
     private boolean hasValidPhoneLength(String phone) {
         String digits = phone.replaceAll("\\D", "");
         return digits.length() >= 9 && digits.length() <= 15;
+    }
+
+    private void saveEligibilityApprovedAuditLog(Teams team, String note, UUID adminUserId) {
+        AuditLog auditLog = new AuditLog();
+        auditLog.setActionType("TEAM_ELIGIBILITY_APPROVED");
+        auditLog.setEntityType("Teams");
+        auditLog.setEntityId(team.getTeamId());
+        auditLog.setActorUserId(adminUserId);
+        auditLog.setNewValueJson(
+                "{\"status\":\"Active\",\"note\":\"" + escapeJson(note) + "\"}"
+        );
+        auditLog.setOccurredAt(LocalDateTime.now());
+        auditLog.setNotes(note);
+
+        auditLogRepository.save(auditLog);
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     private Event getActiveEvent(UUID eventId) {

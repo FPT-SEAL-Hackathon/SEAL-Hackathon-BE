@@ -108,7 +108,7 @@ public class TeamController {
         response.setApproved(request.getApproved());
 
         if (Boolean.TRUE.equals(request.getApproved())) {
-            TeamResponse team = teamService.activateTeam(teamId);
+            TeamResponse team = teamService.activateTeam(teamId, request.getNote(), currentUserId(authentication));
             response.setTeam(team);
             response.setMessage("Team approved for competition");
         } else {

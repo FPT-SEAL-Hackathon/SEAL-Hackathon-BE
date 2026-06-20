@@ -20,7 +20,7 @@ public interface TeamService {
 
     List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId);
 
-    TeamResponse activateTeam(UUID teamId);
+    TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId);
 
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
