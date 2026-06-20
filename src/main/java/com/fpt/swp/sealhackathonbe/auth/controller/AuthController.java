@@ -69,7 +69,7 @@ public class AuthController {
             @RequestBody RefreshTokenRequest request) {
 
         return ResponseEntity.ok(
-                jwtServiceImpl.refresh(request)
+                jwtServiceImpl. refresh(request)
         );
     }
     @GetMapping("/verify-email")
