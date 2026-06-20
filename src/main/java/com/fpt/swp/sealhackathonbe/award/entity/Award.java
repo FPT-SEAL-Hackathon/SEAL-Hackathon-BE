@@ -10,7 +10,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -52,8 +54,8 @@ public class Award {
     private String awardTitle;
 
     @Nationalized
-    @Lob
-    @Column(name = "Description")
+    @JdbcTypeCode(SqlTypes.LONGNVARCHAR)
+    @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
     @Column(name = "PrizeValue", precision = 12, scale = 2)
