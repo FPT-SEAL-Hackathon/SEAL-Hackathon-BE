@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
@@ -40,6 +41,7 @@ public class TeamServiceImpl implements TeamService {
     //         UUID.fromString("60000000-0000-0000-0000-000000000002");
 
     private final EventRepository eventRepository;
+    private final CategoryRepository categoryRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
 
@@ -50,6 +52,7 @@ public class TeamServiceImpl implements TeamService {
         // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
         validateTeamSizeConfig(event);
+        validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
         if (teamsRepository.existsByEventIdAndTeamName(request.getEventId(), request.getTeamName())) {
             throw new RuntimeException("Team name already exists in this event");
@@ -325,6 +328,13 @@ public class TeamServiceImpl implements TeamService {
         // Team chi duoc tao trong event ton tai va chua bi soft delete.
         return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
+    }
+
+    private void validateCategoryBelongsToEvent(UUID categoryId, UUID eventId) {
+        boolean exists = categoryRepository.existsByCategoryIdAndEventEventIdAndIsActiveTrue(categoryId, eventId);
+        if (!exists) {
+            throw new RuntimeException("Category does not belong to this event");
+        }
     }
 
     private void validateTeamSizeConfig(Event event) {
