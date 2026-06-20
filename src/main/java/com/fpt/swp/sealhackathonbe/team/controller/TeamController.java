@@ -3,8 +3,11 @@ package com.fpt.swp.sealhackathonbe.team.controller;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
@@ -86,6 +89,57 @@ public class TeamController {
     @GetMapping("/events/{eventId}/teams")
     public ResponseEntity<List<TeamResponse>> getTeamsByEvent(@PathVariable UUID eventId) {
         List<TeamResponse> response = teamService.getByEventId(eventId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Review team eligibility by event",
+            description = "Organizer reviews team size and member profile information before competition."
+    )
+    @GetMapping("/admin/events/{eventId}/teams/eligibility-review")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<TeamEligibilityReviewResponse>> reviewTeamsEligibility(
+            @PathVariable UUID eventId
+    ) {
+        List<TeamEligibilityReviewResponse> response = teamService.reviewTeamsEligibility(eventId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Decide team eligibility",
+            description = "Organizer approves an eligible team for competition or rejects it with a disqualification reason."
+    )
+    @PostMapping("/admin/teams/{teamId}/eligibility-decision")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<EligibilityDecisionResponse> decideTeamEligibility(
+            @PathVariable UUID teamId,
+            @Valid @RequestBody EligibilityDecisionRequest request,
+            Authentication authentication
+    ) {
+        EligibilityDecisionResponse response = new EligibilityDecisionResponse();
+        response.setApproved(request.getApproved());
+
+        if (Boolean.TRUE.equals(request.getApproved())) {
+            TeamResponse team = teamService.activateTeam(teamId);
+            response.setTeam(team);
+            response.setMessage("Team approved for competition");
+        } else {
+            if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+                throw new RuntimeException("Rejection reason is required");
+            }
+
+            DisqualifyTeamRequest disqualifyRequest = new DisqualifyTeamRequest();
+            disqualifyRequest.setReason(request.getNote());
+
+            DisqualificationResponse disqualification = teamDisqualificationService.disqualifyTeam(
+                    teamId,
+                    disqualifyRequest,
+                    currentUserId(authentication)
+            );
+            response.setDisqualification(disqualification);
+            response.setMessage("Team disqualified from competition");
+        }
+
         return ResponseEntity.ok(response);
     }
 
@@ -189,6 +243,25 @@ public class TeamController {
     ) {
         DisqualificationResponse response = teamDisqualificationService.disqualifyTeam(
                 teamId,
+                request,
+                currentUserId(authentication)
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Disqualify ineligible teams in an event",
+            description = "Mark teams that do not satisfy event team size rules as disqualified. Use an organizer account."
+    )
+    @PostMapping("/admin/events/{eventId}/teams/disqualify-ineligible")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<DisqualificationResponse>> disqualifyIneligibleTeams(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody DisqualifyTeamRequest request,
+            Authentication authentication
+    ) {
+        List<DisqualificationResponse> response = teamDisqualificationService.disqualifyIneligibleTeams(
+                eventId,
                 request,
                 currentUserId(authentication)
         );

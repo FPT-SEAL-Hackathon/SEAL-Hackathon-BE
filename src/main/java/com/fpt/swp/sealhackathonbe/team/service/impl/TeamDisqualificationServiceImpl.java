@@ -1,11 +1,14 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
@@ -24,7 +27,9 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             UUID.fromString("60000000-0000-0000-0000-000000000003");
 
     private final TeamsRepository teamsRepository;
+    private final TeamMembersRepository teamMembersRepository;
     private final DisqualificationsRepository disqualificationsRepository;
+    private final EventRepository eventRepository;
 
     @Override
     @Transactional
@@ -66,6 +71,26 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
     }
 
     @Override
+    @Transactional
+    public List<DisqualificationResponse> disqualifyIneligibleTeams(
+            UUID eventId,
+            DisqualifyTeamRequest request,
+            UUID adminUserId
+    ) {
+        Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        return teamsRepository.findByEventId(eventId)
+                .stream()
+                .filter(team -> !TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId()))
+                .filter(team -> !hasActiveDisqualification(team.getTeamId()))
+                .filter(team -> isTeamSizeIneligible(team, event))
+                .map(team -> disqualifyTeamForPreCheck(team, request.getReason(), adminUserId))
+                .map(TeamMapper::toDisqualificationResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId) {
         // Luong du lieu: RoundID + CategoryID -> disqualification active -> DTO.
@@ -73,5 +98,43 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
                 .stream()
                 .map(TeamMapper::toDisqualifiedTeamResponse)
                 .toList();
+    }
+
+    private boolean hasActiveDisqualification(UUID teamId) {
+        return disqualificationsRepository.findByTeamId(teamId)
+                .stream()
+                .anyMatch(disqualification -> !Boolean.TRUE.equals(disqualification.getReversed()));
+    }
+
+    private boolean isTeamSizeIneligible(Teams team, Event event) {
+        long activeMemberCount = teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
+
+        Integer minTeamSize = event.getMinTeamSize();
+        if (minTeamSize != null && activeMemberCount < minTeamSize) {
+            return true;
+        }
+
+        Integer maxTeamSize = event.getMaxTeamSize();
+        return maxTeamSize != null && activeMemberCount > maxTeamSize;
+    }
+
+    private Disqualifications disqualifyTeamForPreCheck(
+            Teams team,
+            String reason,
+            UUID adminUserId
+    ) {
+        team.setTeamStatusId(TEAM_STATUS_DISQUALIFIED);
+        team.setUpdatedAt(LocalDateTime.now());
+        teamsRepository.save(team);
+
+        Disqualifications disqualification = new Disqualifications();
+        disqualification.setTeamId(team.getTeamId());
+        disqualification.setSubmissionId(null);
+        disqualification.setReason(reason);
+        disqualification.setDisqualifiedById(adminUserId);
+        disqualification.setDisqualifiedAt(LocalDateTime.now());
+        disqualification.setReversed(false);
+
+        return disqualificationsRepository.save(disqualification);
     }
 }

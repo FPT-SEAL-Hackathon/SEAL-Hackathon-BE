@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 
@@ -18,6 +19,10 @@ public interface TeamService {
     TeamResponse getById(UUID teamId);
 
     List<TeamResponse> getByEventId(UUID eventId);
+
+    List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId);
+
+    TeamResponse activateTeam(UUID teamId);
 
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
