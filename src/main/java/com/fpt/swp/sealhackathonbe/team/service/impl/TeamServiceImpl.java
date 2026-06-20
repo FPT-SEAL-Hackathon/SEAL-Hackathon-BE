@@ -89,19 +89,6 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public TeamResponse getMyTeam(UUID currentUserId) {
-        // Luồng xem team của tôi: userId -> TeamMembers active -> Teams -> danh sách member active -> TeamResponse.
-        TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(currentUserId)
-                .orElseThrow(() -> new RuntimeException("User does not belong to any active team"));
-
-        Teams team = member.getTeam();
-
-        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
-        return TeamMapper.toTeamResponse(team, members);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<TeamResponse> getByEventId(UUID eventId) {
         return teamsRepository.findByEventId(eventId)
                 .stream()

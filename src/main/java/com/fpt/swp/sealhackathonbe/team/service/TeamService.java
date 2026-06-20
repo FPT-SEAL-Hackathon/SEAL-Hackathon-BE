@@ -13,8 +13,6 @@ public interface TeamService {
     TeamResponse createTeam(CreateTeamRequest request, UUID currentUserId);
 
     // Lấy team active mà currentUserId đang tham gia.
-    TeamResponse getMyTeam(UUID currentUserId);
-
     // Lấy team theo ID, kèm danh sách thành viên active của team đó.
     TeamResponse getById(UUID teamId);
 

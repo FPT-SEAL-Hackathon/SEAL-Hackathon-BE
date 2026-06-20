@@ -61,18 +61,6 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    // Quyen hien tai: moi tai khoan co JWT hop le.
-    // Tai khoan phai dang la member active cua mot team.
-    // Seed test: api.alpha.leader@seal.test, api.alpha.member@seal.test,
-    // api.beta.leader@seal.test hoac api.beta.member@seal.test / Test@123.
-    @Operation(summary = "Get my team")
-    @GetMapping("/teams/my-team")
-    public ResponseEntity<TeamResponse> getMyTeam(Authentication authentication) {
-        // Tim membership active cua user hien tai de tra ve team ma user dang tham gia.
-        TeamResponse response = teamService.getMyTeam(currentUserId(authentication));
-        return ResponseEntity.ok(response);
-    }
-
     // Quyen hien tai: moi tai khoan co JWT hop le, khong can la member cua team.
     // Seed test: dung bat ky tai khoan seed nao co JWT hop le.
     // Team mau: Alpha = E1000000-0000-0000-0000-000000000001,
