@@ -12,7 +12,7 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
     List<Judging> findBySubmission_SubmissionId(UUID submissionId);
 
-    List<Judging> findByRoundJudge_RoundJudgeId(UUID roundJudgeId);
+    List<Judging> findByRoundJudge_Judge_UserId(UUID roundJudgeId);
 
     Optional<Judging> findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriterionId(
             UUID submissionId, UUID roundJudgeId, UUID roundCriteriaId);
