@@ -26,6 +26,57 @@ public class EmailService {
 
     @Async
     public void sendEmail(String recipient, String subject, String content) {
+        sendPlainTextEmail(recipient, subject, content);
+    }
+
+    @Async
+    public void sendNotificationEmail(String recipient, String title, String body) {
+        sendPlainTextEmail(recipient, title, body);
+    }
+
+    @Async
+    public void sendVerificationCodeEmail(String recipient, String verificationCode) {
+        sendVerificationCodeEmail(recipient, null, verificationCode);
+    }
+
+    @Async
+    public void sendVerificationCodeEmail(String recipient, String recipientName, String verificationCode) {
+        sendPlainTextEmail(
+                recipient,
+                "Verify your SEAL Hackathon account",
+                buildVerificationCodeContent(recipientName, verificationCode)
+        );
+    }
+    //send mail without name of user
+    @Async
+    public void sendVerificationLinkEmail(String recipient, String verificationLink) {
+        sendVerificationLinkEmail(recipient, null, verificationLink);
+    }
+    //send mail with name of user
+    @Async
+    public void sendVerificationLinkEmail(String recipient, String recipientName, String verificationLink) {
+        sendPlainTextEmail(
+                recipient,
+                "Verify your SEAL Hackathon account",
+                buildVerificationLinkContent(recipientName, verificationLink)
+        );
+    }
+    //
+    @Async
+    public void sendPasswordResetEmail(String recipient, String resetLink) {
+        sendPasswordResetEmail(recipient, null, resetLink);
+    }
+
+    @Async
+    public void sendPasswordResetEmail(String recipient, String recipientName, String resetLink) {
+        sendPlainTextEmail(
+                recipient,
+                "Reset your SEAL Hackathon password",
+                buildPasswordResetContent(recipientName, resetLink)
+        );
+    }
+
+    private void sendPlainTextEmail(String recipient, String subject, String content) {
         if (!mailEnabled) {
             return;
         }
@@ -47,5 +98,42 @@ public class EmailService {
         } catch (MailException exception) {
             log.error("Failed to send notification email to {}", recipient, exception);
         }
+    }
+
+    private String buildVerificationCodeContent(String recipientName, String verificationCode) {
+        String greeting = buildGreeting(recipientName);
+        return greeting + "\n\n"
+                + "Use the verification code below to verify your SEAL Hackathon account:\n\n"
+                + verificationCode + "\n\n"
+                + "If you did not request this email, you can ignore it.\n\n"
+                + "Regards,\n"
+                + senderName;
+    }
+
+    private String buildVerificationLinkContent(String recipientName, String verificationLink) {
+        String greeting = buildGreeting(recipientName);
+        return greeting + "\n\n"
+                + "Click the link below to verify your SEAL Hackathon account:\n\n"
+                + verificationLink + "\n\n"
+                + "If you did not request this email, you can ignore it.\n\n"
+                + "Regards,\n"
+                + senderName;
+    }
+
+    private String buildPasswordResetContent(String recipientName, String resetLink) {
+        String greeting = buildGreeting(recipientName);
+        return greeting + "\n\n"
+                + "Click the link below to reset your SEAL Hackathon password:\n\n"
+                + resetLink + "\n\n"
+                + "If you did not request a password reset, you can ignore this email.\n\n"
+                + "Regards,\n"
+                + senderName;
+    }
+
+    private String buildGreeting(String recipientName) {
+        if (recipientName == null || recipientName.isBlank()) {
+            return "Hi,";
+        }
+        return "Hi " + recipientName.trim() + ",";
     }
 }

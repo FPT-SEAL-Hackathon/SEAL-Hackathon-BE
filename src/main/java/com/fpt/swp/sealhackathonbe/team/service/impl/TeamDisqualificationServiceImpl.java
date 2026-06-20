@@ -74,4 +74,5 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
                 .map(TeamMapper::toDisqualifiedTeamResponse)
                 .toList();
     }
+
 }

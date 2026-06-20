@@ -30,6 +30,9 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private static final UUID TEAM_STATUS_WITHDRAWN =
             UUID.fromString("60000000-0000-0000-0000-000000000004");
 
+    private static final UUID TEAM_STATUS_ACTIVE =
+            UUID.fromString("60000000-0000-0000-0000-000000000002");
+
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
@@ -90,10 +93,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateTeamCanSubmit(Teams team) {
-        // Team da bi loai hoac rut lui khong duoc tiep tuc nop bai.
-        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
-                || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
-            throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
+        // Only teams approved by organizer for competition can submit or update work.
+        if (!TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
+            if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
+                    || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+                throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
+            }
+
+            throw new RuntimeException("Only active teams can submit work");
         }
     }
 

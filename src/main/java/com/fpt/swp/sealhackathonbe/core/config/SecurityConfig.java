@@ -41,6 +41,8 @@ public class SecurityConfig {
             "/",
             "/auth/login",
             "/auth/register",
+            "/auth/refresh",
+            "/auth/verify-email",
             "/api/v1/public/**"
     };
 

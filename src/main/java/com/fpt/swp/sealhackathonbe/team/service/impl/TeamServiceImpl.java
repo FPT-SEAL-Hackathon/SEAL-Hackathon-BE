@@ -1,8 +1,13 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
+import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
@@ -17,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,14 +31,22 @@ import java.util.UUID;
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
             UUID.fromString("60000000-0000-0000-0000-000000000001");
+    private static final UUID TEAM_STATUS_ACTIVE =
+            UUID.fromString("60000000-0000-0000-0000-000000000002");
+    private static final UUID TEAM_STATUS_DISQUALIFIED =
+            UUID.fromString("60000000-0000-0000-0000-000000000003");
+    private static final UUID TEAM_STATUS_WITHDRAWN =
+            UUID.fromString("60000000-0000-0000-0000-000000000004");
     // Dư thừa hiện tại: chưa có nghiệp vụ nào trong class này chuyển team sang ACTIVE.
     // Giữ comment để khi bổ sung luồng kích hoạt team có thể dùng lại đúng status ID.
     // private static final UUID TEAM_STATUS_ACTIVE =
     //         UUID.fromString("60000000-0000-0000-0000-000000000002");
 
     private final EventRepository eventRepository;
+    private final CategoryRepository categoryRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     @Transactional
@@ -41,6 +55,7 @@ public class TeamServiceImpl implements TeamService {
         // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
         validateTeamSizeConfig(event);
+        validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
         if (teamsRepository.existsByEventIdAndTeamName(request.getEventId(), request.getTeamName())) {
             throw new RuntimeException("Team name already exists in this event");
@@ -77,19 +92,6 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public TeamResponse getMyTeam(UUID currentUserId) {
-        // Luồng xem team của tôi: userId -> TeamMembers active -> Teams -> danh sách member active -> TeamResponse.
-        TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(currentUserId)
-                .orElseThrow(() -> new RuntimeException("User does not belong to any active team"));
-
-        Teams team = member.getTeam();
-
-        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
-        return TeamMapper.toTeamResponse(team, members);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<TeamResponse> getByEventId(UUID eventId) {
         return teamsRepository.findByEventId(eventId)
                 .stream()
@@ -99,6 +101,38 @@ public class TeamServiceImpl implements TeamService {
                     return TeamMapper.toTeamResponse(team, members);
                 })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId) {
+        Event event = getActiveEvent(eventId);
+
+        return teamsRepository.findByEventId(eventId)
+                .stream()
+                .map(team -> toEligibilityReviewResponse(team, event))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId) {
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        Event event = requireActiveEvent(team.getEvent());
+
+        TeamEligibilityReviewResponse review = toEligibilityReviewResponse(team, event);
+        if (!Boolean.TRUE.equals(review.getEligibleForCompetition())) {
+            throw new RuntimeException("Team is not eligible for competition");
+        }
+
+        team.setTeamStatusId(TEAM_STATUS_ACTIVE);
+        team.setUpdatedAt(LocalDateTime.now());
+        Teams savedTeam = teamsRepository.save(team);
+        saveEligibilityApprovedAuditLog(savedTeam, note, adminUserId);
+
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
+        return TeamMapper.toTeamResponse(savedTeam, members);
     }
 
     @Override
@@ -130,10 +164,10 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional
-    public void removeMember(UUID userId, UUID currentUserId) {
-        // Luồng rời/kick member: tìm membership active -> kiểm tra quyền leader hoặc tự rời
+    public void removeMember(UUID teamId, UUID userId, UUID currentUserId) {
+        // Luồng rời/kick member: tìm đúng membership active trong team -> kiểm tra quyền leader hoặc tự rời
         // -> kiểm tra MinTeamSize của event -> đánh dấu inactive, không xóa cứng.
-        TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(userId)
+        TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
         Teams team = member.getTeam();
@@ -157,10 +191,168 @@ public class TeamServiceImpl implements TeamService {
         teamMembersRepository.save(member);
     }
 
+    private TeamEligibilityReviewResponse toEligibilityReviewResponse(Teams team, Event event) {
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+        List<TeamEligibilityMemberResponse> memberResponses = members.stream()
+                .map(this::toEligibilityMemberResponse)
+                .toList();
+
+        long activeMemberCount = members.size();
+        List<String> issues = new ArrayList<>();
+
+        Integer minTeamSize = event.getMinTeamSize();
+        if (minTeamSize != null && activeMemberCount < minTeamSize) {
+            issues.add("Team has fewer active members than the event minimum");
+        }
+
+        Integer maxTeamSize = event.getMaxTeamSize();
+        if (maxTeamSize != null && activeMemberCount > maxTeamSize) {
+            issues.add("Team has more active members than the event maximum");
+        }
+
+        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())) {
+            issues.add("Team is disqualified");
+        }
+
+        if (TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+            issues.add("Team is withdrawn");
+        }
+
+        boolean teamSizeEligible = issues.stream()
+                .noneMatch(issue -> issue.contains("active members"));
+        boolean membersInfoComplete = memberResponses.stream()
+                .allMatch(member -> Boolean.TRUE.equals(member.getProfileComplete()));
+        boolean eligibleForCompetition = teamSizeEligible
+                && membersInfoComplete
+                && !TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
+                && !TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId());
+
+        if (!membersInfoComplete) {
+            issues.add("One or more members have incomplete profile information");
+        }
+
+        TeamEligibilityReviewResponse response = new TeamEligibilityReviewResponse();
+        response.setTeamId(team.getTeamId());
+        response.setEventId(team.getEventId());
+        response.setCategoryId(team.getCategoryId());
+        response.setTeamName(team.getTeamName());
+        response.setTeamStatusId(team.getTeamStatusId());
+        response.setLeaderUserId(team.getLeaderUserId());
+        response.setMinTeamSize(minTeamSize);
+        response.setMaxTeamSize(maxTeamSize);
+        response.setActiveMemberCount(activeMemberCount);
+        response.setTeamSizeEligible(teamSizeEligible);
+        response.setMembersInfoComplete(membersInfoComplete);
+        response.setEligibleForCompetition(eligibleForCompetition);
+        response.setIssues(issues);
+        response.setMembers(memberResponses);
+        return response;
+    }
+
+    private TeamEligibilityMemberResponse toEligibilityMemberResponse(TeamMembers member) {
+        User user = member.getUser();
+        List<String> issues = new ArrayList<>();
+
+        if (user == null) {
+            issues.add("User profile not found");
+        } else {
+            if (isBlank(user.getFullName())) {
+                issues.add("Full name is missing");
+            }
+
+            if (isBlank(user.getPhone())) {
+                issues.add("Phone is missing");
+            } else if (!hasValidPhoneLength(user.getPhone())) {
+                issues.add("Phone format is invalid");
+            }
+
+            if (isBlank(user.getUniversityName())) {
+                issues.add("University name is missing");
+            }
+
+            if (isBlank(user.getFptStudentCode()) && isBlank(user.getExternalStudentCode())) {
+                issues.add("Student code is missing");
+            }
+
+            String accountStatusName = user.getAccountStatus() != null
+                    ? user.getAccountStatus().getStatusName()
+                    : null;
+            if (!"Active".equalsIgnoreCase(accountStatusName)) {
+                issues.add("Account is not active");
+            }
+        }
+
+        TeamEligibilityMemberResponse response = new TeamEligibilityMemberResponse();
+        response.setTeamMemberId(member.getTeamMemberId());
+        response.setUserId(member.getUserId());
+        response.setJoinedAt(member.getJoinedAt());
+        response.setActive(member.getActive());
+        response.setProfileComplete(issues.isEmpty());
+        response.setIssues(issues);
+
+        if (user != null) {
+            response.setFullName(user.getFullName());
+            response.setEmail(user.getEmail());
+            response.setPhone(user.getPhone());
+            response.setFptStudentCode(user.getFptStudentCode());
+            response.setExternalStudentCode(user.getExternalStudentCode());
+            response.setUniversityName(user.getUniversityName());
+            response.setUserTypeName(user.getUserType() != null ? user.getUserType().getTypeName() : null);
+            response.setAccountStatusName(
+                    user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null
+            );
+        }
+
+        return response;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private boolean hasValidPhoneLength(String phone) {
+        String digits = phone.replaceAll("\\D", "");
+        return digits.length() >= 9 && digits.length() <= 15;
+    }
+
+    private void saveEligibilityApprovedAuditLog(Teams team, String note, UUID adminUserId) {
+        AuditLog auditLog = new AuditLog();
+        auditLog.setActionType("TEAM_ELIGIBILITY_APPROVED");
+        auditLog.setEntityType("Teams");
+        auditLog.setEntityId(team.getTeamId());
+        auditLog.setActorUserId(adminUserId);
+        auditLog.setNewValueJson(
+                "{\"status\":\"Active\",\"note\":\"" + escapeJson(note) + "\"}"
+        );
+        auditLog.setOccurredAt(LocalDateTime.now());
+        auditLog.setNotes(note);
+
+        auditLogRepository.save(auditLog);
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
     private Event getActiveEvent(UUID eventId) {
         // Team chi duoc tao trong event ton tai va chua bi soft delete.
         return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
+    }
+
+    private void validateCategoryBelongsToEvent(UUID categoryId, UUID eventId) {
+        boolean exists = categoryRepository.existsByCategoryIdAndEventEventIdAndIsActiveTrue(categoryId, eventId);
+        if (!exists) {
+            throw new RuntimeException("Category does not belong to this event");
+        }
     }
 
     private void validateTeamSizeConfig(Event event) {

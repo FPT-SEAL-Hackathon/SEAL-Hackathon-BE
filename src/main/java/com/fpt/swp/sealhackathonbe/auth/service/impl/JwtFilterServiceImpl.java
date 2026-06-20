@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
 import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtFilterService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-public class JwtFilterServiceImpl extends OncePerRequestFilter {
+public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFilterService {
 
     @Autowired
     private JwtServiceImpl jwtServiceImpl;
@@ -40,7 +41,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        if (path.equals("/auth/login") || path.equals("/auth/register")) {
+        if (path.equals("/auth/login") || path.equals("/auth/register") || path.equals("/auth/refresh")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -106,7 +107,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter {
                 "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
         );
     }
-    private String resolveToken(HttpServletRequest request) {
+    public String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 
         if (bearer != null && bearer.startsWith("Bearer ")) {
