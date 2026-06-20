@@ -723,11 +723,11 @@ BEGIN
 
 SELECT @TeamStatus = TeamStatusID FROM Teams WHERE TeamID = @TeamID;
 
-IF @TeamStatus IN (
-        '60000000-0000-0000-0000-000000000003',
-        '60000000-0000-0000-0000-000000000004'
-    )
-        THROW 51001, N'This team is disqualified or withdrawn and cannot submit.', 1;
+IF @TeamStatus IS NULL
+        THROW 51002, N'Team not found.', 1;
+
+IF @TeamStatus <> '60000000-0000-0000-0000-000000000002'
+        THROW 51001, N'Only active teams can submit work.', 1;
 
 SELECT @Deadline = SubmissionDeadline FROM Rounds WHERE RoundID = @RoundID;
 
