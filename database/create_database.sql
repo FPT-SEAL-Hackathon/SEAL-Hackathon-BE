@@ -956,6 +956,11 @@ SET TeamStatusID = '60000000-0000-0000-0000-000000000003',
     UpdatedAt = GETUTCDATE()
 WHERE TeamID = @TeamID;
 
+UPDATE Submissions
+SET SubmissionStatusID = '50000000-0000-0000-0000-000000000004',
+    LastUpdatedAt = GETUTCDATE()
+WHERE TeamID = @TeamID;
+
 INSERT INTO Disqualifications (TeamID, Reason, DisqualifiedByID)
 VALUES (@TeamID, @Reason, @DisqualifiedByID);
 
