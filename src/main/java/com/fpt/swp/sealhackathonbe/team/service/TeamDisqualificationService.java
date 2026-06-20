@@ -15,13 +15,6 @@ public interface TeamDisqualificationService {
             UUID adminUserId
     );
 
-    // Organizer loai hang loat cac team trong event chua dat dieu kien so luong thanh vien.
-    List<DisqualificationResponse> disqualifyIneligibleTeams(
-            UUID eventId,
-            DisqualifyTeamRequest request,
-            UUID adminUserId
-    );
-
     // Lay team bi loai theo round va category, sap xep ban ghi loai moi nhat truoc.
     List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId);
 }

@@ -238,25 +238,6 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(
-            summary = "Disqualify ineligible teams in an event",
-            description = "Mark teams that do not satisfy event team size rules as disqualified. Use an organizer account."
-    )
-    @PostMapping("/admin/events/{eventId}/teams/disqualify-ineligible")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<List<DisqualificationResponse>> disqualifyIneligibleTeams(
-            @PathVariable UUID eventId,
-            @Valid @RequestBody DisqualifyTeamRequest request,
-            Authentication authentication
-    ) {
-        List<DisqualificationResponse> response = teamDisqualificationService.disqualifyIneligibleTeams(
-                eventId,
-                request,
-                currentUserId(authentication)
-        );
-        return ResponseEntity.ok(response);
-    }
-
     private UUID currentUserId(Authentication authentication) {
         // JWT filter dat email vao Authentication; controller doi email thanh userId cho service.
         User user = userRepository.findByEmail(authentication.getName());
