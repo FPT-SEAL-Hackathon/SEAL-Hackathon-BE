@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -22,9 +24,12 @@ import java.util.UUID;
 public class TeamDisqualificationServiceImpl implements TeamDisqualificationService {
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
+    private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
+            UUID.fromString("50000000-0000-0000-0000-000000000004");
 
     private final TeamsRepository teamsRepository;
     private final DisqualificationsRepository disqualificationsRepository;
+    private final SubmissionsRepository submissionsRepository;
 
     @Override
     @Transactional
@@ -37,7 +42,8 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
         // 1. Admin chon team can loai.
         // 2. Kiem tra team chua co disqualification active de tranh tao trung.
         // 3. Doi trang thai team thanh DISQUALIFIED.
-        // 4. Ghi Disqualifications voi TeamID co gia tri va SubmissionID = null.
+        // 4. Doi cac submission hien co cua team sang DISQUALIFIED de danh sach submission khong lech status.
+        // 5. Ghi Disqualifications voi TeamID co gia tri va SubmissionID = null.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
@@ -49,16 +55,25 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             throw new RuntimeException("Team is already disqualified");
         }
 
+        LocalDateTime now = LocalDateTime.now();
+
         team.setTeamStatusId(TEAM_STATUS_DISQUALIFIED);
-        team.setUpdatedAt(LocalDateTime.now());
+        team.setUpdatedAt(now);
         teamsRepository.save(team);
+
+        List<Submissions> submissions = submissionsRepository.findByTeamId(teamId);
+        submissions.forEach(submission -> {
+            submission.setSubmissionStatusId(SUBMISSION_STATUS_DISQUALIFIED);
+            submission.setLastUpdatedAt(now);
+        });
+        submissionsRepository.saveAll(submissions);
 
         Disqualifications disqualification = new Disqualifications();
         disqualification.setTeamId(teamId);
         disqualification.setSubmissionId(null);
         disqualification.setReason(request.getReason());
         disqualification.setDisqualifiedById(adminUserId);
-        disqualification.setDisqualifiedAt(LocalDateTime.now());
+        disqualification.setDisqualifiedAt(now);
         disqualification.setReversed(false);
 
         Disqualifications saved = disqualificationsRepository.save(disqualification);

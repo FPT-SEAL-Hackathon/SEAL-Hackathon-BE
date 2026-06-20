@@ -6,6 +6,8 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
@@ -36,17 +38,20 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final RoundRepository roundRepository;
     private final EntityManager entityManager;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
             TeamsRepository teamsRepository,
             TeamMembersRepository teamMembersRepository,
+            RoundRepository roundRepository,
             EntityManager entityManager
     ) {
         this.submissionsRepository = submissionsRepository;
         this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
+        this.roundRepository = roundRepository;
         this.entityManager = entityManager;
     }
 
@@ -61,6 +66,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(team);
+        validateTeamCanSubmitToRound(team, request.getRoundId());
         validateSubmissionDeadline(request.getRoundId());
 
         callUpsertSubmissionProcedure(request, currentUserId);
@@ -101,6 +107,29 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             }
 
             throw new RuntimeException("Only active teams can submit work");
+        }
+    }
+
+    private void validateTeamCanSubmitToRound(Teams team, UUID roundId) {
+        // A team can only submit to rounds in the same category/event it registered for.
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new RuntimeException("Round not found"));
+
+        if (round.getCategory() == null || round.getCategory().getCategoryId() == null) {
+            throw new RuntimeException("Round category not found");
+        }
+
+        if (!team.getCategoryId().equals(round.getCategory().getCategoryId())) {
+            throw new RuntimeException("Team cannot submit to a round outside its category");
+        }
+
+        if (round.getCategory().getEvent() == null
+                || round.getCategory().getEvent().getEventId() == null) {
+            throw new RuntimeException("Round event not found");
+        }
+
+        if (!team.getEventId().equals(round.getCategory().getEvent().getEventId())) {
+            throw new RuntimeException("Team cannot submit to a round outside its event");
         }
     }
 
