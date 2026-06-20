@@ -208,13 +208,14 @@ public class TeamController {
     // Ca thanh cong: alpha leader duyet applicant vao Alpha truoc, sau do dang nhap
     // api.alpha.leader@seal.test va xoa userId A1000000-0000-0000-0000-000000000011.
     @Operation(summary = "Remove a member or leave a team")
-    @DeleteMapping("/teams/members/{userId}")
+    @DeleteMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
+            @PathVariable UUID teamId,
             @PathVariable UUID userId,
             Authentication authentication
     ) {
         // Service phan biet leader kick member va member tu roi team.
-        teamService.removeMember(userId, currentUserId(authentication));
+        teamService.removeMember(teamId, userId, currentUserId(authentication));
         return ResponseEntity.noContent().build();
     }
 

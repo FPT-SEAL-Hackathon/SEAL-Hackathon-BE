@@ -160,10 +160,10 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional
-    public void removeMember(UUID userId, UUID currentUserId) {
-        // Luồng rời/kick member: tìm membership active -> kiểm tra quyền leader hoặc tự rời
+    public void removeMember(UUID teamId, UUID userId, UUID currentUserId) {
+        // Luồng rời/kick member: tìm đúng membership active trong team -> kiểm tra quyền leader hoặc tự rời
         // -> kiểm tra MinTeamSize của event -> đánh dấu inactive, không xóa cứng.
-        TeamMembers member = teamMembersRepository.findByUserIdAndActiveTrue(userId)
+        TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Active team member not found"));
 
         Teams team = member.getTeam();

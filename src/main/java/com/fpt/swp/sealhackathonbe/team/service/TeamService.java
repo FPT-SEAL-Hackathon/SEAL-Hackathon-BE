@@ -26,5 +26,5 @@ public interface TeamService {
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
-    void removeMember(UUID userId, UUID currentUserId);
+    void removeMember(UUID teamId, UUID userId, UUID currentUserId);
 }
