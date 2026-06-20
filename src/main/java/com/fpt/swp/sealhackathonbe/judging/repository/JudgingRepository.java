@@ -10,7 +10,7 @@ import java.util.UUID;
 @Repository
 public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
-    List<Judging> findBySubmission_SubmissionId(UUID submissionId);
+    List<Judging> findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(UUID submissionId, UUID UserId);
 
     List<Judging> findByRoundJudge_Judge_UserId(UUID roundJudgeId);
 
