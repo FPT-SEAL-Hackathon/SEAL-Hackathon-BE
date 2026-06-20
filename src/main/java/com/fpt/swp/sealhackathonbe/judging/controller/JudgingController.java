@@ -50,7 +50,7 @@ public class JudgingController {
     @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     @Operation(summary = "Get judging scores by submission ID", description = "Retrieves all scores given to a specific submission")
     public ResponseEntity<List<JudgingDTO>> getJudgingBySubmission(@PathVariable UUID submissionId) {
-        List<JudgingDTO> scores = judgingService.getScoresBySubmission(submissionId);
+        List<JudgingDTO> scores = judgingService.getScoresBySubmissionAndJudgeId(submissionId);
         return ResponseEntity.ok(scores);
     }
 

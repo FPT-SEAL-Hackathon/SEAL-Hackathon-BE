@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public interface JudgingService {
-    List<JudgingDTO> getScoresBySubmission(UUID submissionId);
+    List<JudgingDTO> getScoresBySubmissionAndJudgeId(UUID submissionId);
     List<JudgingDTO> getScoresByJudgeId(UUID judgeUserId);
     void recordJudging(List<ScoreSubmissionDTO> dtos);
     void updateJudging(List<UpdateScoreSubmissionDTO> dtos);
