@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.core.config;
 
 
-import com.fpt.swp.sealhackathonbe.auth.service.JwtFilter;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtFilterServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +27,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 public class SecurityConfig {
 
     @Autowired
-    private JwtFilter jwtFilter;
+    private JwtFilterServiceImpl jwtFilterServiceImpl;
     @Autowired
     private UserDetailsService userDetailsService;
     // Khai báo danh sách các endpoint của Swagger cần được public
@@ -41,6 +41,8 @@ public class SecurityConfig {
             "/",
             "/auth/login",
             "/auth/register",
+            "/auth/refresh",
+            "/auth/verify-email",
             "/api/v1/public/**"
     };
 
@@ -114,7 +116,7 @@ public class SecurityConfig {
                 )
 
                 .addFilterBefore(
-                        jwtFilter,
+                        jwtFilterServiceImpl,
                         UsernamePasswordAuthenticationFilter.class
                 );
 

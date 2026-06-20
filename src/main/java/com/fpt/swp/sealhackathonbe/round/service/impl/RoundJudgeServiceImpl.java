@@ -3,6 +3,7 @@ package com.fpt.swp.sealhackathonbe.round.service.impl;
 import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
+import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
@@ -74,6 +75,17 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
         return roundJudgeRepository.findJudgesByRoundRoundId(roundId)
                 .stream()
                 .map(roundMapper::toJudgeResponse)
+                .toList();
+    }
+
+    @Override
+    public List<RoundResponse> getRoundsByJudge(UUID judgeId) {
+        if (!userRepository.existsById(judgeId)) {
+            throw new EntityNotFoundException("Judge not found");
+        }
+        return roundJudgeRepository.findRoundsByJudgeJudgeId(judgeId)
+                .stream()
+                .map(roundMapper::toRoundResponse)
                 .toList();
     }
 
