@@ -11,11 +11,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-// Mock imports
-import com.fpt.swp.sealhackathonbe.event.entity.Round;
-import com.fpt.swp.sealhackathonbe.event.entity.Category;
-import com.fpt.swp.sealhackathonbe.team.entity.Team;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submission;
+import com.fpt.swp.sealhackathonbe.category.entity.Category;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 
 @Entity
 @Table(name = "RoundRankings", uniqueConstraints = {
@@ -42,11 +41,11 @@ public class RoundRanking {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TeamID", nullable = false)
-    private Team team;
+    private Teams team;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SubmissionID", nullable = false)
-    private Submission submission;
+    private Submissions submission;
 
     @Column(name = "TotalScore", nullable = false, precision = 10, scale = 4)
     private BigDecimal totalScore;

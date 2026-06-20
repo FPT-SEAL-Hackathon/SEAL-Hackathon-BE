@@ -36,7 +36,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
+        <!-- 2. Spring Boot Starter Thymeleaf (giống servlet .jsp) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <version>4.0.6</version>
+            <scope>compile</scope>
+        </dependency>
         <!-- 2. Spring Data JPA (ORM tương tác với Database không cần viết SQL) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -116,6 +122,23 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!-- 9. Spring Boot Starter Mail (gui email xac nhan, reset password, v.v.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <!-- 10. OpenCSV (export CSV files) -->
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.9</version>
+        </dependency>
+        <!-- 11. OpenHTMLToPDF (render Thymeleaf HTML certificates to PDF) -->
+        <dependency>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.0.10</version>
         </dependency>
     </dependencies>
 

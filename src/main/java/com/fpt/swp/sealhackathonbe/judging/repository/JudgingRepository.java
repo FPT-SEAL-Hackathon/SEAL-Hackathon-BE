@@ -10,10 +10,12 @@ import java.util.UUID;
 @Repository
 public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
-    List<Judging> findBySubmissionId(UUID submissionId);
+    List<Judging> findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(UUID submissionId, UUID UserId);
 
-    List<Judging> findByJudgeUserId(UUID judgeUserId);
+    List<Judging> findByRoundJudge_Judge_UserId(UUID roundJudgeId);
 
-    Optional<Judging> findBySubmissionIdAndJudgeUserIdAndEventCriterionId(
-            UUID submissionId, UUID judgeUserId, UUID eventCriterionId);
+    Optional<Judging> findBySubmission_SubmissionIdAndRoundJudge_RoundJudgeIdAndRoundCriterion_RoundCriterionId(
+            UUID submissionId, UUID roundJudgeId, UUID roundCriteriaId);
+
+    List<Judging> findBySubmission_SubmissionIdIn(List<UUID> submissionIds);
 }

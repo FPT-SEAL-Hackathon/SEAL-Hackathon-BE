@@ -1,13 +1,24 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "TeamJoinRequests")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class TeamJoinRequests {
 
+  // Entity lưu đơn xin vào team; requestStatus đi theo các giá trị PENDING/APPROVED/REJECTED trong service.
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "RequestID")
@@ -16,8 +27,16 @@ public class TeamJoinRequests {
   @Column(name = "TeamID", nullable = false)
   private UUID teamId;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
+  private Teams team;
+
   @Column(name = "UserID", nullable = false)
   private UUID userId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "UserID", nullable = false, insertable = false, updatable = false)
+  private User user;
 
   @Column(name = "RequestStatus", nullable = false, length = 20)
   private String requestStatus;
@@ -31,70 +50,10 @@ public class TeamJoinRequests {
   @Column(name = "RespondedByID")
   private UUID respondedById;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "RespondedByID", insertable = false, updatable = false)
+  private User respondedBy;
+
   @Column(name = "ResponseNote", length = 500)
   private String responseNote;
-
-  public UUID getRequestId() {
-    return requestId;
-  }
-
-  public void setRequestId(UUID requestId) {
-    this.requestId = requestId;
-  }
-
-  public UUID getTeamId() {
-    return teamId;
-  }
-
-  public void setTeamId(UUID teamId) {
-    this.teamId = teamId;
-  }
-
-  public UUID getUserId() {
-    return userId;
-  }
-
-  public void setUserId(UUID userId) {
-    this.userId = userId;
-  }
-
-  public String getRequestStatus() {
-    return requestStatus;
-  }
-
-  public void setRequestStatus(String requestStatus) {
-    this.requestStatus = requestStatus;
-  }
-
-  public LocalDateTime getRequestedAt() {
-    return requestedAt;
-  }
-
-  public void setRequestedAt(LocalDateTime requestedAt) {
-    this.requestedAt = requestedAt;
-  }
-
-  public LocalDateTime getRespondedAt() {
-    return respondedAt;
-  }
-
-  public void setRespondedAt(LocalDateTime respondedAt) {
-    this.respondedAt = respondedAt;
-  }
-
-  public UUID getRespondedById() {
-    return respondedById;
-  }
-
-  public void setRespondedById(UUID respondedById) {
-    this.respondedById = respondedById;
-  }
-
-  public String getResponseNote() {
-    return responseNote;
-  }
-
-  public void setResponseNote(String responseNote) {
-    this.responseNote = responseNote;
-  }
 }
