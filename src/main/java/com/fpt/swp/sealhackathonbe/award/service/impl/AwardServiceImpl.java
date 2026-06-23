@@ -88,7 +88,8 @@ public class AwardServiceImpl implements AwardService {
         award.setPrizeCurrency(defaultCurrency(request.getPrizeCurrency()));
         award.setAwardedAt(Instant.now());
         award.setAwardedBy(admin);
-        award.setIsPublished(false);
+        award.setIsPublished(true);
+        award.setPublishedAt(Instant.now());
 
         return convertToResponse(awardRepository.save(award));
     }
