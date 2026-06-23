@@ -263,6 +263,6 @@ public class NotificationServiceImpl implements NotificationService {
         long unreadCount = notificationRepository.countByRecipientUserIDAndIsReadFalse(recipient);
         NotificationPushEvent event = new NotificationPushEvent(NotificationResponse.from(notification), unreadCount);
         notificationRealtimeService.publish(recipient.getUserId(), event);
-        emailService.sendEmail(recipient.getEmail(), notification.getTitle(), notification.getBody());
+        emailService.sendNotificationEmail(recipient.getEmail(), notification.getTitle(), notification.getBody());
     }
 }

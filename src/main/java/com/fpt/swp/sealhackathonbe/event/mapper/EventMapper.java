@@ -21,7 +21,7 @@ public class EventMapper {
                 .eventEndDate(event.getEventEndDate())
                 .maxTeamSize(event.getMaxTeamSize())
                 .minTeamSize(event.getMinTeamSize())
-                .createdById(event.getCreatedById())
+                .createdById(event.getCreatedBy().getUserId())
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .build();

@@ -3,8 +3,11 @@ package com.fpt.swp.sealhackathonbe.team.controller;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
@@ -17,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,18 +61,6 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    // Quyen hien tai: moi tai khoan co JWT hop le.
-    // Tai khoan phai dang la member active cua mot team.
-    // Seed test: api.alpha.leader@seal.test, api.alpha.member@seal.test,
-    // api.beta.leader@seal.test hoac api.beta.member@seal.test / Test@123.
-    @Operation(summary = "Get my team")
-    @GetMapping("/teams/my-team")
-    public ResponseEntity<TeamResponse> getMyTeam(Authentication authentication) {
-        // Tim membership active cua user hien tai de tra ve team ma user dang tham gia.
-        TeamResponse response = teamService.getMyTeam(currentUserId(authentication));
-        return ResponseEntity.ok(response);
-    }
-
     // Quyen hien tai: moi tai khoan co JWT hop le, khong can la member cua team.
     // Seed test: dung bat ky tai khoan seed nao co JWT hop le.
     // Team mau: Alpha = E1000000-0000-0000-0000-000000000001,
@@ -78,6 +70,64 @@ public class TeamController {
     public ResponseEntity<TeamResponse> getTeamById(@PathVariable UUID teamId) {
         // Lay thong tin team va danh sach member active theo teamId.
         TeamResponse response = teamService.getById(teamId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get teams by event")
+    @GetMapping("/events/{eventId}/teams")
+    public ResponseEntity<List<TeamResponse>> getTeamsByEvent(@PathVariable UUID eventId) {
+        List<TeamResponse> response = teamService.getByEventId(eventId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Review team eligibility by event",
+            description = "Organizer reviews team size and member profile information before competition."
+    )
+    @GetMapping("/admin/events/{eventId}/teams/eligibility-review")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<TeamEligibilityReviewResponse>> reviewTeamsEligibility(
+            @PathVariable UUID eventId
+    ) {
+        List<TeamEligibilityReviewResponse> response = teamService.reviewTeamsEligibility(eventId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Decide team eligibility",
+            description = "Organizer approves an eligible team for competition or rejects it with a disqualification reason."
+    )
+    @PostMapping("/admin/teams/{teamId}/eligibility-decision")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<EligibilityDecisionResponse> decideTeamEligibility(
+            @PathVariable UUID teamId,
+            @Valid @RequestBody EligibilityDecisionRequest request,
+            Authentication authentication
+    ) {
+        EligibilityDecisionResponse response = new EligibilityDecisionResponse();
+        response.setApproved(request.getApproved());
+
+        if (Boolean.TRUE.equals(request.getApproved())) {
+            TeamResponse team = teamService.activateTeam(teamId, request.getNote(), currentUserId(authentication));
+            response.setTeam(team);
+            response.setMessage("Team approved for competition");
+        } else {
+            if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+                throw new RuntimeException("Rejection reason is required");
+            }
+
+            DisqualifyTeamRequest disqualifyRequest = new DisqualifyTeamRequest();
+            disqualifyRequest.setReason(request.getNote());
+
+            DisqualificationResponse disqualification = teamDisqualificationService.disqualifyTeam(
+                    teamId,
+                    disqualifyRequest,
+                    currentUserId(authentication)
+            );
+            response.setDisqualification(disqualification);
+            response.setMessage("Team disqualified from competition");
+        }
+
         return ResponseEntity.ok(response);
     }
 
@@ -158,13 +208,14 @@ public class TeamController {
     // Ca thanh cong: alpha leader duyet applicant vao Alpha truoc, sau do dang nhap
     // api.alpha.leader@seal.test va xoa userId A1000000-0000-0000-0000-000000000011.
     @Operation(summary = "Remove a member or leave a team")
-    @DeleteMapping("/teams/members/{userId}")
+    @DeleteMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
+            @PathVariable UUID teamId,
             @PathVariable UUID userId,
             Authentication authentication
     ) {
         // Service phan biet leader kick member va member tu roi team.
-        teamService.removeMember(userId, currentUserId(authentication));
+        teamService.removeMember(teamId, userId, currentUserId(authentication));
         return ResponseEntity.noContent().build();
     }
 
@@ -173,6 +224,7 @@ public class TeamController {
             description = "Mark a team as disqualified and record the reason. Use an organizer account."
     )
     @PostMapping("/admin/teams/{teamId}/disqualify")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<DisqualificationResponse> disqualifyTeam(
             @PathVariable UUID teamId,
             @Valid @RequestBody DisqualifyTeamRequest request,

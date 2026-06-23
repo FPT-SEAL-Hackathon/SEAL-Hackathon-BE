@@ -10,7 +10,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -22,28 +24,28 @@ import java.util.UUID;
 @Table(name = "Awards")
 public class Award {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Sửa lại chuẩn JPA cho UUID
+    @GeneratedValue(strategy = GenerationType.UUID) // Standard JPA UUID generation
     @Column(name = "AwardID", nullable = false)
     private UUID id;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "EventID", nullable = false)
-    private Event event; // Đã đổi tên chuẩn
+    private Event event; // Standardized field name
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CategoryID")
-    private Category category; // Đã đổi tên chuẩn
+    private Category category; // Standardized field name
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "TeamID", nullable = false)
-    private Teams team; // Đã đổi tên chuẩn
+    private Teams team; // Standardized field name
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "AwardTierID", nullable = false)
-    private AwardTier awardTier; // Đã đổi tên chuẩn
+    private AwardTier awardTier; // Standardized field name
 
     @Size(max = 300)
     @NotNull
@@ -52,8 +54,8 @@ public class Award {
     private String awardTitle;
 
     @Nationalized
-    @Lob
-    @Column(name = "Description")
+    @JdbcTypeCode(SqlTypes.LONGNVARCHAR)
+    @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
     @Column(name = "PrizeValue", precision = 12, scale = 2)
@@ -67,17 +69,17 @@ public class Award {
 
     @NotNull
     @Column(name = "AwardedAt", nullable = false)
-    private Instant awardedAt; // Xóa @ColumnDefault("getutcdate()"), sẽ xử lý gán ngày giờ ở tầng Service
+    private Instant awardedAt; // Assigned in the service layer
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "AwardedByID", nullable = false)
-    private User awardedBy; // Đã đổi tên chuẩn
+    private User awardedBy; // Standardized field name
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "IsPublished", nullable = false)
-    private Boolean isPublished = false; // Gán giá trị mặc định thẳng trên code Java
+    private Boolean isPublished = false; // Default value assigned in Java code
 
     @Column(name = "PublishedAt")
     private Instant publishedAt;

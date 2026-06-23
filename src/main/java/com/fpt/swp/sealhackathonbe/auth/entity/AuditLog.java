@@ -1,15 +1,10 @@
 package com.fpt.swp.sealhackathonbe.auth.entity;
 
-import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Nationalized;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -22,5 +17,34 @@ public class AuditLog {
     @Column(name = "LogID", nullable = false)
     private UUID id;
 
+    @Column(name = "ActionType", nullable = false, length = 100)
+    private String actionType;
+
+    @Column(name = "EntityType", nullable = false, length = 100)
+    private String entityType;
+
+    @Column(name = "EntityID")
+    private UUID entityId;
+
+    @Column(name = "EntityKey", length = 200)
+    private String entityKey;
+
+    @Column(name = "ActorUserID")
+    private UUID actorUserId;
+
+    @Column(name = "OldValueJSON")
+    private String oldValueJson;
+
+    @Column(name = "NewValueJSON")
+    private String newValueJson;
+
+    @Column(name = "IPAddress", length = 50)
+    private String ipAddress;
+
+    @Column(name = "OccurredAt", nullable = false)
+    private LocalDateTime occurredAt;
+
+    @Column(name = "Notes")
+    private String notes;
 
 }

@@ -24,7 +24,7 @@ public class AwardResponse {
     private BigDecimal prizeValue;
     private String prizeCurrency;
     private Instant awardedAt;
-    private String awardedByName; // Chỉ trả về tên người trao giải để hiển thị lên UI
+    private String awardedByName; // Only returns the awarder's name for UI display
     private Boolean isPublished;
     private Instant publishedAt;
 }
