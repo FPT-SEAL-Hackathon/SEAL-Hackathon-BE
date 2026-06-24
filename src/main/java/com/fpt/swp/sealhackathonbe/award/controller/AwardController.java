@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +34,7 @@ public class AwardController {
      */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
     @PostMapping("/grandAwardToATeam")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<AwardResponse> grantAwardToTeam(@Valid @RequestBody AwardRequest request, @AuthenticationPrincipal UserPrincipal principal) {
 
         AwardResponse response = awardService.grantAward(request, principal.getUser().getUserId());
@@ -67,6 +69,7 @@ public class AwardController {
             operationId = "saveAwardPatterns"
     )
     @PostMapping("/templates/categories/{categoryId}/award-patterns")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardPatternResponse>> saveAwardPatterns(
             @PathVariable UUID categoryId,
             @Valid @RequestBody AwardPatternRequest request
@@ -104,6 +107,7 @@ public class AwardController {
             operationId = "autoGrantTopAwards"
     )
     @PostMapping("/categories/{categoryId}/auto-grant-top")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardResponse>> autoGrantTopAwards(
             @PathVariable UUID categoryId,
             @RequestParam(required = false) UUID roundId,
