@@ -15,6 +15,9 @@ public interface SubmissionQueryService {
     // Lay tat ca bai nop trong mot round cho man hinh review/cham diem.
     List<SubmissionResponse> getSubmissionsByRound(UUID roundId);
 
+    // Lay cac bai nop trong round chua duoc review/cham diem.
+    List<SubmissionResponse> getUnreviewSubmissionByRound(UUID roundId);
+
     // Lay bai nop cua cac team thuoc event; submission khong chua EventID truc tiep.
     List<SubmissionResponse> findByEventId(UUID eventId);
 }

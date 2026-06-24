@@ -88,6 +88,19 @@ public class SubmissionController {
     }
 
     @Operation(
+            summary = "Get unreview submissions by round",
+            description = "Get submissions in one round that have not been scored yet."
+    )
+    @GetMapping("/admin/rounds/{roundId}/unreview-submissions")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    public ResponseEntity<List<SubmissionResponse>> getUnreviewSubmissionByRound(
+            @PathVariable UUID roundId
+    ) {
+        List<SubmissionResponse> response = submissionQueryService.getUnreviewSubmissionByRound(roundId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
             summary = "Get submissions by event",
             description = "Get all submissions from teams in one event. Use an organizer account."
     )

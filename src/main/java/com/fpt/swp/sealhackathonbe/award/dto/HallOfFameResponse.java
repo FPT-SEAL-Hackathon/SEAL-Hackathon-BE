@@ -11,5 +11,4 @@ public class HallOfFameResponse {
     private String teamName;
     private String awardTierName; // Example: First Prize, Second Prize
     private String awardTitle;    // Example: Hackathon 2026 Champion
-    private String leaderName;    // Team leader name for recognition
 }
