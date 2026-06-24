@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.notification.controller;
 
 import com.fpt.swp.sealhackathonbe.notification.dto.BroadcastNotificationRequest;
+import com.fpt.swp.sealhackathonbe.notification.dto.CreateNotificationByEmailRequest;
 import com.fpt.swp.sealhackathonbe.notification.dto.CreateNotificationRequest;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationResponse;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationRealtimeService;
@@ -134,6 +135,32 @@ public class NotificationController {
             UUID senderId = currentUserId(authentication);
             NotificationResponse notification = notificationService.sendNotification(
                     request.getRecipientUserId(),
+                    senderId,
+                    request.getEventId(),
+                    request.getTitle(),
+                    request.getBody()
+            );
+
+            return buildSuccessResponse(notification, "Notification sent successfully");
+        } catch (Exception e) {
+            return buildErrorResponse(e.getMessage(), 400);
+        }
+    }
+
+    @Operation(
+            summary = "Send notification to a user by email",
+            description = "Create and send an in-app notification and email to a specific user by email.",
+            operationId = "sendNotificationToEmail"
+    )
+    @PostMapping("/sendNotificationToEmail")
+    public ResponseEntity<Map<String, Object>> sendNotificationToEmail(
+            @Valid @RequestBody CreateNotificationByEmailRequest request,
+            Authentication authentication
+    ) {
+        try {
+            UUID senderId = currentUserId(authentication);
+            NotificationResponse notification = notificationService.sendNotificationByEmail(
+                    request.getRecipientEmail(),
                     senderId,
                     request.getEventId(),
                     request.getTitle(),
