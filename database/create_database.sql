@@ -35,6 +35,7 @@ DECLARE @SS_DRAFT             UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000
 DECLARE @SS_SUBMITTED         UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000002';
 DECLARE @SS_UNDER_REVIEW      UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000003';
 DECLARE @SS_DISQUALIFIED      UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000004';
+DECLARE @SS_SCORED            UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000005';
 
 -- TeamStatus
 DECLARE @TS_FORMING           UNIQUEIDENTIFIER = '60000000-0000-0000-0000-000000000001';
@@ -108,7 +109,8 @@ INSERT INTO SubmissionStatus (StatusID, StatusName) VALUES
                                                         (@SS_DRAFT, N'Draft'),
                                                         (@SS_SUBMITTED, N'Submitted'),
                                                         (@SS_UNDER_REVIEW, N'Under Review'),
-                                                        (@SS_DISQUALIFIED, N'Disqualified');
+                                                        (@SS_DISQUALIFIED, N'Disqualified'),
+                                                        (@SS_SCORED, N'Scored');
 
 CREATE TABLE TeamStatus (
                             StatusID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
@@ -1260,6 +1262,7 @@ BEGIN
     DECLARE @SS_DRAFT UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000001';
     DECLARE @SS_SUBMITTED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000002';
     DECLARE @SS_DISQUALIFIED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000004';
+    DECLARE @SS_SCORED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000005';
 
     IF EXISTS (
         SELECT 1
@@ -1277,6 +1280,7 @@ END
         SELECT i.SubmissionID,
                CASE
                    WHEN i.SubmissionStatusID = @SS_DISQUALIFIED THEN @SS_DISQUALIFIED
+                   WHEN EXISTS (SELECT 1 FROM Judging j WHERE j.SubmissionID = i.SubmissionID) THEN @SS_SCORED
                    WHEN NULLIF(LTRIM(RTRIM(COALESCE(i.RepositoryURL, N''))), N'') IS NOT NULL
                      OR NULLIF(LTRIM(RTRIM(COALESCE(i.DemoURL, N''))), N'') IS NOT NULL
                      OR NULLIF(LTRIM(RTRIM(COALESCE(i.ReportURL, N''))), N'') IS NOT NULL
@@ -1291,6 +1295,26 @@ SET SubmissionStatusID = ds.StatusID
 FROM Submissions s
 JOIN DesiredStatus ds ON ds.SubmissionID = s.SubmissionID
 WHERE s.SubmissionStatusID <> ds.StatusID;
+END;
+GO
+
+CREATE OR ALTER TRIGGER trg_MarkSubmissionScoredAfterJudging
+ON Judging
+AFTER INSERT
+                                  AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @SS_DISQUALIFIED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000004';
+    DECLARE @SS_SCORED UNIQUEIDENTIFIER = '50000000-0000-0000-0000-000000000005';
+
+UPDATE s
+SET SubmissionStatusID = @SS_SCORED,
+    LastUpdatedAt = GETUTCDATE()
+FROM Submissions s
+JOIN inserted i ON i.SubmissionID = s.SubmissionID
+WHERE s.SubmissionStatusID <> @SS_DISQUALIFIED
+  AND s.SubmissionStatusID <> @SS_SCORED;
 END;
 GO
 
