@@ -21,6 +21,14 @@ public interface NotificationService {
             String body
     );
 
+    NotificationResponse sendNotificationByEmail(
+            String recipientEmail,
+            UUID sentByUserId,
+            UUID eventId,
+            String title,
+            String body
+    );
+
     List<NotificationResponse> sendBroadcastNotification(
             List<UUID> recipientIds,
             UUID sentByUserId,

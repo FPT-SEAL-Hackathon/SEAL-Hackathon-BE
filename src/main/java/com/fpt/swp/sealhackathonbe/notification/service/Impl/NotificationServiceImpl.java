@@ -70,6 +70,23 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    public NotificationResponse sendNotificationByEmail(
+            String recipientEmail,
+            UUID sentByUserId,
+            UUID eventId,
+            String title,
+            String body
+    ) {
+        User recipient = getUserByEmail(recipientEmail, "Recipient user not found");
+        User sender = getUser(sentByUserId, "Sender user not found");
+        Event event = getEvent(eventId);
+
+        Notification notification = createNotification(recipient, sender, event, title, body);
+        return NotificationResponse.from(notification);
+    }
+
+    @Override
+    @Transactional
     public List<NotificationResponse> sendBroadcastNotification(
             List<UUID> recipientIds,
             UUID sentByUserId,
@@ -201,6 +218,18 @@ public class NotificationServiceImpl implements NotificationService {
             throw new RuntimeException(errorMessage);
         }
         return userRepository.findById(userId).orElseThrow(() -> new RuntimeException(errorMessage));
+    }
+
+    private User getUserByEmail(String email, String errorMessage) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException(errorMessage);
+        }
+
+        User user = userRepository.findByEmail(email.trim());
+        if (user == null) {
+            throw new RuntimeException(errorMessage);
+        }
+        return user;
     }
 
     private Event getEvent(UUID eventId) {
