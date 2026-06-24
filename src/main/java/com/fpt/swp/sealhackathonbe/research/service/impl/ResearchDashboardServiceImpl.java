@@ -93,19 +93,16 @@ public class ResearchDashboardServiceImpl implements ResearchDashboardService {
     @Override
     public List<ScoreDistributionResponse> getScoreDistribution(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
         BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
-        String sql = applyFilters("""
+        String innerSql = applyFilters("""
                 SELECT
-                    FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize AS BucketStart,
-                    COUNT(*) AS ScoreCount
+                    FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize AS BucketStart
                 FROM Judging sc
                          JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
                          JOIN Teams t ON t.TeamID = s.TeamID
                 WHERE t.EventID = :eventId
                   AND sc.IsCalibration = 0
-                """, roundId, categoryId) + """
-                GROUP BY FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize
-                ORDER BY BucketStart
-                """;
+                """, roundId, categoryId);
+        String sql = "SELECT src.BucketStart, COUNT(*) AS ScoreCount FROM (" + innerSql + ") src GROUP BY src.BucketStart ORDER BY src.BucketStart";
 
         List<Object[]> rows = query(sql, eventId, roundId, categoryId)
                 .setParameter("bucketSize", normalizedBucketSize)
