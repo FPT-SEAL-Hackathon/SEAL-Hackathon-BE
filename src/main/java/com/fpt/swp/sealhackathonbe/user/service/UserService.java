@@ -194,6 +194,10 @@ public class UserService {
             throw new RuntimeException("Email already exists");
         }
 
+        if (request.getUserTypeId() == null) {
+            throw new IllegalArgumentException("User type is required");
+        }
+
         UserType userType = userTypeRepo
                 .findById(request.getUserTypeId())
                 .orElseThrow(() ->
