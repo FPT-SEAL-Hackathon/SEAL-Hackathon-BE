@@ -1,10 +1,8 @@
 package com.fpt.swp.sealhackathonbe.research.service.impl;
 
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
-import com.fpt.swp.sealhackathonbe.research.dto.ResearchDashboardResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ScoreDistributionResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.VarianceReportResponse;
-import com.fpt.swp.sealhackathonbe.research.service.ResearchDashboardService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
@@ -19,22 +17,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ResearchDashboardServiceImpl implements ResearchDashboardService {
+public class ResearchDashboardServiceImpl {
     private static final BigDecimal DEFAULT_BUCKET_SIZE = BigDecimal.TEN;
 
     private final EntityManager entityManager;
 
-    @Override
-    public ResearchDashboardResponse getDashboard(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
-        BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
-        return new ResearchDashboardResponse(
-                getVarianceReport(eventId, roundId, categoryId),
-                getScoreDistribution(eventId, roundId, categoryId, normalizedBucketSize),
-                getReliabilityMetrics(eventId, roundId, categoryId)
-        );
-    }
 
-    @Override
     public List<VarianceReportResponse> getVarianceReport(UUID eventId, UUID roundId, UUID categoryId) {
         String sql = applyFilters("""
                 SELECT
@@ -90,7 +78,6 @@ public class ResearchDashboardServiceImpl implements ResearchDashboardService {
                 .toList();
     }
 
-    @Override
     public List<ScoreDistributionResponse> getScoreDistribution(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
         BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
         String innerSql = applyFilters("""
@@ -130,7 +117,6 @@ public class ResearchDashboardServiceImpl implements ResearchDashboardService {
                 .toList();
     }
 
-    @Override
     public List<ReliabilityMetricResponse> getReliabilityMetrics(UUID eventId, UUID roundId, UUID categoryId) {
         String sql = applyFilters("""
                 WITH ScoreComparisons AS (
