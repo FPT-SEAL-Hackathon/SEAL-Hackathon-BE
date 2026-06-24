@@ -8,6 +8,7 @@ import com.fpt.swp.sealhackathonbe.round.dto.response.RoundCriterionResponse;
 import com.fpt.swp.sealhackathonbe.round.service.RoundCriterionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class RoundCriterionController {
     }
 
     @PostMapping("/criteria/import/{roundId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundCriterionResponse> importCriteriaFromEvent(
             @PathVariable UUID roundId,
             @Valid @RequestBody ImportCriteriaFromEventRequest request) {
@@ -38,6 +40,7 @@ public class RoundCriterionController {
     }
 
     @PostMapping("/criterion/{roundId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse createSpecificCriterion(
             @PathVariable UUID roundId,
             @Valid @RequestBody CreateSpecificCriterionRequest request) {
@@ -45,6 +48,7 @@ public class RoundCriterionController {
     }
 
     @PutMapping("/criterion/import/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse updateImportedCriterion(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateImportedCriterionRequest request) {
@@ -52,6 +56,7 @@ public class RoundCriterionController {
     }
 
     @PutMapping("/criterion/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse updateSpecificCriterion(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateSpecificCriterionRequest request
@@ -60,6 +65,7 @@ public class RoundCriterionController {
     }
 
     @DeleteMapping("/criterion/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void delete(@PathVariable UUID id) {
         roundCriterionService.delete(id);
     }

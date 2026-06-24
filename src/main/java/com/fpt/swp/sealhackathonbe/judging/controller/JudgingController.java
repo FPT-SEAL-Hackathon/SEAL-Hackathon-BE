@@ -55,7 +55,7 @@ public class JudgingController {
     }
 
     @GetMapping("/judging/judge/{judgeUserId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER') or #judgeUserId == principal.user.userId")
     @Operation(summary = "Get judging scores by judge ID", description = "Retrieves all scores given by a specific judge")
     public ResponseEntity<List<JudgingDTO>> getJudgingByJudgeId(@PathVariable UUID judgeUserId) {
         List<JudgingDTO> scores = judgingService.getScoresByJudgeId(judgeUserId);

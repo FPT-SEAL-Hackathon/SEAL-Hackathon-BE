@@ -31,6 +31,10 @@ import java.util.UUID;
 
 @Service
 public class UserService {
+    private static final UUID FPT_STUDENT_ID =
+            UUID.fromString("10000000-0000-0000-0000-000000000001");
+    private static final UUID EXTERNAL_STUDENT_ID =
+            UUID.fromString("10000000-0000-0000-0000-000000000002");
 
     @Autowired
     private JwtServiceImpl jwtServiceImpl;
@@ -198,6 +202,12 @@ public class UserService {
                 .findById(request.getUserTypeId())
                 .orElseThrow(() ->
                         new RuntimeException("User type not found"));
+
+        if (!FPT_STUDENT_ID.equals(userType.getUserTypeId())
+                && !EXTERNAL_STUDENT_ID.equals(userType.getUserTypeId())) {
+            throw new RuntimeException("This user type cannot be self-registered");
+        }
+
         AccountStatus accountStatus = accountStatusRepo
                 .findByStatusName("Unverified")
                 .orElseThrow(() ->
@@ -211,10 +221,6 @@ public class UserService {
         user.setUserType(userType);
         user.setAccountStatus(accountStatus);
         user.setCreatedAt(LocalDateTime.now());
-        // Student code
-        UUID FPT_STUDENT_ID = UUID.fromString(
-                "10000000-0000-0000-0000-000000000001"
-        );
 
         if (userType.getUserTypeId().equals(FPT_STUDENT_ID)) {
             user.setFptStudentCode(request.getStudentCode());
