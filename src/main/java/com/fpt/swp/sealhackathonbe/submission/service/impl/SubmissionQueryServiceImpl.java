@@ -14,6 +14,12 @@ import java.util.UUID;
 @Service
 public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     // Phan query cua luong submission: repository doc bang Submissions, mapper chuyen entity sang DTO.
+    private static final UUID SUBMISSION_STATUS_SCORED =
+            UUID.fromString("50000000-0000-0000-0000-000000000005");
+
+    private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
+            UUID.fromString("50000000-0000-0000-0000-000000000004");
+
     private final SubmissionsRepository submissionsRepository;
     private final TeamMembersRepository teamMembersRepository;
 
@@ -51,6 +57,20 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     public List<SubmissionResponse> getSubmissionsByRound(UUID roundId) {
         // Tra ve tat ca submission trong mot round cho man hinh danh sach/review.
         return submissionsRepository.findByRoundId(roundId)
+                .stream()
+                .map(SubmissionMapper::toSubmissionResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubmissionResponse> getUnreviewSubmissionByRound(UUID roundId) {
+        // Unreview o day la cac submission chua bi cham diem xong va khong bi loai.
+        return submissionsRepository
+                .findByRoundIdAndSubmissionStatusIdNotIn(
+                        roundId,
+                        List.of(SUBMISSION_STATUS_SCORED, SUBMISSION_STATUS_DISQUALIFIED)
+                )
                 .stream()
                 .map(SubmissionMapper::toSubmissionResponse)
                 .toList();

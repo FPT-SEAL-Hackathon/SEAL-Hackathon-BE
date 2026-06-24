@@ -16,6 +16,9 @@ public interface SubmissionsRepository extends JpaRepository<Submissions, UUID> 
     // Dung cho API lay danh sach submission theo round.
     List<Submissions> findByRoundId(UUID roundId);
 
+    // Dung cho API lay cac submission trong round chua duoc review/cham diem.
+    List<Submissions> findByRoundIdAndSubmissionStatusIdNotIn(UUID roundId, List<UUID> statusIds);
+
     // Dung khi team bi loai: tat ca submission hien co cua team cung chuyen sang Disqualified.
     List<Submissions> findByTeamId(UUID teamId);
 
