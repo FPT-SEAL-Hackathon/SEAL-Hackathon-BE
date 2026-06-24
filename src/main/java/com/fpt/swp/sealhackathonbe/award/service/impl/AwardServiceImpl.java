@@ -24,6 +24,9 @@ import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -55,6 +58,8 @@ public class AwardServiceImpl implements AwardService {
     private final UserRepository userRepository;
     private final RoundRepository roundRepository;
     private final RoundRankingRepository roundRankingRepository;
+    private final NotificationService notificationService;
+    private final TeamMembersRepository teamMembersRepository;
 
     @Override
     @Transactional
@@ -91,7 +96,9 @@ public class AwardServiceImpl implements AwardService {
         award.setIsPublished(true);
         award.setPublishedAt(Instant.now());
 
-        return convertToResponse(awardRepository.save(award));
+        Award savedAward = awardRepository.save(award);
+        notifyTeamAboutAward(savedAward, adminId);
+        return convertToResponse(savedAward);
     }
 
     @Override
@@ -255,7 +262,39 @@ public class AwardServiceImpl implements AwardService {
         award.setIsPublished(true);
         award.setPublishedAt(Instant.now());
 
-        return awardRepository.save(award);
+        Award savedAward = awardRepository.save(award);
+        notifyTeamAboutAward(savedAward, admin.getUserId());
+        return savedAward;
+    }
+
+    private void notifyTeamAboutAward(Award award, UUID adminId) {
+        List<UUID> recipientIds = teamMembersRepository.findByTeamIdAndActiveTrue(award.getTeam().getTeamId())
+                .stream()
+                .map(TeamMembers::getUserId)
+                .collect(Collectors.toList());
+
+        if (recipientIds.isEmpty()) return;
+
+        String title = "Congratulations! Your team won an award: " + award.getAwardTitle();
+        String body = String.format("Hello %s,\n\n" +
+                "We are thrilled to announce that your team has been granted the \"%s - %s\" award in the event \"%s\".\n\n" +
+                "Prize: %s %s\n\n" +
+                "Congratulations from the organization board!",
+                award.getTeam().getTeamName(),
+                award.getAwardTier().getTierName(),
+                award.getAwardTitle(),
+                award.getEvent().getEventName(),
+                award.getPrizeValue() != null ? award.getPrizeValue().toString() : "N/A",
+                award.getPrizeCurrency()
+        );
+
+        notificationService.sendBroadcastNotification(
+                recipientIds,
+                adminId,
+                award.getEvent().getEventId(),
+                title,
+                body
+        );
     }
 
     private Category getCategory(UUID categoryId) {
