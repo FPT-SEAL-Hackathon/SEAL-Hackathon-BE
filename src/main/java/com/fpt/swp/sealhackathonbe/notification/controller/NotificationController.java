@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -127,6 +128,7 @@ public class NotificationController {
             operationId = "sendNotificationToUser"
     )
     @PostMapping("/sendNotificationToUser")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
@@ -153,6 +155,7 @@ public class NotificationController {
             operationId = "sendNotificationToEmail"
     )
     @PostMapping("/sendNotificationToEmail")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendNotificationToEmail(
             @Valid @RequestBody CreateNotificationByEmailRequest request,
             Authentication authentication
@@ -179,6 +182,7 @@ public class NotificationController {
             operationId = "sendBroadcastNotification"
     )
     @PostMapping("/sendBroadcastNotification")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendBroadcastNotification(
             @Valid @RequestBody BroadcastNotificationRequest request,
             Authentication authentication

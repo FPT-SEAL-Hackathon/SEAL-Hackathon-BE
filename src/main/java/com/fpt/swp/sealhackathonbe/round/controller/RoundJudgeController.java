@@ -35,6 +35,7 @@ public class RoundJudgeController {
     }
 
     @GetMapping("/judge/rounds/{judgeId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER') or #judgeId == principal.user.userId")
     public ResponseEntity<List<RoundResponse>> getRoundsByJudge(@PathVariable UUID judgeId) {
         return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
     }
