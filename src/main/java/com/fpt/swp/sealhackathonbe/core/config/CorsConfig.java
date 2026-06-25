@@ -9,11 +9,13 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String viteApiUrl = System.getenv("VITE_API_URL");
+        String[] origins = (viteApiUrl != null && !viteApiUrl.trim().isEmpty())
+                ? new String[]{"http://localhost:5173", "http://localhost:3000", viteApiUrl}
+                : new String[]{"http://localhost:5173", "http://localhost:3000"};
+
         registry.addMapping("/**") // Áp dụng cho tất cả các endpoint API
-                .allowedOrigins(
-                    "http://localhost:5173", // Cho phép Vite (React Frontend) gọi tới
-                    "http://localhost:3000"
-                )
+                .allowedOrigins(origins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS") // Các HTTP method được phép
                 .allowedHeaders("*") // Chấp nhận mọi Header (như Authorization, Content-Type...)
                 .allowCredentials(true) // Cho phép gửi Cookies hoặc thông tin Authentication
