@@ -20,7 +20,14 @@ public class CorsConfig {
                 : Arrays.asList("http://localhost:5173", "http://localhost:3000");
 
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(origins);
+        // Fallback to allow any origin pattern if exact origin is tricky to configure on Azure
+        if (origins.size() == 2) { 
+            // If FRONT_END_URL wasn't set, allow all to prevent production crash
+            configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        } else {
+            configuration.setAllowedOrigins(origins);
+            configuration.setAllowedOriginPatterns(Arrays.asList(frontEndUrl, "https://*.azurestaticapps.net"));
+        }
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
