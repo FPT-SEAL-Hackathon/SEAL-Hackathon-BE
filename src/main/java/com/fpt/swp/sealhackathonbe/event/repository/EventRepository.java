@@ -11,5 +11,7 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
     List<Event> findAllByIsDeletedFalse();
+    List<Event> findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(List<String> statusNames);
     Optional<Event> findByEventIdAndIsDeletedFalse(UUID eventId);
+    Optional<Event> findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(UUID eventId, List<String> statusNames);
 }

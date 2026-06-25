@@ -82,6 +82,8 @@ public class AwardServiceImpl implements AwardService {
                     .orElseThrow(() -> new EntityNotFoundException("Category not found."));
         }
 
+        validateAwardTierNotAlreadyGranted(event, category, tier);
+
         Award award = new Award();
         award.setEvent(event);
         award.setCategory(category);
@@ -220,6 +222,7 @@ public class AwardServiceImpl implements AwardService {
                         LinkedHashMap::new
                 ));
         validateAwardPatternsExist(rankings, patternByRank);
+        validateRankingAwardsNotAlreadyGranted(event, category, rankings, patternByRank);
 
         return rankings.stream()
                 .map(ranking -> grantRankingAward(event, category, admin, ranking, patternByRank))
@@ -240,14 +243,7 @@ public class AwardServiceImpl implements AwardService {
         }
 
         Teams team = ranking.getTeam();
-        Award award = awardRepository
-                .findByEventEventIdAndCategoryCategoryIdAndTeamTeamIdAndAwardTitle(
-                        event.getEventId(),
-                        category.getCategoryId(),
-                        team.getTeamId(),
-                        pattern.getAwardTitle()
-                )
-                .orElseGet(Award::new);
+        Award award = new Award();
 
         award.setEvent(event);
         award.setCategory(category);
@@ -265,6 +261,36 @@ public class AwardServiceImpl implements AwardService {
         Award savedAward = awardRepository.save(award);
         notifyTeamAboutAward(savedAward, admin.getUserId());
         return savedAward;
+    }
+
+    private void validateAwardTierNotAlreadyGranted(Event event, Category category, AwardTier tier) {
+        UUID categoryId = category != null ? category.getCategoryId() : null;
+        if (awardRepository.existsPublishedAwardTierInScope(event.getEventId(), categoryId, tier.getId())) {
+            throw new IllegalStateException(String.format(
+                    "Award tier '%s' has already been granted for this %s.",
+                    tier.getTierName(),
+                    category != null ? "category" : "event"
+            ));
+        }
+    }
+
+    private void validateRankingAwardsNotAlreadyGranted(
+            Event event,
+            Category category,
+            List<RoundRanking> rankings,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        Set<UUID> requestedTierIds = new HashSet<>();
+        for (RoundRanking ranking : rankings) {
+            AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
+            AwardTier tier = pattern.getAwardTier();
+
+            if (!requestedTierIds.add(tier.getId())) {
+                throw new IllegalStateException("Duplicate award tier in selected award patterns: " + tier.getTierName());
+            }
+
+            validateAwardTierNotAlreadyGranted(event, category, tier);
+        }
     }
 
     private void notifyTeamAboutAward(Award award, UUID adminId) {
