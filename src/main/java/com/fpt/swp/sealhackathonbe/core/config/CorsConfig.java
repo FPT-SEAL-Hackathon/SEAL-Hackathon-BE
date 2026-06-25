@@ -9,9 +9,9 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        String viteApiUrl = System.getenv("VITE_API_URL");
-        String[] origins = (viteApiUrl != null && !viteApiUrl.trim().isEmpty())
-                ? new String[]{"http://localhost:5173", "http://localhost:3000", viteApiUrl}
+        String frontEndUrl = System.getenv("FRONT_END_URL");
+        String[] origins = (frontEndUrl != null && !frontEndUrl.trim().isEmpty())
+                ? new String[]{"http://localhost:5173", "http://localhost:3000", frontEndUrl}
                 : new String[]{"http://localhost:5173", "http://localhost:3000"};
 
         registry.addMapping("/**") // Áp dụng cho tất cả các endpoint API
