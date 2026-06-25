@@ -521,6 +521,14 @@ CREATE TABLE EventRankings (
 );
 GO
 
+-- Thêm cột IsPublished vào bảng RoundRankings
+ALTER TABLE RoundRankings
+    ADD IsPublished BIT NOT NULL DEFAULT 0;
+GO
+-- Thêm cột IsPublished vào bảng EventRankings
+ALTER TABLE EventRankings
+    ADD IsPublished BIT NOT NULL DEFAULT 0;
+GO
 -- ============================================================
 -- SECTION 11: DISQUALIFICATIONS
 -- ============================================================
