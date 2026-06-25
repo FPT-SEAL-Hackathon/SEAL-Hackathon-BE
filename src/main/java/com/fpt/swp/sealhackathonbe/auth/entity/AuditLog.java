@@ -1,12 +1,20 @@
 package com.fpt.swp.sealhackathonbe.auth.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Lưu dấu vết thao tác quan trọng để phục vụ audit và truy vết bảo mật.
+ */
 @Getter
 @Setter
 @Entity
@@ -46,5 +54,4 @@ public class AuditLog {
 
     @Column(name = "Notes")
     private String notes;
-
 }

@@ -7,9 +7,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Cung cấp người dùng hiện tại từ SecurityContext cho các xử lý cần ownership.
+ */
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
 
+    /**
+     * Permission:
+     * Trả về user đang đăng nhập hoặc ném lỗi nếu request chưa xác thực.
+     */
     public User getCurrentUser() {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

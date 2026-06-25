@@ -1,10 +1,8 @@
 package com.fpt.swp.sealhackathonbe.research.service.impl;
 
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
-import com.fpt.swp.sealhackathonbe.research.dto.ResearchDashboardResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ScoreDistributionResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.VarianceReportResponse;
-import com.fpt.swp.sealhackathonbe.research.service.ResearchDashboardService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
@@ -19,22 +17,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ResearchDashboardServiceImpl implements ResearchDashboardService {
+public class ResearchDashboardServiceImpl {
     private static final BigDecimal DEFAULT_BUCKET_SIZE = BigDecimal.TEN;
 
     private final EntityManager entityManager;
 
-    @Override
-    public ResearchDashboardResponse getDashboard(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
-        BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
-        return new ResearchDashboardResponse(
-                getVarianceReport(eventId, roundId, categoryId),
-                getScoreDistribution(eventId, roundId, categoryId, normalizedBucketSize),
-                getReliabilityMetrics(eventId, roundId, categoryId)
-        );
-    }
 
-    @Override
     public List<VarianceReportResponse> getVarianceReport(UUID eventId, UUID roundId, UUID categoryId) {
         String sql = applyFilters("""
                 SELECT
@@ -90,22 +78,18 @@ public class ResearchDashboardServiceImpl implements ResearchDashboardService {
                 .toList();
     }
 
-    @Override
     public List<ScoreDistributionResponse> getScoreDistribution(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
         BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
-        String sql = applyFilters("""
+        String innerSql = applyFilters("""
                 SELECT
-                    FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize AS BucketStart,
-                    COUNT(*) AS ScoreCount
+                    FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize AS BucketStart
                 FROM Judging sc
                          JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
                          JOIN Teams t ON t.TeamID = s.TeamID
                 WHERE t.EventID = :eventId
                   AND sc.IsCalibration = 0
-                """, roundId, categoryId) + """
-                GROUP BY FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize
-                ORDER BY BucketStart
-                """;
+                """, roundId, categoryId);
+        String sql = "SELECT src.BucketStart, COUNT(*) AS ScoreCount FROM (" + innerSql + ") src GROUP BY src.BucketStart ORDER BY src.BucketStart";
 
         List<Object[]> rows = query(sql, eventId, roundId, categoryId)
                 .setParameter("bucketSize", normalizedBucketSize)
@@ -133,7 +117,6 @@ public class ResearchDashboardServiceImpl implements ResearchDashboardService {
                 .toList();
     }
 
-    @Override
     public List<ReliabilityMetricResponse> getReliabilityMetrics(UUID eventId, UUID roundId, UUID categoryId) {
         String sql = applyFilters("""
                 WITH ScoreComparisons AS (

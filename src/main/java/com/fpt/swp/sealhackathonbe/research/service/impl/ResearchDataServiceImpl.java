@@ -2,23 +2,13 @@ package com.fpt.swp.sealhackathonbe.research.service.impl;
 
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
-import com.fpt.swp.sealhackathonbe.research.dto.CalibrationSampleResponse;
-import com.fpt.swp.sealhackathonbe.research.dto.CreateCalibrationSampleRequest;
-import com.fpt.swp.sealhackathonbe.research.dto.DataExportLogResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ScoreDistributionResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.VarianceReportResponse;
-import com.fpt.swp.sealhackathonbe.research.entity.CalibrationSample;
 import com.fpt.swp.sealhackathonbe.research.entity.DataExportLog;
-import com.fpt.swp.sealhackathonbe.research.repository.CalibrationSampleRepository;
 import com.fpt.swp.sealhackathonbe.research.repository.DataExportLogRepository;
-import com.fpt.swp.sealhackathonbe.research.service.ResearchDashboardService;
 import com.fpt.swp.sealhackathonbe.research.service.ResearchDataService;
-import com.fpt.swp.sealhackathonbe.round.entity.Round;
-import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.studentdownload.dto.DownloadFileResponse;
-import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
-import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.opencsv.CSVWriter;
@@ -39,75 +29,10 @@ import java.util.UUID;
 public class ResearchDataServiceImpl implements ResearchDataService {
     private static final String CSV_CONTENT_TYPE = "text/csv; charset=UTF-8";
 
-    private final CalibrationSampleRepository calibrationSampleRepository;
     private final DataExportLogRepository dataExportLogRepository;
-    private final RoundRepository roundRepository;
-    private final SubmissionsRepository submissionsRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final ResearchDashboardService researchDashboardService;
-
-    @Override
-    @Transactional
-    public CalibrationSampleResponse createCalibrationSample(CreateCalibrationSampleRequest request, UUID currentUserId) {
-        Round round = roundRepository.findById(request.roundId())
-                .orElseThrow(() -> new RuntimeException("Round not found"));
-        Submissions submission = submissionsRepository.findById(request.submissionId())
-                .orElseThrow(() -> new RuntimeException("Submission not found"));
-        User addedBy = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!request.roundId().equals(submission.getRoundId())) {
-            throw new IllegalArgumentException("Submission does not belong to this round");
-        }
-        if (calibrationSampleRepository.existsByRound_RoundIdAndSubmission_SubmissionId(
-                request.roundId(),
-                request.submissionId()
-        )) {
-            throw new IllegalArgumentException("Calibration sample already exists for this round and submission");
-        }
-
-        CalibrationSample sample = new CalibrationSample();
-        sample.setRound(round);
-        sample.setSubmission(submission);
-        sample.setReferenceScoreJson(request.referenceScoreJson());
-        sample.setAddedBy(addedBy);
-
-        return toCalibrationResponse(calibrationSampleRepository.save(sample));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CalibrationSampleResponse> getCalibrationSamplesByRound(UUID roundId) {
-        return calibrationSampleRepository.findByRound_RoundIdOrderByAddedAtDesc(roundId).stream()
-                .map(this::toCalibrationResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CalibrationSampleResponse getCalibrationSample(UUID sampleId) {
-        return calibrationSampleRepository.findById(sampleId)
-                .map(this::toCalibrationResponse)
-                .orElseThrow(() -> new RuntimeException("Calibration sample not found"));
-    }
-
-    @Override
-    @Transactional
-    public void deleteCalibrationSample(UUID sampleId) {
-        if (!calibrationSampleRepository.existsById(sampleId)) {
-            throw new RuntimeException("Calibration sample not found");
-        }
-        calibrationSampleRepository.deleteById(sampleId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<DataExportLogResponse> getExportLogs(UUID eventId) {
-        return dataExportLogRepository.findByEvent_EventIdOrderByExportedAtDesc(eventId).stream()
-                .map(this::toExportLogResponse)
-                .toList();
-    }
+    private final ResearchDashboardServiceImpl researchDashboardService;
 
     @Override
     @Transactional
@@ -265,36 +190,6 @@ public class ResearchDataServiceImpl implements ResearchDataService {
             throw new RuntimeException("Failed to generate research CSV", e);
         }
         return writer.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    private CalibrationSampleResponse toCalibrationResponse(CalibrationSample sample) {
-        Submissions submission = sample.getSubmission();
-        return new CalibrationSampleResponse(
-                sample.getSampleId(),
-                sample.getRound().getRoundId(),
-                sample.getRound().getRoundName(),
-                submission.getSubmissionId(),
-                submission.getTeamId(),
-                submission.getTeam() == null ? null : submission.getTeam().getTeamName(),
-                sample.getReferenceScoreJson(),
-                sample.getAddedBy().getUserId(),
-                sample.getAddedBy().getFullName(),
-                sample.getAddedAt()
-        );
-    }
-
-    private DataExportLogResponse toExportLogResponse(DataExportLog log) {
-        return new DataExportLogResponse(
-                log.getExportId(),
-                log.getEvent().getEventId(),
-                log.getEvent().getEventName(),
-                log.getExportedBy().getUserId(),
-                log.getExportedBy().getFullName(),
-                log.getExportedAt(),
-                log.getFileFormat(),
-                log.getRowCount(),
-                log.getNotes()
-        );
     }
 
     private String normalizeType(String type) {

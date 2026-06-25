@@ -5,6 +5,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Thông tin hồ sơ an toàn được trả về từ API xác thực.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

@@ -24,4 +24,5 @@ public class RoundRankingDTO {
     private Integer rankPosition;
     private Boolean isAdvanced;
     private LocalDateTime computedAt;
+    private Boolean isPublished;
 }

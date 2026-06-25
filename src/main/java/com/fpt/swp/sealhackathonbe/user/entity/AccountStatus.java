@@ -1,6 +1,13 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,7 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-
+/**
+ * Biểu diễn trạng thái vòng đời tài khoản như Unverified hoặc Active.
+ */
 @Entity
 @Table(
         name = "AccountStatus",
@@ -35,17 +44,25 @@ public class AccountStatus {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "accountStatus")
     private List<User> userAccountStatusList = new ArrayList<>();
 
-    //tránh lỗi dữ liệu không đồng bộ (bị null)========
-    public void addUser(User user){
+    /**
+     * Đồng bộ quan hệ hai chiều khi gán trạng thái cho user.
+     */
+    public void addUser(User user) {
         userAccountStatusList.add(user);
         user.setAccountStatus(this);
     }
-    public void removeUser(User user){
+
+    /**
+     * Gỡ trạng thái khỏi user và giữ quan hệ hai chiều nhất quán.
+     */
+    public void removeUser(User user) {
         userAccountStatusList.remove(user);
         user.setAccountStatus(null);
     }
-    //cách làm chuẩn====================================
 
+    /**
+     * Tránh load danh sách user khi log/debug trạng thái.
+     */
     @Override
     public String toString() {
         return "AccountStatus{" +

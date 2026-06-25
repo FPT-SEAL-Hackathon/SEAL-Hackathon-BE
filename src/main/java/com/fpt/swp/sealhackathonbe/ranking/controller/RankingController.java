@@ -51,6 +51,28 @@ public class RankingController {
         List<RoundRankingDTO> rankings = rankingService.computeRoundRankings(roundId,categoryId);
         return ResponseEntity.ok(rankings);
     }
+    @PostMapping("/admin/rounds/{roundId}/publish-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Publish rankings for a round", description = "Publishes the computed rankings for a specific round and category")
+    public ResponseEntity<Void> publishRoundRankings(
+            @PathVariable("roundId") UUID roundId,
+            @RequestParam UUID categoryId
+    ){
+        rankingService.publishRoundRankings(roundId, categoryId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/admin/events/{eventId}/publish-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Publish rankings for an event", description = "Publishes the computed final rankings for a specific event and category")
+    public ResponseEntity<Void> publishEventRankings(
+            @PathVariable("eventId") UUID eventId,
+            @RequestParam UUID categoryId
+    ){
+        rankingService.publishEventRankings(eventId, categoryId);
+        return ResponseEntity.ok().build();
+    }
+
     /**
      * Public leaderboard API.
      */
@@ -62,8 +84,11 @@ public class RankingController {
 
         List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
 
-        // Sort by rank position
-        rankings.sort((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()));
+        // Sort by rank position and filter only published
+        rankings = rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .collect(Collectors.toList());
         return ResponseEntity.ok(rankings);
     }
 }
