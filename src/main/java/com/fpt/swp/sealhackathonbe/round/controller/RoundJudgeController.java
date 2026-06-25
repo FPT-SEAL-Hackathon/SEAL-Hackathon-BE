@@ -21,6 +21,8 @@ public class RoundJudgeController {
     private final RoundJudgeService roundJudgeService;
 
     @PostMapping("/round/judges/{roundId}")
+    // RBAC:
+    // Chỉ ORGANIZER được phân công judge cho round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
@@ -35,12 +37,16 @@ public class RoundJudgeController {
     }
 
     @GetMapping("/judge/rounds/{judgeId}")
+    // RBAC:
+    // Cho phép ORGANIZER hoặc chính judge xem round được phân công.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER') or #judgeId == principal.user.userId")
     public ResponseEntity<List<RoundResponse>> getRoundsByJudge(@PathVariable UUID judgeId) {
         return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
     }
 
     @DeleteMapping("/round/judge/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được gỡ judge khỏi round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void removeJudge(@PathVariable UUID id) {
         roundJudgeService.removeJudge(id);

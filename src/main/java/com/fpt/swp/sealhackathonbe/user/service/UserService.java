@@ -1,14 +1,14 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
+import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
+import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
-import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
-import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -19,7 +19,6 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,6 +28,10 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Xử lý đăng ký, đăng nhập, lưu refresh token,
+ * xác minh email và thu hồi phiên đăng xuất.
+ */
 @Service
 public class UserService {
     private static final UUID FPT_STUDENT_ID =
@@ -63,7 +66,10 @@ public class UserService {
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
 
-
+    /**
+     * Login:
+     * Xác thực tài khoản đã verify rồi cấp JWT và thông tin hồ sơ.
+     */
     public LoginResponse verify(LoginRequest request) {
 
         Authentication authentication =
@@ -80,7 +86,6 @@ public class UserService {
                     (UserPrincipal) authentication.getPrincipal();
 
             User user = userPrincipal.getUser();
-            // Check trạng thái tài khoản
             if ("UNVERIFIED".equalsIgnoreCase(
                     user.getAccountStatus().getStatusName())) {
 
@@ -89,8 +94,12 @@ public class UserService {
                 );
             }
 
+            // JWT:
+            // Cấp access token ngắn hạn sau khi xác thực thành công.
             String accessToken = jwtServiceImpl.generateAccessToken(user);
 
+            // Refresh Token:
+            // Lưu refresh token để quản lý phiên và hỗ trợ logout.
             String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
             String studentCode =
@@ -115,7 +124,7 @@ public class UserService {
 
             RefreshToken tokenEntity = RefreshToken.builder()
                     .user(user)
-                    .tokenHash(refreshToken)   // ⚠️ LƯU REFRESH TOKEN (KHÔNG PHẢI ACCESS)
+                    .tokenHash(refreshToken)
                     .issuedAt(LocalDateTime.now())
                     .expiresAt(LocalDateTime.now().plusDays(7))
                     .revokedAt(null)
@@ -133,6 +142,9 @@ public class UserService {
         throw new RuntimeException("Invalid email or password");
     }
 
+    /**
+     * Tạo token xác minh email một lần cho tài khoản mới đăng ký.
+     */
     private void createAndSendVerificationToken(User user) {
 
         String verificationToken =
@@ -170,6 +182,10 @@ public class UserService {
         );
     }
 
+    /**
+     * Logout:
+     * Thu hồi refresh token để phiên hiện tại không thể refresh tiếp.
+     */
     @Transactional
     public void logout(String refreshToken) {
 
@@ -180,20 +196,23 @@ public class UserService {
 
         token.setRevokedAt(LocalDateTime.now());
 
-        refreshTokenRepository.save(token); // 🔥 nên thêm
+        refreshTokenRepository.save(token);
     }
 
+    /**
+     * Register:
+     * Chỉ cho tự đăng ký tài khoản student và bắt buộc xác minh email.
+     */
     @Transactional
     public UserResponse register(RegisterRequest request) {
 
-        // Kiểm tra confirm password
         if (!request.getPassword()
                 .equals(request.getConfirmPassword())) {
             throw new RuntimeException(
                     "Password and Confirm Password do not match"
             );
         }
-        // Kiểm tra email đã tồn tại
+
         if (userRepo.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
@@ -203,6 +222,8 @@ public class UserService {
                 .orElseThrow(() ->
                         new RuntimeException("User type not found"));
 
+        // RBAC:
+        // Chặn tự đăng ký role đặc quyền như ORGANIZER/JUDGE từ API public.
         if (!FPT_STUDENT_ID.equals(userType.getUserTypeId())
                 && !EXTERNAL_STUDENT_ID.equals(userType.getUserTypeId())) {
             throw new RuntimeException("This user type cannot be self-registered");
@@ -228,6 +249,8 @@ public class UserService {
             user.setExternalStudentCode(request.getStudentCode());
         }
 
+        // Password:
+        // Mã hóa mật khẩu trước khi lưu để không ghi plaintext vào database.
         user.setPasswordHash(
                 encoder.encode(request.getPassword())
         );
@@ -240,7 +263,6 @@ public class UserService {
                         : savedUser.getExternalStudentCode();
 
         createAndSendVerificationToken(savedUser);
-
 
         return UserResponse.builder()
                 .id(savedUser.getUserId())
@@ -262,5 +284,3 @@ public class UserService {
                 .build();
     }
 }
-
-

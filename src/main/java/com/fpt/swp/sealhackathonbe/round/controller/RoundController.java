@@ -21,6 +21,8 @@ public class RoundController {
     private final RoundService roundService;
 
     @PostMapping("/round/{categoryId}")
+    // RBAC:
+    // Chỉ ORGANIZER được tạo round vì thao tác này đổi cấu trúc event.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundResponse create(@PathVariable UUID categoryId,
                                 @Valid @RequestBody CreateRoundRequest request) {
@@ -38,6 +40,8 @@ public class RoundController {
     }
 
     @PutMapping("/round/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được sửa round vì ảnh hưởng timeline và chấm điểm.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundResponse update(@PathVariable UUID id,
                                 @Valid @RequestBody UpdateRoundRequest request) {
@@ -45,6 +49,8 @@ public class RoundController {
     }
 
     @DeleteMapping("/round/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được xóa round để tránh mất dữ liệu bởi user thường.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void delete(@PathVariable UUID id) {
         roundService.delete(id);

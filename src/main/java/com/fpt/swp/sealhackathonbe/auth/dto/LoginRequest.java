@@ -4,6 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+/**
+ * Dữ liệu đăng nhập do client gửi lên.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
