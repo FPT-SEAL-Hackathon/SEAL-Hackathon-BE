@@ -1,24 +1,33 @@
 package com.fpt.swp.sealhackathonbe.core.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         String frontEndUrl = System.getenv("FRONT_END_URL");
-        String[] origins = (frontEndUrl != null && !frontEndUrl.trim().isEmpty())
-                ? new String[]{"http://localhost:5173", "http://localhost:3000", frontEndUrl}
-                : new String[]{"http://localhost:5173", "http://localhost:3000"};
+        List<String> origins = (frontEndUrl != null && !frontEndUrl.trim().isEmpty())
+                ? Arrays.asList("http://localhost:5173", "http://localhost:3000", frontEndUrl)
+                : Arrays.asList("http://localhost:5173", "http://localhost:3000");
 
-        registry.addMapping("/**") // Áp dụng cho tất cả các endpoint API
-                .allowedOrigins(origins)
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS") // Các HTTP method được phép
-                .allowedHeaders("*") // Chấp nhận mọi Header (như Authorization, Content-Type...)
-                .allowCredentials(true) // Cho phép gửi Cookies hoặc thông tin Authentication
-                .maxAge(3600); // Cache cấu hình CORS trong 1 giờ (3600 giây) để giảm tải request OPTIONS (Preflight)
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
