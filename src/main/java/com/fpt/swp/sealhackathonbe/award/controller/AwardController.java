@@ -29,11 +29,12 @@ public class AwardController {
     private final AwardService awardService;
 
     /**
-     * API for granting an award to a team (for Event Coordinator / Admin)
-     * POST /api/v1/awards
+     * Cấp giải thưởng cho team, chỉ nên thực hiện bởi người điều phối.
      */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
     @PostMapping("/grandAwardToATeam")
+    // RBAC:
+    // Chỉ ORGANIZER được tạo award để tránh user thường can thiệp kết quả.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<AwardResponse> grantAwardToTeam(@Valid @RequestBody AwardRequest request, @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -42,8 +43,7 @@ public class AwardController {
     }
 
     /**
-     * API for getting the details of a specific award
-     * GET /api/v1/awards/{id}
+     * Xem chi tiết một award theo id.
      */
     @Operation(summary = "Get award details", description = "Get the details of a specific award by its ID.", operationId = "getAwardById")
     @GetMapping("/{id}")
@@ -53,8 +53,7 @@ public class AwardController {
     }
 
     /**
-     * API for getting all awards of a specific event
-     * GET /api/v1/awards/events/{eventId}
+     * Xem danh sách award thuộc một event.
      */
     @Operation(summary = "Get awards by event", description = "Get all awards belonging to a specific event.", operationId = "getAwardsByEvent")
     @GetMapping("/events/{eventId}")
@@ -69,6 +68,8 @@ public class AwardController {
             operationId = "saveAwardPatterns"
     )
     @PostMapping("/templates/categories/{categoryId}/award-patterns")
+    // RBAC:
+    // Chỉ ORGANIZER được đổi mẫu award vì ảnh hưởng kết quả xếp hạng.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardPatternResponse>> saveAwardPatterns(
             @PathVariable UUID categoryId,
@@ -107,6 +108,8 @@ public class AwardController {
             operationId = "autoGrantTopAwards"
     )
     @PostMapping("/categories/{categoryId}/auto-grant-top")
+    // RBAC:
+    // Chỉ ORGANIZER được tự động cấp award từ bảng xếp hạng.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardResponse>> autoGrantTopAwards(
             @PathVariable UUID categoryId,

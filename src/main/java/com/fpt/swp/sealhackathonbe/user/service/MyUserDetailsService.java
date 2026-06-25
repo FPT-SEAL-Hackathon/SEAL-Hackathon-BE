@@ -9,12 +9,18 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Nạp tài khoản theo email cho Spring Security khi đăng nhập.
+ */
 @Service
 public class MyUserDetailsService implements UserDetailsService {
 
     @Autowired
     private UserRepository userRepository;
 
+    /**
+     * Tạo UserPrincipal để Spring kiểm tra mật khẩu và quyền ROLE_*.
+     */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email);

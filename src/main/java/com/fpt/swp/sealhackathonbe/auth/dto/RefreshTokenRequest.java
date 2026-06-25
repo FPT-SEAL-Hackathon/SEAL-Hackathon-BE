@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Chứa refresh token dùng để xin access token mới.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/**
+ * Dọn dẹp định kỳ các refresh token đã hết hạn.
+ */
 @Service
 public class RefreshTokenCleanupService {
 
@@ -16,10 +19,18 @@ public class RefreshTokenCleanupService {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
+    /**
+     * Nhận repository để xóa token hết hạn theo batch.
+     */
     public RefreshTokenCleanupService(RefreshTokenRepository refreshTokenRepository) {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
+    // Refresh Token:
+    // Chỉ xóa token có thời điểm hết hạn nhỏ hơn hiện tại và ghi log số lượng.
+    /**
+     * Chạy theo cron cấu hình để giảm dữ liệu phiên không còn dùng được.
+     */
     @Scheduled(cron = "${refresh-token.cleanup.cron:0 0 * * * *}")
     @Transactional
     public void deleteExpiredRefreshTokens() {

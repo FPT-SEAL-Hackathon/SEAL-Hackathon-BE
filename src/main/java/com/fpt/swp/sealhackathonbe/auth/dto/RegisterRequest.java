@@ -8,6 +8,9 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Dữ liệu đăng ký public dùng để tạo tài khoản student.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

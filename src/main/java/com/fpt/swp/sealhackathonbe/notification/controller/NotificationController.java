@@ -52,6 +52,9 @@ public class NotificationController {
 
         return ResponseEntity.ok(response);
     }
+
+    // Permission:
+    // Luôn lấy userId từ Authentication để user chỉ thao tác trên dữ liệu của mình.
     private UUID currentUserId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Unauthenticated user");
@@ -128,6 +131,8 @@ public class NotificationController {
             operationId = "sendNotificationToUser"
     )
     @PostMapping("/sendNotificationToUser")
+    // RBAC:
+    // Chỉ ORGANIZER được gửi thông báo trực tiếp để tránh spam giữa user.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
@@ -155,6 +160,8 @@ public class NotificationController {
             operationId = "sendNotificationToEmail"
     )
     @PostMapping("/sendNotificationToEmail")
+    // RBAC:
+    // Chỉ ORGANIZER được gửi thông báo qua email để bảo vệ người nhận.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendNotificationToEmail(
             @Valid @RequestBody CreateNotificationByEmailRequest request,
@@ -182,6 +189,8 @@ public class NotificationController {
             operationId = "sendBroadcastNotification"
     )
     @PostMapping("/sendBroadcastNotification")
+    // RBAC:
+    // Chỉ ORGANIZER được broadcast vì ảnh hưởng nhiều người dùng.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendBroadcastNotification(
             @Valid @RequestBody BroadcastNotificationRequest request,

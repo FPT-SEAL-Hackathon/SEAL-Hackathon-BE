@@ -1,6 +1,14 @@
 package com.fpt.swp.sealhackathonbe.user.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +19,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Đại diện tài khoản, hồ sơ và role dùng cho xác thực/phân quyền.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,7 +39,6 @@ public class User {
     @GeneratedValue
     private UUID userId;
 
-    // Email UNIQUE
     @Column(name = "Email", nullable = false, length = 255)
     private String email;
 
@@ -41,12 +51,10 @@ public class User {
     @Column(name = "Phone", length = 20)
     private String phone;
 
-    // FK -> UserType
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "UserTypeID", nullable = false)
     private UserType userType;
 
-    // FK -> AccountStatus
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "AccountStatusID", nullable = false)
     private AccountStatus accountStatus;
@@ -60,12 +68,10 @@ public class User {
     @Column(name = "UniversityName", length = 200)
     private String universityName;
 
-    // CreatedAt default GETUTCDATE()
     @CreationTimestamp
     @Column(name = "CreatedAt", updatable = false)
     private LocalDateTime createdAt;
 
-    // UpdatedAt default GETUTCDATE()
     @UpdateTimestamp
     @Column(name = "UpdatedAt")
     private LocalDateTime updatedAt;
@@ -73,7 +79,6 @@ public class User {
     @Column(name = "ApprovedAt")
     private LocalDateTime approvedAt;
 
-    // FK self reference (duyệt bởi user khác)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ApprovedByUserID")
     private User approvedBy;
@@ -84,14 +89,25 @@ public class User {
     @Column(name = "IsDeleted", nullable = false)
     private Boolean isDeleted = false;
 
+    /**
+     * RBAC:
+     * UserType là nguồn để suy ra role bảo mật của tài khoản.
+     */
     public UserType getUserType() {
         return userType;
     }
 
+    /**
+     * RBAC:
+     * Gán loại user khi đăng ký hoặc khi admin cập nhật quyền.
+     */
     public void setUserType(UserType userType) {
         this.userType = userType;
     }
 
+    /**
+     * Không đưa password hoặc quan hệ lazy vào log/debug.
+     */
     @Override
     public String toString() {
         return "User{" +
