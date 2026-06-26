@@ -16,6 +16,8 @@ public interface TeamService {
     // Lấy team theo ID, kèm danh sách thành viên active của team đó.
     TeamResponse getById(UUID teamId);
 
+    Long countAllTeams();
+
     List<TeamResponse> getByEventId(UUID eventId);
 
     List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId);
