@@ -92,6 +92,12 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
+    public Long countAllTeams() {
+        return teamsRepository.count();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<TeamResponse> getByEventId(UUID eventId) {
         return teamsRepository.findByEventId(eventId)
                 .stream()
