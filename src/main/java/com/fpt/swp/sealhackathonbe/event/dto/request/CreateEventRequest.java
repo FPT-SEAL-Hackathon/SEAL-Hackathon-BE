@@ -31,10 +31,8 @@ public class CreateEventRequest {
     private UUID eventStatusId;
 
     @FutureOrPresent(message = "Registration start time must be in the present or future")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationStart;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;
