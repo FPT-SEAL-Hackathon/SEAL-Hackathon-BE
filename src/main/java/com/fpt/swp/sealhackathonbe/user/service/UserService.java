@@ -9,6 +9,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
+import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -24,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -63,11 +65,14 @@ public class UserService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private AppProperties appProperties;
+
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
 
     /**
-     * Login:
+     * Đăng nhập:
      * Xác thực tài khoản đã verify rồi cấp JWT và thông tin hồ sơ.
      */
     public LoginResponse verify(LoginRequest request) {
@@ -98,7 +103,7 @@ public class UserService {
             // Cấp access token ngắn hạn sau khi xác thực thành công.
             String accessToken = jwtServiceImpl.generateAccessToken(user);
 
-            // Refresh Token:
+            // Token làm mới:
             // Lưu refresh token để quản lý phiên và hỗ trợ logout.
             String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
@@ -162,9 +167,13 @@ public class UserService {
 
         verificationTokenRepository.save(tokenEntity);
 
-        String verifyLink =
-                "http://localhost:8080/auth/verify-email?token="
-                        + verificationToken;
+        // Xác minh email được thực hiện từ frontend, nên host phải lấy từ cấu hình triển khai.
+        String verifyLink = UriComponentsBuilder
+                .fromUriString(appProperties.getFrontendUrl())
+                .path("/verify-email")
+                .queryParam("token", verificationToken)
+                .build()
+                .toUriString();
 
         String subject = "Verify Your Email";
 
@@ -183,7 +192,7 @@ public class UserService {
     }
 
     /**
-     * Logout:
+     * Đăng xuất:
      * Thu hồi refresh token để phiên hiện tại không thể refresh tiếp.
      */
     @Transactional
@@ -200,7 +209,7 @@ public class UserService {
     }
 
     /**
-     * Register:
+     * Đăng ký:
      * Chỉ cho tự đăng ký tài khoản student và bắt buộc xác minh email.
      */
     @Transactional
@@ -249,7 +258,7 @@ public class UserService {
             user.setExternalStudentCode(request.getStudentCode());
         }
 
-        // Password:
+        // Mật khẩu:
         // Mã hóa mật khẩu trước khi lưu để không ghi plaintext vào database.
         user.setPasswordHash(
                 encoder.encode(request.getPassword())
