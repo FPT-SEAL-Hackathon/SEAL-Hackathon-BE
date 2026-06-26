@@ -26,6 +26,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventServiceImplementation implements EventService {
 
+    private static final List<String> PUBLIC_EVENT_STATUSES = List.of(
+            "Registration Open",
+            "Ongoing",
+            "Completed"
+    );
+
     private final EventRepository eventRepository;
     private final EventStatusRepository eventStatusRepository;
     private final EventMapper eventMapper;
@@ -95,6 +101,23 @@ public class EventServiceImplementation implements EventService {
                 .stream()
                 .map(eventMapper::toEventResponse)
                 .toList();
+    }
+
+    @Override
+    public List<EventResponse> getPublicEvents() {
+        return eventRepository
+                .findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(PUBLIC_EVENT_STATUSES)
+                .stream()
+                .map(eventMapper::toEventResponse)
+                .toList();
+    }
+
+    @Override
+    public EventResponse getPublicEventById(UUID eventId) {
+        Event event = eventRepository
+                .findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(eventId, PUBLIC_EVENT_STATUSES)
+                .orElseThrow(() -> new EntityNotFoundException("Public event not found"));
+        return eventMapper.toEventResponse(event);
     }
 
     @Override
