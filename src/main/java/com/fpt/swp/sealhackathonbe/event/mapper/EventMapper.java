@@ -14,7 +14,7 @@ public class EventMapper {
                 .description(event.getDescription())
                 .location(event.getLocation())
                 .bannerImageUrl(event.getBannerImageUrl())
-                .eventStatusId(event.getEventStatus().getEventStatusId())
+                .eventStatus(event.getEventStatus())
                 .registrationStart(event.getRegistrationStart())
                 .registrationEnd(event.getRegistrationEnd())
                 .eventStartDate(event.getEventStartDate())
