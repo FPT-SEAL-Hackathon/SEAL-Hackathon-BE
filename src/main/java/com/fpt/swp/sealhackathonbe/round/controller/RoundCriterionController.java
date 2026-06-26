@@ -32,6 +32,8 @@ public class RoundCriterionController {
     }
 
     @PostMapping("/criteria/import/{roundId}")
+    // RBAC:
+    // Chỉ ORGANIZER được import tiêu chí vì thay đổi cấu hình chấm điểm.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundCriterionResponse> importCriteriaFromEvent(
             @PathVariable UUID roundId,
@@ -40,6 +42,8 @@ public class RoundCriterionController {
     }
 
     @PostMapping("/criterion/{roundId}")
+    // RBAC:
+    // Chỉ ORGANIZER được tạo tiêu chí vì ảnh hưởng luật chấm điểm.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse createSpecificCriterion(
             @PathVariable UUID roundId,
@@ -48,6 +52,8 @@ public class RoundCriterionController {
     }
 
     @PutMapping("/criterion/import/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được sửa tiêu chí import để bảo vệ cấu hình chấm điểm.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse updateImportedCriterion(
             @PathVariable UUID id,
@@ -56,6 +62,8 @@ public class RoundCriterionController {
     }
 
     @PutMapping("/criterion/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được sửa tiêu chí để bảo vệ cấu hình chấm điểm.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundCriterionResponse updateSpecificCriterion(
             @PathVariable UUID id,
@@ -65,6 +73,8 @@ public class RoundCriterionController {
     }
 
     @DeleteMapping("/criterion/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được xóa tiêu chí để tránh thay đổi điểm trái quyền.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void delete(@PathVariable UUID id) {
         roundCriterionService.delete(id);

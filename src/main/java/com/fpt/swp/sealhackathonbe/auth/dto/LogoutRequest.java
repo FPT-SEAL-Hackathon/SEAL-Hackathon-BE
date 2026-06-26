@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Chứa refresh token cần thu hồi khi đăng xuất.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
