@@ -15,6 +15,8 @@ public interface EventService {
     EventResponse update(UUID eventId, UpdateEventRequest request);
     EventResponse getById(UUID eventId);
     List<EventResponse> getAll();
+    List<EventResponse> getPublicEvents();
+    EventResponse getPublicEventById(UUID eventId);
     EventResponse updateStatus(UUID eventId, UpdateEventStatusRequest request);
     void delete(UUID eventId);
 }

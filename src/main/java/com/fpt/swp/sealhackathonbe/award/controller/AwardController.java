@@ -28,9 +28,6 @@ public class AwardController {
 
     private final AwardService awardService;
 
-    /**
-     * Cấp giải thưởng cho team, chỉ nên thực hiện bởi người điều phối.
-     */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
     @PostMapping("/grandAwardToATeam")
     // RBAC:
