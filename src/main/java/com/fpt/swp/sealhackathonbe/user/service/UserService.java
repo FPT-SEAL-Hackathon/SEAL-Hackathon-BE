@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
+import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -25,9 +26,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -40,6 +45,8 @@ public class UserService {
             UUID.fromString("10000000-0000-0000-0000-000000000001");
     private static final UUID EXTERNAL_STUDENT_ID =
             UUID.fromString("10000000-0000-0000-0000-000000000002");
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int VERIFICATION_TOKEN_BYTES = 32;
 
     @Autowired
     private JwtServiceImpl jwtServiceImpl;
@@ -67,6 +74,9 @@ public class UserService {
 
     @Autowired
     private AppProperties appProperties;
+
+    @Autowired
+    private TokenHashUtil tokenHashUtil;
 
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
@@ -152,16 +162,20 @@ public class UserService {
      */
     private void createAndSendVerificationToken(User user) {
 
-        String verificationToken =
-                UUID.randomUUID().toString();
+        String verificationToken = generateVerificationToken();
+        String verificationTokenHash = tokenHashUtil.hash(verificationToken);
+        LocalDateTime now = LocalDateTime.now();
+
+        verificationTokenRepository.findByUserAndUsedAtIsNull(user)
+                .forEach(existingToken -> existingToken.setUsedAt(now));
 
         VerificationToken tokenEntity =
                 VerificationToken.builder()
                         .user(user)
-                        .tokenHash(verificationToken)
-                        .createdAt(LocalDateTime.now())
+                        .tokenHash(verificationTokenHash)
+                        .createdAt(now)
                         .expiresAt(
-                                LocalDateTime.now().plusHours(24)
+                                now.plusHours(24)
                         )
                         .build();
 
@@ -175,20 +189,57 @@ public class UserService {
                 .build()
                 .toUriString();
 
-        String subject = "Verify Your Email";
+        sendVerificationEmailAfterCommit(user, verifyLink);
+    }
 
-        String content =
-                "Welcome to SEAL Hackathon.\n\n"
-                        + "Please click the link below to verify your email:\n\n"
-                        + verifyLink
-                        + "\n\n"
-                        + "This link will expire in 24 hours.";
+    /**
+     * Tạo token ngẫu nhiên đủ mạnh để gửi qua email xác minh.
+     */
+    private String generateVerificationToken() {
+        byte[] tokenBytes = new byte[VERIFICATION_TOKEN_BYTES];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(tokenBytes);
+    }
 
-        emailService.sendEmail(
+    /**
+     * Chỉ gửi email sau khi transaction lưu user/token đã commit thành công.
+     */
+    private void sendVerificationEmailAfterCommit(User user, String verifyLink) {
+        Runnable sendEmail = () -> emailService.sendVerificationLinkEmail(
                 user.getEmail(),
-                subject,
-                content
+                user.getFullName(),
+                verifyLink
         );
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendEmail.run();
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendEmail.run();
+                    }
+                }
+        );
+    }
+
+    /**
+     * Gửi lại email xác minh cho tài khoản còn ở trạng thái chưa xác minh.
+     */
+    @Transactional
+    public void resendVerificationEmail(String email) {
+        User user = userRepo.findByEmail(email);
+
+        if (user == null || !"UNVERIFIED".equalsIgnoreCase(user.getAccountStatus().getStatusName())) {
+            return;
+        }
+
+        createAndSendVerificationToken(user);
     }
 
     /**

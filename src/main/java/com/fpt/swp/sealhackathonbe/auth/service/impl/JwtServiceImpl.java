@@ -7,6 +7,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtService;
+import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
@@ -39,6 +40,9 @@ public class JwtServiceImpl implements JwtService {
 
     @Autowired
     private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
+    private TokenHashUtil tokenHashUtil;
 
     @Autowired
     private AccountStatusRepository accountStatusRepo;
@@ -201,10 +205,15 @@ public class JwtServiceImpl implements JwtService {
      */
     @Transactional
     public void verifyEmail(String token) {
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException(
+                    "Invalid verification token"
+            );
+        }
 
         VerificationToken verificationToken =
                 verificationTokenRepository
-                        .findByTokenHash(token)
+                        .findByTokenHash(tokenHashUtil.hash(token))
                         .orElseThrow(
                                 () -> new RuntimeException(
                                         "Invalid verification token"
