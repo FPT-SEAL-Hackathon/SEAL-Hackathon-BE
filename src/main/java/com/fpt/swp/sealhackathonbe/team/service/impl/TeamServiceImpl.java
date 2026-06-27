@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -47,6 +48,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final AuditLogRepository auditLogRepository;
+    private final EventParticipantService eventParticipantService;
 
     @Override
     @Transactional
@@ -54,6 +56,7 @@ public class TeamServiceImpl implements TeamService {
         // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt động
         // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
+        eventParticipantService.assertActiveParticipant(event.getEventId(), currentUserId);
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 

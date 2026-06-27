@@ -52,6 +52,14 @@ DECLARE @AT_INNOVATION        UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000
 DECLARE @AT_PRESENTATION      UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000000006';
 DECLARE @AT_SPECIAL           UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000000007';
 
+--ParticipantStatus
+DECLARE @PS_PENDING_APPROVAL UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
+DECLARE @PS_ACTIVE           UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000002';
+DECLARE @PS_REJECTED         UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000003';
+DECLARE @PS_SUSPENDED        UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000004';
+DECLARE @PS_TEMPORARY        UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000005';
+DECLARE @PS_UNVERIFIED       UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000006';
+
 -- ============================================================
 -- SECTION 1: ENUMS / LOOKUP TABLES
 -- ============================================================
@@ -315,6 +323,104 @@ CREATE TABLE CategoryMentors (
                                  IsActive BIT NOT NULL DEFAULT 1,
                                  CONSTRAINT UQ_CategoryMentors UNIQUE (CategoryID, MentorUserID)
 );
+GO
+-- ============================================================
+-- SECTION 5.5: EVENT PARTICIPANTS
+-- ============================================================
+
+IF OBJECT_ID(N'dbo.ParticipantStatus', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.ParticipantStatus (
+                                       StatusID UNIQUEIDENTIFIER NOT NULL
+                                           CONSTRAINT DF_ParticipantStatus_ID DEFAULT NEWID(),
+
+                                       StatusName NVARCHAR(50) NOT NULL,
+
+                                       CONSTRAINT PK_ParticipantStatus PRIMARY KEY (StatusID),
+                                       CONSTRAINT UQ_ParticipantStatus_Name UNIQUE (StatusName),
+                                       CONSTRAINT CK_ParticipantStatus_Name CHECK (
+                                           StatusName IN (
+                                               N'PENDING_APPROVAL',
+                                               N'ACTIVE',
+                                               N'REJECTED',
+                                               N'SUSPENDED',
+                                               N'TEMPORARY',
+                                               N'UNVERIFIED'
+                                           )
+                                           )
+);
+
+INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
+VALUES
+    (@PS_PENDING_APPROVAL, N'PENDING_APPROVAL'),
+    (@PS_ACTIVE,           N'ACTIVE'),
+    (@PS_REJECTED,         N'REJECTED'),
+    (@PS_SUSPENDED,        N'SUSPENDED'),
+    (@PS_TEMPORARY,        N'TEMPORARY'),
+    (@PS_UNVERIFIED,       N'UNVERIFIED');
+END;
+GO
+
+
+IF OBJECT_ID(N'dbo.EventParticipants', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.EventParticipants (
+                                       EventParticipantID UNIQUEIDENTIFIER NOT NULL
+                                           CONSTRAINT DF_EventParticipants_ID DEFAULT NEWID(),
+
+                                       EventID UNIQUEIDENTIFIER NOT NULL,
+                                       UserID UNIQUEIDENTIFIER NOT NULL,
+
+                                       ParticipantStatusID UNIQUEIDENTIFIER NOT NULL
+                                           CONSTRAINT DF_EventParticipants_Status
+                                           DEFAULT '80000000-0000-0000-0000-000000000001',
+
+                                       AppliedAt DATETIME2 NOT NULL
+                                           CONSTRAINT DF_EventParticipants_AppliedAt DEFAULT SYSUTCDATETIME(),
+
+                                       ApprovedAt DATETIME2 NULL,
+                                       ApprovedBy UNIQUEIDENTIFIER NULL,
+
+                                       RejectedReason NVARCHAR(1000) NULL,
+
+                                       CreatedAt DATETIME2 NOT NULL
+                                           CONSTRAINT DF_EventParticipants_CreatedAt DEFAULT SYSUTCDATETIME(),
+
+                                       UpdatedAt DATETIME2 NOT NULL
+                                           CONSTRAINT DF_EventParticipants_UpdatedAt DEFAULT SYSUTCDATETIME(),
+
+                                       CONSTRAINT PK_EventParticipants
+                                           PRIMARY KEY (EventParticipantID),
+
+                                       CONSTRAINT UQ_EventParticipants_Event_User
+                                           UNIQUE (EventID, UserID),
+
+                                       CONSTRAINT FK_EventParticipants_Event
+                                           FOREIGN KEY (EventID) REFERENCES dbo.Events(EventID),
+
+                                       CONSTRAINT FK_EventParticipants_User
+                                           FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID),
+
+                                       CONSTRAINT FK_EventParticipants_Status
+                                           FOREIGN KEY (ParticipantStatusID) REFERENCES dbo.ParticipantStatus(StatusID),
+
+                                       CONSTRAINT FK_EventParticipants_ApprovedBy
+                                           FOREIGN KEY (ApprovedBy) REFERENCES dbo.Users(UserID)
+);
+
+CREATE INDEX IX_EventParticipants_Event_Status
+    ON dbo.EventParticipants(EventID, ParticipantStatusID);
+
+CREATE INDEX IX_EventParticipants_User_Status
+    ON dbo.EventParticipants(UserID, ParticipantStatusID);
+
+CREATE INDEX IX_EventParticipants_Status_AppliedAt
+    ON dbo.EventParticipants(ParticipantStatusID, AppliedAt DESC);
+
+CREATE INDEX IX_EventParticipants_ApprovedBy
+    ON dbo.EventParticipants(ApprovedBy)
+    WHERE ApprovedBy IS NOT NULL;
+END;
 GO
 
 -- ============================================================

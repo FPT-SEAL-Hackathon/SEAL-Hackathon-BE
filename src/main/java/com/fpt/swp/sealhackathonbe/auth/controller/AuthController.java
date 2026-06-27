@@ -4,6 +4,7 @@ import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.LogoutRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.ResendVerificationEmailRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
@@ -46,6 +47,19 @@ public class AuthController {
         System.out.println("REGISTER CALLED");
         UserResponse response = userService.register(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Gửi lại email xác minh nếu tài khoản còn cần xác minh.
+     */
+    @PostMapping("/resend-verification-email")
+    public ResponseEntity<String> resendVerificationEmail(
+            @Valid @RequestBody ResendVerificationEmailRequest request
+    ) {
+        userService.resendVerificationEmail(request.getEmail());
+        return ResponseEntity.ok(
+                "If the account needs verification, a verification email has been sent"
+        );
     }
 
     /**
