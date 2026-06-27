@@ -12,6 +12,8 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
     private final EventParticipantService eventParticipantService;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -63,6 +66,9 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         TeamJoinRequests joinRequest = new TeamJoinRequests();
         joinRequest.setTeamId(teamId);
         joinRequest.setUserId(currentUserId);
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        joinRequest.setUser(user);
         joinRequest.setRequestStatus(REQUEST_STATUS_PENDING);
         joinRequest.setRequestedAt(LocalDateTime.now());
 
