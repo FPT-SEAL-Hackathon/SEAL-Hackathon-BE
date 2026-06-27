@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamJoinRequests;
@@ -34,6 +35,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
+    private final EventParticipantService eventParticipantService;
 
     @Override
     @Transactional
@@ -44,6 +46,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
         validateTeamCanReceiveJoinRequest(team);
+        eventParticipantService.assertActiveParticipant(team.getEventId(), currentUserId);
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, team.getEventId())) {
             throw new RuntimeException("User already belongs to an active team in this event");
@@ -105,6 +108,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         if (REQUEST_STATUS_APPROVED.equals(request.getAction())) {
             validateTeamCanReceiveJoinRequest(team);
+            eventParticipantService.assertActiveParticipant(team.getEventId(), joinRequest.getUserId());
 
             if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(
                     joinRequest.getUserId(),
