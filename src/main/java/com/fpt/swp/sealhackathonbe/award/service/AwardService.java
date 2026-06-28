@@ -4,8 +4,10 @@ import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.RankingAwardCandidateResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.SystemAwardPrizeTotalResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +18,10 @@ public interface AwardService {
     AwardResponse getAwardById(UUID awardId);
 
     List<AwardResponse> getAwardsByEvent(UUID eventId);
+
+    EventPrizeTotalResponse getEventPrizeTotal(UUID eventId);
+
+    SystemAwardPrizeTotalResponse getSystemPrizeTotal();
 
     List<HallOfFameResponse> getHallOfFameData();
 
