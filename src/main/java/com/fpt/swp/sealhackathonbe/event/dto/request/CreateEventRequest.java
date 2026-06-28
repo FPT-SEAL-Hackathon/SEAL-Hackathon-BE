@@ -32,7 +32,6 @@ public class CreateEventRequest {
 
     @FutureOrPresent(message = "Registration start time must be in the present or future")
     private LocalDateTime registrationStart;
-
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;
