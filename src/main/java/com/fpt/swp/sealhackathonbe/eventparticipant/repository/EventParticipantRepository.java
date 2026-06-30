@@ -59,6 +59,11 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     List<EventParticipant> findByUserIdOrderByAppliedAtDesc(UUID userId);
 
     @EntityGraph(attributePaths = {
+            "participantStatus"
+    })
+    List<EventParticipant> findByUserIdAndEventIdIn(UUID userId, List<UUID> eventIds);
+
+    @EntityGraph(attributePaths = {
             "participantStatus",
             "event",
             "event.eventStatus",
@@ -73,6 +78,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
             SELECT ep
             FROM EventParticipant ep
             WHERE (:eventId IS NULL OR ep.eventId = :eventId)
+              AND (:ownerUserId IS NULL OR ep.event.createdBy.userId = :ownerUserId)
               AND (:status IS NULL OR LOWER(ep.participantStatus.statusName) = LOWER(:status))
               AND (:categoryId IS NULL OR EXISTS (
                     SELECT 1
@@ -96,6 +102,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     Page<EventParticipant> search(
             @Param("eventId") UUID eventId,
             @Param("categoryId") UUID categoryId,
+            @Param("ownerUserId") UUID ownerUserId,
             @Param("status") String status,
             @Param("keyword") String keyword,
             @Param("university") String university,

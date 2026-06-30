@@ -1,9 +1,11 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +24,16 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final EventParticipantService eventParticipantService;
 
     public SubmissionQueryServiceImpl(
             SubmissionsRepository submissionsRepository,
-            TeamMembersRepository teamMembersRepository
+            TeamMembersRepository teamMembersRepository,
+            EventParticipantService eventParticipantService
     ) {
         this.submissionsRepository = submissionsRepository;
         this.teamMembersRepository = teamMembersRepository;
+        this.eventParticipantService = eventParticipantService;
     }
 
     @Override
@@ -44,8 +49,9 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     @Transactional(readOnly = true)
     public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId) {
         // Dung unique key o muc bang: moi team chi co mot submission trong mot round.
-        teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
+        TeamMembers membership = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
                 .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+        eventParticipantService.assertActiveParticipant(membership.getTeam().getEventId(), currentUserId);
 
         return submissionsRepository.findByTeamIdAndRoundId(teamId, roundId)
                 .map(SubmissionMapper::toSubmissionResponse)

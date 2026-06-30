@@ -160,7 +160,7 @@ public class UserService {
     /**
      * Tạo token xác minh email một lần cho tài khoản mới đăng ký.
      */
-    private void createAndSendVerificationToken(User user) {
+    public void createAndSendVerificationToken(User user) {
 
         String verificationToken = generateVerificationToken();
         String verificationTokenHash = tokenHashUtil.hash(verificationToken);

@@ -14,6 +14,7 @@ import java.util.Set;
 @Configuration
 public class CorsConfig {
     private static final String LOCAL_DEVELOPMENT_FRONTEND_URL = "http://localhost:5173";
+    private static final String LOCAL_DEVELOPMENT_FRONTEND_IP_URL = "http://127.0.0.1:5173";
 
     private final AppProperties appProperties;
 
@@ -49,6 +50,7 @@ public class CorsConfig {
         Set<String> allowedOrigins = new LinkedHashSet<>();
         allowedOrigins.add(appProperties.getFrontendUrl());
         allowedOrigins.add(LOCAL_DEVELOPMENT_FRONTEND_URL);
+        allowedOrigins.add(LOCAL_DEVELOPMENT_FRONTEND_IP_URL);
         return List.copyOf(allowedOrigins);
     }
 }

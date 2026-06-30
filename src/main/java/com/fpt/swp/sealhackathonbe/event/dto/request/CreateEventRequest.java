@@ -1,7 +1,5 @@
 package com.fpt.swp.sealhackathonbe.event.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fpt.swp.sealhackathonbe.event.entity.EventStatus;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +20,7 @@ public class CreateEventRequest {
 
     private String description;
 
+    @NotBlank(message = "Location is required")
     private String location;
 
     @URL(message = "Invalid banner image URL")
@@ -30,16 +29,24 @@ public class CreateEventRequest {
     @NotNull(message = "Event status is required")
     private UUID eventStatusId;
 
+    @NotNull(message = "Registration start time is required")
     @FutureOrPresent(message = "Registration start time must be in the present or future")
     private LocalDateTime registrationStart;
+
+    @NotNull(message = "Registration end time is required")
     private LocalDateTime registrationEnd;
 
+    @NotNull(message = "Event start date is required")
     private LocalDate eventStartDate;
+
+    @NotNull(message = "Event end date is required")
     private LocalDate eventEndDate;
 
+    @NotNull(message = "Max team size is required")
     @Min(value = 1, message = "Max team size must be greater than 0")
     private Integer maxTeamSize;
 
+    @NotNull(message = "Min team size is required")
     @Min(value = 1, message = "Min team size must be greater than 0")
     private Integer minTeamSize;
 
