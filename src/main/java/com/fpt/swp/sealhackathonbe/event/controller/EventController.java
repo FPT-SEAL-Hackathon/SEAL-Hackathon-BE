@@ -27,6 +27,16 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAll());
     }
 
+    @GetMapping("/public/events")
+    public ResponseEntity<List<EventResponse>> getPublicEvents() {
+        return ResponseEntity.ok(eventService.getPublicEvents());
+    }
+
+    @GetMapping("/public/events/{id}")
+    public ResponseEntity<EventResponse> getPublicEventById(@PathVariable UUID id) {
+        return ResponseEntity.ok(eventService.getPublicEventById(id));
+    }
+
     @GetMapping("/event/{id}")
     public ResponseEntity<EventResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.getById(id));

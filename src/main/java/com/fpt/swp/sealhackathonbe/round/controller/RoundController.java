@@ -7,6 +7,7 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundService;
 import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,9 @@ public class RoundController {
     private final RoundService roundService;
 
     @PostMapping("/round/{categoryId}")
+    // RBAC:
+    // Chỉ ORGANIZER được tạo round vì thao tác này đổi cấu trúc event.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundResponse create(@PathVariable UUID categoryId,
                                 @Valid @RequestBody CreateRoundRequest request) {
         return roundService.create(categoryId, request);
@@ -36,12 +40,18 @@ public class RoundController {
     }
 
     @PutMapping("/round/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được sửa round vì ảnh hưởng timeline và chấm điểm.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public RoundResponse update(@PathVariable UUID id,
                                 @Valid @RequestBody UpdateRoundRequest request) {
         return roundService.update(id, request);
     }
 
     @DeleteMapping("/round/{id}")
+    // RBAC:
+    // Chỉ ORGANIZER được xóa round để tránh mất dữ liệu bởi user thường.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void delete(@PathVariable UUID id) {
         roundService.delete(id);
     }

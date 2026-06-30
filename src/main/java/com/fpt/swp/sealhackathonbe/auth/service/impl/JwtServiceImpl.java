@@ -7,6 +7,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtService;
+import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
@@ -26,6 +27,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Tạo, đọc và xác thực JWT cho đăng nhập, refresh token và xác minh email.
+ */
 @Service
 public class JwtServiceImpl implements JwtService {
     private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 2;
@@ -34,23 +38,28 @@ public class JwtServiceImpl implements JwtService {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
-
     @Autowired
     private VerificationTokenRepository verificationTokenRepository;
 
     @Autowired
+    private TokenHashUtil tokenHashUtil;
+
+    @Autowired
     private AccountStatusRepository accountStatusRepo;
+
     @Value("${jwt.secret}")
     private String secretKey;
 
-    // 🔥 ACCESS TOKEN
+    /**
+     * JWT:
+     * Tạo access token chứa userId, email và role hiện tại của người dùng.
+     */
     public String generateAccessToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
         claims.put("userId", user.getUserId());
 
-        // 🔥 ADD ROLE (QUAN TRỌNG)
         String role = user.getUserType()
                 .getTypeName()
                 .replace(" ", "_")
@@ -69,8 +78,10 @@ public class JwtServiceImpl implements JwtService {
                 .compact();
     }
 
-
-    // 🔥 REFRESH TOKEN (giữ nhẹ, không cần role)
+    /**
+     * Refresh Token:
+     * Tạo token dài hạn dùng để xin access token mới.
+     */
     public String generateRefreshToken(User user) {
 
         return Jwts.builder()
@@ -83,10 +94,10 @@ public class JwtServiceImpl implements JwtService {
                 .compact();
     }
 
-    // =========================
-    // PARSE JWT
-    // =========================
-
+    /**
+     * Refresh Token:
+     * Từ chối token đã thu hồi/hết hạn trước khi cấp access token mới.
+     */
     @Transactional
     public TokenResponse refresh(
             RefreshTokenRequest request) {
@@ -124,21 +135,35 @@ public class JwtServiceImpl implements JwtService {
                 .accessToken(newAccessToken)
                 .build();
     }
-    // =========================
-    // Các Hàm phụ ở dưới
-    // =========================
+
+    /**
+     * JWT:
+     * Lấy email chủ sở hữu token để nạp thông tin người dùng.
+     */
     public String extractUserName(String token) {
         return extractAllClaims(token).getSubject();
     }
 
+    /**
+     * JWT:
+     * Lấy role trong token để dựng quyền ROLE_*.
+     */
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }
 
+    /**
+     * JWT:
+     * Lấy thời điểm hết hạn để kiểm tra vòng đời token.
+     */
     public Date extractExpiration(String token) {
         return extractAllClaims(token).getExpiration();
     }
 
+    /**
+     * JWT:
+     * Xác thực chữ ký trước khi tin tưởng các claim trong token.
+     */
     public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
@@ -147,10 +172,18 @@ public class JwtServiceImpl implements JwtService {
                 .getBody();
     }
 
+    /**
+     * JWT:
+     * Kiểm tra token đã quá hạn so với thời điểm hiện tại.
+     */
     public boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
+    /**
+     * JWT:
+     * Token chỉ hợp lệ khi email khớp user đã nạp và chưa hết hạn.
+     */
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUserName(token);
 
@@ -158,20 +191,29 @@ public class JwtServiceImpl implements JwtService {
                 && !isTokenExpired(token);
     }
 
-    // =========================
-    // KEY
-    // =========================
-
+    /**
+     * JWT:
+     * Tạo khóa ký từ secret cấu hình để ký và xác minh token.
+     */
     public Key getKey() {
         byte[] keyBytes = secretKey.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
     }
+
+    /**
+     * Kích hoạt tài khoản nếu token xác minh email còn hiệu lực.
+     */
     @Transactional
     public void verifyEmail(String token) {
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException(
+                    "Invalid verification token"
+            );
+        }
 
         VerificationToken verificationToken =
                 verificationTokenRepository
-                        .findByTokenHash(token)
+                        .findByTokenHash(tokenHashUtil.hash(token))
                         .orElseThrow(
                                 () -> new RuntimeException(
                                         "Invalid verification token"

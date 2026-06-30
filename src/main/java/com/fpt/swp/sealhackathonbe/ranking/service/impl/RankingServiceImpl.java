@@ -108,12 +108,17 @@ public class RankingServiceImpl implements RankingService {
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
                 if (!judgings.isEmpty()) {
+                    int validScoreCount = 0;
                     for (Judging j : judgings) {
-                        if (j.getScoreValue() != null) {
+                        // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
+                        if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
                             totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
+                            validScoreCount++;
                         }
                     }
-                    averageScore = totalScore.divide(BigDecimal.valueOf(judgings.size()), 4, RoundingMode.HALF_UP);
+                    if (validScoreCount > 0) {
+                        averageScore = totalScore.divide(BigDecimal.valueOf(validScoreCount), 4, RoundingMode.HALF_UP);
+                    }
                 }
             }
 
@@ -126,6 +131,7 @@ public class RankingServiceImpl implements RankingService {
             ranking.setTotalScore(totalScore);
             ranking.setAverageScore(averageScore);
             ranking.setRankPosition(0);
+            ranking.setIsPublished(false);
             ranking.setIsAdvanced(false);
 
             rankings.add(ranking);
@@ -162,8 +168,22 @@ public class RankingServiceImpl implements RankingService {
                 .rankPosition(r.getRankPosition())
                 .isAdvanced(r.getIsAdvanced())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .isPublished(r.getIsPublished())
                 .build()
         ).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void publishRoundRankings(UUID roundId, UUID categoryId) {
+        List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
+        if (existingRankings.isEmpty()) {
+            throw new IllegalStateException("Rankings must be computed before publishing.");
+        }
+        for (RoundRanking r : existingRankings) {
+            r.setIsPublished(true);
+        }
+        roundRankingRepository.saveAll(existingRankings);
     }
 
     @Override
@@ -234,6 +254,7 @@ public class RankingServiceImpl implements RankingService {
                 ranking.setTeam(teamRef);
                 ranking.setFinalScore(finalScore);
                 ranking.setRankPosition(0);
+                ranking.setIsPublished(false);
 
                 rankings.add(ranking);
             }
@@ -260,11 +281,25 @@ public class RankingServiceImpl implements RankingService {
                     .finalScore(r.getFinalScore())
                     .rankPosition(r.getRankPosition())
                     .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                    .isPublished(r.getIsPublished())
                     .build()
             ).collect(Collectors.toList()));
         }
 
         return allComputedRankings;
+    }
+
+    @Override
+    @Transactional
+    public void publishEventRankings(UUID eventId, UUID categoryId) {
+        List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
+        if (existingRankings.isEmpty()) {
+            throw new IllegalStateException("Event rankings must be computed before publishing.");
+        }
+        for (EventRanking r : existingRankings) {
+            r.setIsPublished(true);
+        }
+        eventRankingRepository.saveAll(existingRankings);
     }
 
     @Override
@@ -279,6 +314,7 @@ public class RankingServiceImpl implements RankingService {
                 .finalScore(r.getFinalScore())
                 .rankPosition(r.getRankPosition())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .isPublished(r.getIsPublished())
                 .build()
         ).collect(Collectors.toList());
     }

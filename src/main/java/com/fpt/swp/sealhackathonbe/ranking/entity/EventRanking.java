@@ -52,4 +52,7 @@ public class EventRanking {
     @CreationTimestamp
     @Column(name = "ComputedAt", nullable = false, updatable = false)
     private LocalDateTime computedAt;
+
+    @Column(name = "IsPublished", nullable = false)
+    private Boolean isPublished = false;
 }

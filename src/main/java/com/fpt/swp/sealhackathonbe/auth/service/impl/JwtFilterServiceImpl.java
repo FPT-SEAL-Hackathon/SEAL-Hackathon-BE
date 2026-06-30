@@ -20,6 +20,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Lọc JWT trên mỗi request để thiết lập người dùng và quyền trong SecurityContext.
+ */
 @Component
 public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFilterService {
 
@@ -32,6 +35,10 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    /**
+     * JWT:
+     * Xác thực Bearer token và gắn principal cho các bước phân quyền sau đó.
+     */
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -52,6 +59,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             filterChain.doFilter(request, response);
             return;
         }
+
         RefreshToken tokenEntity =
                 refreshTokenRepository.findByTokenHash(token).orElse(null);
 
@@ -59,9 +67,8 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-        try {
 
-            // 🔥 ONLY 1 TIME PARSE
+        try {
             String username = jwtServiceImpl.extractUserName(token);
             String role = jwtServiceImpl.extractRole(token);
 
@@ -72,8 +79,8 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
                         userDetailsService.loadUserByUsername(username);
 
                 if (jwtServiceImpl.validateToken(token, userDetails)) {
-
-                    // 🔥 SAFE ROLE HANDLING
+                    // RBAC:
+                    // Role trong JWT được chuyển thành authority để @PreAuthorize kiểm tra.
                     List<SimpleGrantedAuthority> authorities = List.of(
                             new SimpleGrantedAuthority(
                                     "ROLE_" + (role != null ? role : "USER")
@@ -99,6 +106,9 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Trả lỗi 401 dạng JSON khi xác thực thất bại.
+     */
     private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
@@ -107,6 +117,11 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
                 "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
         );
     }
+
+    /**
+     * JWT:
+     * Tách token thô khỏi header Authorization dạng Bearer.
+     */
     public String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
 
@@ -116,5 +131,4 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
         return null;
     }
-
 }

@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.notification.controller;
 
 import com.fpt.swp.sealhackathonbe.notification.dto.BroadcastNotificationRequest;
+import com.fpt.swp.sealhackathonbe.notification.dto.CreateNotificationByEmailRequest;
 import com.fpt.swp.sealhackathonbe.notification.dto.CreateNotificationRequest;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationResponse;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationRealtimeService;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -50,6 +52,9 @@ public class NotificationController {
 
         return ResponseEntity.ok(response);
     }
+
+    // Permission:
+    // Luôn lấy userId từ Authentication để user chỉ thao tác trên dữ liệu của mình.
     private UUID currentUserId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Unauthenticated user");
@@ -126,6 +131,9 @@ public class NotificationController {
             operationId = "sendNotificationToUser"
     )
     @PostMapping("/sendNotificationToUser")
+    // RBAC:
+    // Chỉ ORGANIZER được gửi thông báo trực tiếp để tránh spam giữa user.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
@@ -147,11 +155,43 @@ public class NotificationController {
     }
 
     @Operation(
+            summary = "Send notification to a user by email",
+            description = "Create and send an in-app notification and email to a specific user by email.",
+            operationId = "sendNotificationToEmail"
+    )
+    @PostMapping("/sendNotificationToEmail")
+    // RBAC:
+    // Chỉ ORGANIZER được gửi thông báo qua email để bảo vệ người nhận.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<Map<String, Object>> sendNotificationToEmail(
+            @Valid @RequestBody CreateNotificationByEmailRequest request,
+            Authentication authentication
+    ) {
+        try {
+            UUID senderId = currentUserId(authentication);
+            NotificationResponse notification = notificationService.sendNotificationByEmail(
+                    request.getRecipientEmail(),
+                    senderId,
+                    request.getEventId(),
+                    request.getTitle(),
+                    request.getBody()
+            );
+
+            return buildSuccessResponse(notification, "Notification sent successfully");
+        } catch (Exception e) {
+            return buildErrorResponse(e.getMessage(), 400);
+        }
+    }
+
+    @Operation(
             summary = "Send broadcast notification",
             description = "Create and send the same notification to multiple users.",
             operationId = "sendBroadcastNotification"
     )
     @PostMapping("/sendBroadcastNotification")
+    // RBAC:
+    // Chỉ ORGANIZER được broadcast vì ảnh hưởng nhiều người dùng.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> sendBroadcastNotification(
             @Valid @RequestBody BroadcastNotificationRequest request,
             Authentication authentication

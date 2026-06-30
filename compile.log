@@ -1,0 +1,644 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.aecaykhe.swp:SEAL-Hackathon-BE:jar:V.0.1.0
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.springframework.boot:spring-boot-starter-test:jar -> duplicate declaration of version (?) @ line 121, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] 
+[INFO] -----------------< com.aecaykhe.swp:SEAL-Hackathon-BE >-----------------
+[INFO] Building SEAL-Hackathon-BE V.0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ SEAL-Hackathon-BE ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ SEAL-Hackathon-BE ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 233 source files with javac [debug parameters release 17] to target\classes
+[INFO] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/research/service/impl/ResearchDashboardServiceImpl.java: C:\Users\Nguyen Xuan Tan\FPTU\S5\SWP\SEAL-Hackathon-BE\src\main\java\com\fpt\swp\sealhackathonbe\research\service\impl\ResearchDashboardServiceImpl.java uses unchecked or unsafe operations.
+[INFO] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/research/service/impl/ResearchDashboardServiceImpl.java: Recompile with -Xlint:unchecked for details.
+[INFO] Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/controller/AuthController.java:[63,35] cannot find symbol
+  symbol:   method getRefreshToken()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LogoutRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[72,40] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[73,40] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[85,25] cannot find symbol
+  symbol:   method getAccountStatus()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[97,25] cannot find symbol
+  symbol:   method getFptStudentCode()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[98,35] cannot find symbol
+  symbol:   method getFptStudentCode()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[99,35] cannot find symbol
+  symbol:   method getExternalStudentCode()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[102,33] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.dto.UserResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[103,37] cannot find symbol
+  symbol:   method getUserId()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[104,40] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[105,43] cannot find symbol
+  symbol:   method getFullName()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[106,57] cannot find symbol
+  symbol:   method getTypeName()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[108,49] cannot find symbol
+  symbol:   method getUniversityName()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[109,40] cannot find symbol
+  symbol:   method getPhone()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[111,41] cannot find symbol
+  symbol:   method getAccountStatus()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[113,44] cannot find symbol
+  symbol:   method getCreatedAt()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[116,52] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[126,33] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[142,34] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[167,21] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[181,14] cannot find symbol
+  symbol:   method setRevokedAt(java.time.LocalDateTime)
+  location: variable token of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[190,21] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[191,32] cannot find symbol
+  symbol:   method getConfirmPassword()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[197,43] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[202,34] cannot find symbol
+  symbol:   method getUserTypeId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[206,44] cannot find symbol
+  symbol:   method getUserTypeId()
+  location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[207,56] cannot find symbol
+  symbol:   method getUserTypeId()
+  location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[217,30] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[218,33] cannot find symbol
+  symbol:   method getFullName()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[219,39] cannot find symbol
+  symbol:   method getUniversityName()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[220,30] cannot find symbol
+  symbol:   method getPhone()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[222,13] cannot find symbol
+  symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[223,13] cannot find symbol
+  symbol:   method setCreatedAt(java.time.LocalDateTime)
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[225,21] cannot find symbol
+  symbol:   method getUserTypeId()
+  location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[226,43] cannot find symbol
+  symbol:   method getStudentCode()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[228,48] cannot find symbol
+  symbol:   method getStudentCode()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[232,39] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[238,26] cannot find symbol
+  symbol:   method getFptStudentCode()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[239,36] cannot find symbol
+  symbol:   method getFptStudentCode()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[240,36] cannot find symbol
+  symbol:   method getExternalStudentCode()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[245,28] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.dto.UserResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[246,30] cannot find symbol
+  symbol:   method getUserId()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[247,33] cannot find symbol
+  symbol:   method getEmail()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[248,36] cannot find symbol
+  symbol:   method getFullName()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[250,48] cannot find symbol
+  symbol:   method getTypeName()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[254,34] cannot find symbol
+  symbol:   method getUniversityName()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[256,33] cannot find symbol
+  symbol:   method getPhone()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[258,34] cannot find symbol
+  symbol:   method getAccountStatus()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[261,37] cannot find symbol
+  symbol:   method getCreatedAt()
+  location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[51,34] cannot find symbol
+  symbol:   method getUserId()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[55,17] cannot find symbol
+  symbol:   method getTypeName()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[63,33] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[77,33] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[94,38] cannot find symbol
+  symbol:   method getRefreshToken()
+  location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[105,24] cannot find symbol
+  symbol:   method getRevokedAt()
+  location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[111,24] cannot find symbol
+  symbol:   method getExpiresAt()
+  location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[119,32] cannot find symbol
+  symbol:   method getUser()
+  location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[123,29] cannot find symbol
+  symbol:   method builder()
+  location: class com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[181,30] cannot find symbol
+  symbol:   method getUsedAt()
+  location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[187,30] cannot find symbol
+  symbol:   method getExpiresAt()
+  location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[195,38] cannot find symbol
+  symbol:   method getUser()
+  location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[202,13] cannot find symbol
+  symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[204,26] cannot find symbol
+  symbol:   method setUsedAt(java.time.LocalDateTime)
+  location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/AccountStatus.java:[41,13] cannot find symbol
+  symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/AccountStatus.java:[45,13] cannot find symbol
+  symbol:   method setAccountStatus(<nulltype>)
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/notification/service/EmailService.java:[84,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fpt.swp.sealhackathonbe.notification.service.EmailService
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/notification/service/EmailService.java:[99,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fpt.swp.sealhackathonbe.notification.service.EmailService
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtFilterServiceImpl.java:[58,47] cannot find symbol
+  symbol:   method getRevokedAt()
+  location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/controller/AwardController.java:[40,86] cannot find symbol
+  symbol:   method getUserId()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/controller/AwardController.java:[118,95] cannot find symbol
+  symbol:   method getUserId()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[20,71] cannot find symbol
+  symbol:   method getTypeName()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[21,37] cannot find symbol
+  symbol:   method getTypeName()
+  location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[28,20] cannot find symbol
+  symbol:   method getPasswordHash()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[33,20] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[67,55] cannot find symbol
+  symbol:   method getEventId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[68,101] cannot find symbol
+  symbol:   method getEventId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[70,54] cannot find symbol
+  symbol:   method getTeamId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[71,100] cannot find symbol
+  symbol:   method getTeamId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[73,62] cannot find symbol
+  symbol:   method getAwardTierId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[80,20] cannot find symbol
+  symbol:   method getCategoryId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[81,59] cannot find symbol
+  symbol:   method getCategoryId()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[86,14] cannot find symbol
+  symbol:   method setEvent(com.fpt.swp.sealhackathonbe.event.entity.Event)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[87,14] cannot find symbol
+  symbol:   method setCategory(com.fpt.swp.sealhackathonbe.category.entity.Category)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[88,14] cannot find symbol
+  symbol:   method setTeam(com.fpt.swp.sealhackathonbe.team.entity.Teams)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[89,14] cannot find symbol
+  symbol:   method setAwardTier(com.fpt.swp.sealhackathonbe.award.entity.AwardTier)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[90,36] cannot find symbol
+  symbol:   method getAwardTitle()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[91,37] cannot find symbol
+  symbol:   method getDescription()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[92,36] cannot find symbol
+  symbol:   method getPrizeValue()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[93,55] cannot find symbol
+  symbol:   method getPrizeCurrency()
+  location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[94,14] cannot find symbol
+  symbol:   method setAwardedAt(java.time.Instant)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[95,14] cannot find symbol
+  symbol:   method setAwardedBy(com.fpt.swp.sealhackathonbe.user.entity.User)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[96,14] cannot find symbol
+  symbol:   method setIsPublished(boolean)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[97,14] cannot find symbol
+  symbol:   method setPublishedAt(java.time.Instant)
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[126,48] cannot find symbol
+  symbol:   method getEvent()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[127,29] cannot find symbol
+  symbol:   method setCategoryName(award.getC[...]ward")
+  location: variable response of type com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[127,51] cannot find symbol
+  symbol:   method getCategory()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[128,36] cannot find symbol
+  symbol:   method getCategory()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[130,47] cannot find symbol
+  symbol:   method getTeam()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[131,52] cannot find symbol
+  symbol:   method getAwardTier()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[132,49] cannot find symbol
+  symbol:   method getAwardTitle()
+  location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  6.804 s
+[INFO] Finished at: 2026-06-25T13:11:06+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project SEAL-Hackathon-BE: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/controller/AuthController.java:[63,35] cannot find symbol
+[ERROR]   symbol:   method getRefreshToken()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LogoutRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[72,40] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[73,40] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[85,25] cannot find symbol
+[ERROR]   symbol:   method getAccountStatus()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[97,25] cannot find symbol
+[ERROR]   symbol:   method getFptStudentCode()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[98,35] cannot find symbol
+[ERROR]   symbol:   method getFptStudentCode()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[99,35] cannot find symbol
+[ERROR]   symbol:   method getExternalStudentCode()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[102,33] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.dto.UserResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[103,37] cannot find symbol
+[ERROR]   symbol:   method getUserId()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[104,40] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[105,43] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[106,57] cannot find symbol
+[ERROR]   symbol:   method getTypeName()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[108,49] cannot find symbol
+[ERROR]   symbol:   method getUniversityName()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[109,40] cannot find symbol
+[ERROR]   symbol:   method getPhone()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[111,41] cannot find symbol
+[ERROR]   symbol:   method getAccountStatus()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[113,44] cannot find symbol
+[ERROR]   symbol:   method getCreatedAt()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[116,52] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[126,33] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[142,34] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[167,21] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[181,14] cannot find symbol
+[ERROR]   symbol:   method setRevokedAt(java.time.LocalDateTime)
+[ERROR]   location: variable token of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[190,21] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[191,32] cannot find symbol
+[ERROR]   symbol:   method getConfirmPassword()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[197,43] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[202,34] cannot find symbol
+[ERROR]   symbol:   method getUserTypeId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[206,44] cannot find symbol
+[ERROR]   symbol:   method getUserTypeId()
+[ERROR]   location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[207,56] cannot find symbol
+[ERROR]   symbol:   method getUserTypeId()
+[ERROR]   location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[217,30] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[218,33] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[219,39] cannot find symbol
+[ERROR]   symbol:   method getUniversityName()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[220,30] cannot find symbol
+[ERROR]   symbol:   method getPhone()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[222,13] cannot find symbol
+[ERROR]   symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[223,13] cannot find symbol
+[ERROR]   symbol:   method setCreatedAt(java.time.LocalDateTime)
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[225,21] cannot find symbol
+[ERROR]   symbol:   method getUserTypeId()
+[ERROR]   location: variable userType of type com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[226,43] cannot find symbol
+[ERROR]   symbol:   method getStudentCode()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[228,48] cannot find symbol
+[ERROR]   symbol:   method getStudentCode()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[232,39] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[238,26] cannot find symbol
+[ERROR]   symbol:   method getFptStudentCode()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[239,36] cannot find symbol
+[ERROR]   symbol:   method getFptStudentCode()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[240,36] cannot find symbol
+[ERROR]   symbol:   method getExternalStudentCode()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[245,28] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.dto.UserResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[246,30] cannot find symbol
+[ERROR]   symbol:   method getUserId()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[247,33] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[248,36] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[250,48] cannot find symbol
+[ERROR]   symbol:   method getTypeName()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[254,34] cannot find symbol
+[ERROR]   symbol:   method getUniversityName()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[256,33] cannot find symbol
+[ERROR]   symbol:   method getPhone()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[258,34] cannot find symbol
+[ERROR]   symbol:   method getAccountStatus()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/service/UserService.java:[261,37] cannot find symbol
+[ERROR]   symbol:   method getCreatedAt()
+[ERROR]   location: variable savedUser of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[51,34] cannot find symbol
+[ERROR]   symbol:   method getUserId()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[55,17] cannot find symbol
+[ERROR]   symbol:   method getTypeName()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[63,33] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[77,33] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[94,38] cannot find symbol
+[ERROR]   symbol:   method getRefreshToken()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[105,24] cannot find symbol
+[ERROR]   symbol:   method getRevokedAt()
+[ERROR]   location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[111,24] cannot find symbol
+[ERROR]   symbol:   method getExpiresAt()
+[ERROR]   location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[119,32] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[123,29] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[181,30] cannot find symbol
+[ERROR]   symbol:   method getUsedAt()
+[ERROR]   location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[187,30] cannot find symbol
+[ERROR]   symbol:   method getExpiresAt()
+[ERROR]   location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[195,38] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[202,13] cannot find symbol
+[ERROR]   symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtServiceImpl.java:[204,26] cannot find symbol
+[ERROR]   symbol:   method setUsedAt(java.time.LocalDateTime)
+[ERROR]   location: variable verificationToken of type com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/AccountStatus.java:[41,13] cannot find symbol
+[ERROR]   symbol:   method setAccountStatus(com.fpt.swp.sealhackathonbe.user.entity.AccountStatus)
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/AccountStatus.java:[45,13] cannot find symbol
+[ERROR]   symbol:   method setAccountStatus(<nulltype>)
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/notification/service/EmailService.java:[84,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.notification.service.EmailService
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/notification/service/EmailService.java:[99,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.notification.service.EmailService
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/auth/service/impl/JwtFilterServiceImpl.java:[58,47] cannot find symbol
+[ERROR]   symbol:   method getRevokedAt()
+[ERROR]   location: variable tokenEntity of type com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/controller/AwardController.java:[40,86] cannot find symbol
+[ERROR]   symbol:   method getUserId()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/controller/AwardController.java:[118,95] cannot find symbol
+[ERROR]   symbol:   method getUserId()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[20,71] cannot find symbol
+[ERROR]   symbol:   method getTypeName()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[21,37] cannot find symbol
+[ERROR]   symbol:   method getTypeName()
+[ERROR]   location: class com.fpt.swp.sealhackathonbe.user.entity.UserType
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[28,20] cannot find symbol
+[ERROR]   symbol:   method getPasswordHash()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/user/entity/UserPrincipal.java:[33,20] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fpt.swp.sealhackathonbe.user.entity.User
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[67,55] cannot find symbol
+[ERROR]   symbol:   method getEventId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[68,101] cannot find symbol
+[ERROR]   symbol:   method getEventId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[70,54] cannot find symbol
+[ERROR]   symbol:   method getTeamId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[71,100] cannot find symbol
+[ERROR]   symbol:   method getTeamId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[73,62] cannot find symbol
+[ERROR]   symbol:   method getAwardTierId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[80,20] cannot find symbol
+[ERROR]   symbol:   method getCategoryId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[81,59] cannot find symbol
+[ERROR]   symbol:   method getCategoryId()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[86,14] cannot find symbol
+[ERROR]   symbol:   method setEvent(com.fpt.swp.sealhackathonbe.event.entity.Event)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[87,14] cannot find symbol
+[ERROR]   symbol:   method setCategory(com.fpt.swp.sealhackathonbe.category.entity.Category)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[88,14] cannot find symbol
+[ERROR]   symbol:   method setTeam(com.fpt.swp.sealhackathonbe.team.entity.Teams)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[89,14] cannot find symbol
+[ERROR]   symbol:   method setAwardTier(com.fpt.swp.sealhackathonbe.award.entity.AwardTier)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[90,36] cannot find symbol
+[ERROR]   symbol:   method getAwardTitle()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[91,37] cannot find symbol
+[ERROR]   symbol:   method getDescription()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[92,36] cannot find symbol
+[ERROR]   symbol:   method getPrizeValue()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[93,55] cannot find symbol
+[ERROR]   symbol:   method getPrizeCurrency()
+[ERROR]   location: variable request of type com.fpt.swp.sealhackathonbe.award.dto.AwardRequest
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[94,14] cannot find symbol
+[ERROR]   symbol:   method setAwardedAt(java.time.Instant)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[95,14] cannot find symbol
+[ERROR]   symbol:   method setAwardedBy(com.fpt.swp.sealhackathonbe.user.entity.User)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[96,14] cannot find symbol
+[ERROR]   symbol:   method setIsPublished(boolean)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[97,14] cannot find symbol
+[ERROR]   symbol:   method setPublishedAt(java.time.Instant)
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[126,48] cannot find symbol
+[ERROR]   symbol:   method getEvent()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[127,29] cannot find symbol
+[ERROR]   symbol:   method setCategoryName(award.getC[...]ward")
+[ERROR]   location: variable response of type com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[127,51] cannot find symbol
+[ERROR]   symbol:   method getCategory()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[128,36] cannot find symbol
+[ERROR]   symbol:   method getCategory()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[130,47] cannot find symbol
+[ERROR]   symbol:   method getTeam()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[131,52] cannot find symbol
+[ERROR]   symbol:   method getAwardTier()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] /C:/Users/Nguyen Xuan Tan/FPTU/S5/SWP/SEAL-Hackathon-BE/src/main/java/com/fpt/swp/sealhackathonbe/award/service/impl/AwardServiceImpl.java:[132,49] cannot find symbol
+[ERROR]   symbol:   method getAwardTitle()
+[ERROR]   location: variable award of type com.fpt.swp.sealhackathonbe.award.entity.Award
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

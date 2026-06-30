@@ -29,6 +29,8 @@ public class JudgingController {
     private final JudgingService judgingService;
 
     @PostMapping("/judging")
+    // RBAC:
+    // Chỉ judge nội bộ/khách được ghi điểm.
     @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     @Operation(summary = "Record judging scores", description = "Allows internal and guest judges to submit scores for a submission")
     public ResponseEntity<Void> recordJudging(
@@ -38,6 +40,8 @@ public class JudgingController {
     }
 
     @PatchMapping("/judging")
+    // RBAC:
+    // Chỉ judge nội bộ/khách được cập nhật điểm đã chấm.
     @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     @Operation(summary = "Update judging scores", description = "Allows internal and guest judges to update previously submitted scores")
     public ResponseEntity<Void> updateJudging(
@@ -47,6 +51,8 @@ public class JudgingController {
         return ResponseEntity.ok().build();
     }
     @GetMapping("/judging/submission/{submissionId}")
+    // RBAC:
+    // ORGANIZER và judge được xem điểm của submission phục vụ quản lý/chấm.
     @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
     @Operation(summary = "Get judging scores by submission ID", description = "Retrieves all scores given to a specific submission")
     public ResponseEntity<List<JudgingDTO>> getJudgingBySubmission(@PathVariable UUID submissionId) {
@@ -55,7 +61,9 @@ public class JudgingController {
     }
 
     @GetMapping("/judging/judge/{judgeUserId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    // RBAC:
+    // Cho phép ORGANIZER hoặc chính judge xem lịch sử chấm của mình.
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER') or #judgeUserId == principal.user.userId")
     @Operation(summary = "Get judging scores by judge ID", description = "Retrieves all scores given by a specific judge")
     public ResponseEntity<List<JudgingDTO>> getJudgingByJudgeId(@PathVariable UUID judgeUserId) {
         List<JudgingDTO> scores = judgingService.getScoresByJudgeId(judgeUserId);
@@ -63,6 +71,8 @@ public class JudgingController {
     }
 
     @GetMapping("/judging/audit-logs/event/{eventId}")
+    // RBAC:
+    // Chỉ ORGANIZER được xem audit log điểm của event.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     @Operation(summary = "Get evaluation audit logs by event ID", description = "Retrieves audit logs for score changes in an event")
     public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {

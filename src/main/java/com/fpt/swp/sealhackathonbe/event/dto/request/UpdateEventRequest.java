@@ -29,11 +29,7 @@ public class UpdateEventRequest {
     @NotNull(message = "Event status is required")
     private UUID eventStatusId;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @FutureOrPresent(message = "Registration start time must be in the present or future")
     private LocalDateTime registrationStart;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;

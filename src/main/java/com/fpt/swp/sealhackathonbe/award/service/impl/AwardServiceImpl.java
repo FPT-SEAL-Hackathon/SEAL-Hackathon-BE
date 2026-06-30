@@ -3,10 +3,14 @@ package com.fpt.swp.sealhackathonbe.award.service.impl;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternItemRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.AwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalRow;
 import com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.RankingAwardCandidateResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.SystemAwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.entity.Award;
 import com.fpt.swp.sealhackathonbe.award.entity.AwardPattern;
 import com.fpt.swp.sealhackathonbe.award.entity.AwardTier;
@@ -24,6 +28,9 @@ import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -32,7 +39,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,6 +64,8 @@ public class AwardServiceImpl implements AwardService {
     private final UserRepository userRepository;
     private final RoundRepository roundRepository;
     private final RoundRankingRepository roundRankingRepository;
+    private final NotificationService notificationService;
+    private final TeamMembersRepository teamMembersRepository;
 
     @Override
     @Transactional
@@ -77,6 +88,8 @@ public class AwardServiceImpl implements AwardService {
                     .orElseThrow(() -> new EntityNotFoundException("Category not found."));
         }
 
+        validateAwardTierNotAlreadyGranted(event, category, tier);
+
         Award award = new Award();
         award.setEvent(event);
         award.setCategory(category);
@@ -88,9 +101,12 @@ public class AwardServiceImpl implements AwardService {
         award.setPrizeCurrency(defaultCurrency(request.getPrizeCurrency()));
         award.setAwardedAt(Instant.now());
         award.setAwardedBy(admin);
-        award.setIsPublished(false);
+        award.setIsPublished(true);
+        award.setPublishedAt(Instant.now());
 
-        return convertToResponse(awardRepository.save(award));
+        Award savedAward = awardRepository.save(award);
+        notifyTeamAboutAward(savedAward, adminId);
+        return convertToResponse(savedAward);
     }
 
     @Override
@@ -107,6 +123,56 @@ public class AwardServiceImpl implements AwardService {
         return awardRepository.findAllByEventEventId(eventId).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventPrizeTotalResponse getEventPrizeTotal(UUID eventId) {
+        Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        List<AwardPrizeTotalResponse> totalPrizes = withDefaultZeroTotal(
+                awardRepository.sumPrizeByEventId(eventId)
+        );
+        return new EventPrizeTotalResponse(event.getEventId(), event.getEventName(), totalPrizes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SystemAwardPrizeTotalResponse getSystemPrizeTotal() {
+        List<AwardPrizeTotalResponse> totalPrizes = withDefaultZeroTotal(
+                awardRepository.sumPrizeForAllActiveEvents()
+        );
+
+        Map<UUID, EventPrizeTotalResponse> eventTotalsById = new LinkedHashMap<>();
+        eventRepository.findAllByIsDeletedFalse().forEach(event ->
+                eventTotalsById.put(
+                        event.getEventId(),
+                        new EventPrizeTotalResponse(
+                                event.getEventId(),
+                                event.getEventName(),
+                                new ArrayList<>()
+                        )
+                )
+        );
+
+        for (EventPrizeTotalRow row : awardRepository.sumPrizeGroupedByActiveEvent()) {
+            EventPrizeTotalResponse eventTotal = eventTotalsById.get(row.getEventId());
+            if (eventTotal != null) {
+                eventTotal.getTotalPrizes().add(
+                        new AwardPrizeTotalResponse(
+                                row.getPrizeCurrency(),
+                                zeroIfNull(row.getTotalPrize())
+                        )
+                );
+            }
+        }
+
+        eventTotalsById.values().forEach(eventTotal ->
+                eventTotal.setTotalPrizes(withDefaultZeroTotal(eventTotal.getTotalPrizes()))
+        );
+
+        return new SystemAwardPrizeTotalResponse(totalPrizes, new ArrayList<>(eventTotalsById.values()));
     }
 
     @Override
@@ -212,6 +278,7 @@ public class AwardServiceImpl implements AwardService {
                         LinkedHashMap::new
                 ));
         validateAwardPatternsExist(rankings, patternByRank);
+        validateRankingAwardsNotAlreadyGranted(event, category, rankings, patternByRank);
 
         return rankings.stream()
                 .map(ranking -> grantRankingAward(event, category, admin, ranking, patternByRank))
@@ -232,14 +299,7 @@ public class AwardServiceImpl implements AwardService {
         }
 
         Teams team = ranking.getTeam();
-        Award award = awardRepository
-                .findByEventEventIdAndCategoryCategoryIdAndTeamTeamIdAndAwardTitle(
-                        event.getEventId(),
-                        category.getCategoryId(),
-                        team.getTeamId(),
-                        pattern.getAwardTitle()
-                )
-                .orElseGet(Award::new);
+        Award award = new Award();
 
         award.setEvent(event);
         award.setCategory(category);
@@ -254,7 +314,69 @@ public class AwardServiceImpl implements AwardService {
         award.setIsPublished(true);
         award.setPublishedAt(Instant.now());
 
-        return awardRepository.save(award);
+        Award savedAward = awardRepository.save(award);
+        notifyTeamAboutAward(savedAward, admin.getUserId());
+        return savedAward;
+    }
+
+    private void validateAwardTierNotAlreadyGranted(Event event, Category category, AwardTier tier) {
+        UUID categoryId = category != null ? category.getCategoryId() : null;
+        if (awardRepository.existsPublishedAwardTierInScope(event.getEventId(), categoryId, tier.getId())) {
+            throw new IllegalStateException(String.format(
+                    "Award tier '%s' has already been granted for this %s.",
+                    tier.getTierName(),
+                    category != null ? "category" : "event"
+            ));
+        }
+    }
+
+    private void validateRankingAwardsNotAlreadyGranted(
+            Event event,
+            Category category,
+            List<RoundRanking> rankings,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        Set<UUID> requestedTierIds = new HashSet<>();
+        for (RoundRanking ranking : rankings) {
+            AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
+            AwardTier tier = pattern.getAwardTier();
+
+            if (!requestedTierIds.add(tier.getId())) {
+                throw new IllegalStateException("Duplicate award tier in selected award patterns: " + tier.getTierName());
+            }
+
+            validateAwardTierNotAlreadyGranted(event, category, tier);
+        }
+    }
+
+    private void notifyTeamAboutAward(Award award, UUID adminId) {
+        List<UUID> recipientIds = teamMembersRepository.findByTeamIdAndActiveTrue(award.getTeam().getTeamId())
+                .stream()
+                .map(TeamMembers::getUserId)
+                .collect(Collectors.toList());
+
+        if (recipientIds.isEmpty()) return;
+
+        String title = "Congratulations! Your team won an award: " + award.getAwardTitle();
+        String body = String.format("Hello %s,\n\n" +
+                "We are thrilled to announce that your team has been granted the \"%s - %s\" award in the event \"%s\".\n\n" +
+                "Prize: %s %s\n\n" +
+                "Congratulations from the organization board!",
+                award.getTeam().getTeamName(),
+                award.getAwardTier().getTierName(),
+                award.getAwardTitle(),
+                award.getEvent().getEventName(),
+                award.getPrizeValue() != null ? award.getPrizeValue().toString() : "N/A",
+                award.getPrizeCurrency()
+        );
+
+        notificationService.sendBroadcastNotification(
+                recipientIds,
+                adminId,
+                award.getEvent().getEventId(),
+                title,
+                body
+        );
     }
 
     private Category getCategory(UUID categoryId) {
@@ -367,5 +489,19 @@ public class AwardServiceImpl implements AwardService {
 
     private String defaultCurrency(String currency) {
         return currency != null && !currency.isBlank() ? currency : "VND";
+    }
+
+    private List<AwardPrizeTotalResponse> withDefaultZeroTotal(List<AwardPrizeTotalResponse> totalPrizes) {
+        if (totalPrizes == null || totalPrizes.isEmpty()) {
+            return List.of(new AwardPrizeTotalResponse("VND", BigDecimal.ZERO));
+        }
+        totalPrizes.forEach(total ->
+                total.setTotalPrize(zeroIfNull(total.getTotalPrize()))
+        );
+        return totalPrizes;
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 }
