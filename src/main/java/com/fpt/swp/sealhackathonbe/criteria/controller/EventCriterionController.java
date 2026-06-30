@@ -27,4 +27,10 @@ public class EventCriterionController {
                 .status(HttpStatus.CREATED)
                 .body(eventCriterionService.importCriteriaToEvent(eventId, request));
     }
+
+    @GetMapping("/{eventId}")
+    public ResponseEntity<List<EventCriterionResponse>> getCriteriaByEvent(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(eventCriterionService.getCriteriaByEvent(eventId));
+    }
+
 }
