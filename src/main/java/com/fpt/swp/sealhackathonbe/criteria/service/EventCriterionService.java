@@ -10,5 +10,6 @@ import java.util.UUID;
 @Service
 public interface EventCriterionService {
     List<EventCriterionResponse> importCriteriaToEvent(UUID eventId, ImportCriteriaToEventRequest request);
+    List<EventCriterionResponse> getCriteriaByEvent(UUID eventId);
 
 }
