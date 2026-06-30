@@ -23,7 +23,6 @@ public class EventResponse {
     private EventStatus eventStatus;
 
     private LocalDateTime registrationStart;
-
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;

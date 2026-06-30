@@ -29,9 +29,7 @@ public class UpdateEventRequest {
     @NotNull(message = "Event status is required")
     private UUID eventStatusId;
 
-    @FutureOrPresent(message = "Registration start time must be in the present or future")
     private LocalDateTime registrationStart;
-
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;
