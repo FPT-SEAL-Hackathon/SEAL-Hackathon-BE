@@ -17,8 +17,6 @@ import java.util.UUID;
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, UUID> {
     boolean existsByEventIdAndUserId(UUID eventId, UUID userId);
 
-    boolean existsByEventIdAndUserIdAndParticipantStatusStatusNameIgnoreCase(UUID eventId, UUID userId, String statusName);
-
     @EntityGraph(attributePaths = {
             "participantStatus",
             "event",

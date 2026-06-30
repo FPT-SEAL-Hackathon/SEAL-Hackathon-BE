@@ -101,9 +101,10 @@ public class UserManagementService {
         validatePassword(request.getPassword());
 
         UserType userType = resolveUserType(request.getRole());
-        AccountStatus accountStatus = request.getStatus() == null || request.getStatus().isBlank()
+        String requestedStatus = firstNonBlank(request.getAccountStatus(), request.getStatus());
+        AccountStatus accountStatus = requestedStatus == null
                 ? resolveAccountStatus(STATUS_UNVERIFIED, false)
-                : resolveAccountStatus(request.getStatus(), true);
+                : resolveAccountStatus(requestedStatus, true);
 
         User user = new User();
         user.setEmail(email);
@@ -178,8 +179,9 @@ public class UserManagementService {
                     requestedUniversityName
             );
         }
-        if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            AccountStatus status = resolveAccountStatus(request.getStatus(), true);
+        String requestedStatus = firstNonBlank(request.getAccountStatus(), request.getStatus());
+        if (requestedStatus != null) {
+            AccountStatus status = resolveAccountStatus(requestedStatus, true);
             validateNotSelfDisable(user, status, actorUserId);
             user.setAccountStatus(status);
         }
@@ -288,30 +290,25 @@ public class UserManagementService {
         String statusName = user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null;
 
         return UserManagementResponse.builder()
-                .id(user.getUserId())
+                .userId(user.getUserId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .role(toApiName(roleName))
-                .userType(toApiName(roleName))
                 .roleName(roleName)
-                .userTypeName(roleName)
                 .teamId(currentMembership.map(TeamMembers::getTeamId).orElse(null))
                 .teamName(currentMembership.map(TeamMembers::getTeam).map(team -> team.getTeamName()).orElse(null))
                 .teamStatus(currentMembership
                         .map(TeamMembers::getTeam)
                         .map(team -> team.getTeamStatus() != null ? team.getTeamStatus().getStatusName() : null)
                         .orElse(null))
-                .status(toApiName(statusName))
                 .accountStatus(toApiName(statusName))
-                .statusName(statusName)
                 .accountStatusName(statusName)
                 .fptStudentCode(user.getFptStudentCode())
                 .externalStudentCode(user.getExternalStudentCode())
                 .universityName(user.getUniversityName())
                 .accountExpiresAt(user.getAccountExpiresAt())
                 .emailVerified(STATUS_ACTIVE.equalsIgnoreCase(statusName))
-                .joinedAt(user.getCreatedAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -326,6 +323,11 @@ public class UserManagementService {
             return null;
         }
         return value.trim();
+    }
+
+    private String firstNonBlank(String first, String second) {
+        String normalizedFirst = trimToNull(first);
+        return normalizedFirst != null ? normalizedFirst : trimToNull(second);
     }
 
     private String normalizeLookup(String value) {

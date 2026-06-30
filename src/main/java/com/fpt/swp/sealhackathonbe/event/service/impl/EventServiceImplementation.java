@@ -345,20 +345,6 @@ public class EventServiceImplementation implements EventService {
         return user != null ? user.getUserId() : null;
     }
 
-    private UUID currentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new IllegalStateException("User not authenticated");
-        }
-
-        User user = userRepository.findByEmail(authentication.getName());
-        if (user == null) {
-            throw new EntityNotFoundException("Current user not found");
-        }
-
-        return user.getUserId();
-    }
-
     private boolean isCurrentUserOrganizer() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null

@@ -152,7 +152,12 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
                 || path.equals("/auth/register")
                 || path.equals("/auth/refresh")
                 || path.equals("/auth/resend-verification-email")
-                || path.equals("/auth/verify-email")) {
+                || path.equals("/auth/verify-email")
+                || path.equals("/api/v1/auth/login")
+                || path.equals("/api/v1/auth/register")
+                || path.equals("/api/v1/auth/refresh")
+                || path.equals("/api/v1/auth/resend-verification-email")
+                || path.equals("/api/v1/auth/verify-email")) {
             return true;
         }
         if (path.startsWith("/api/v1/public/")) {

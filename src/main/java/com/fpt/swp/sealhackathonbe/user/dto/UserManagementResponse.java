@@ -15,27 +15,22 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class UserManagementResponse {
-    private UUID id;
+    private UUID userId;
     private String fullName;
     private String email;
     private String phone;
     private String role;
-    private String userType;
     private String roleName;
-    private String userTypeName;
     private UUID teamId;
     private String teamName;
     private String teamStatus;
-    private String status;
     private String accountStatus;
-    private String statusName;
     private String accountStatusName;
     private String fptStudentCode;
     private String externalStudentCode;
     private String universityName;
     private LocalDateTime accountExpiresAt;
     private Boolean emailVerified;
-    private LocalDateTime joinedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

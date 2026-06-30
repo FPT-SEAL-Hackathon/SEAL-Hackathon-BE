@@ -21,6 +21,9 @@ public class UpdateUserManagementRequest {
     @Size(max = 50, message = "Status must not exceed 50 characters")
     private String status;
 
+    @Size(max = 50, message = "Account status must not exceed 50 characters")
+    private String accountStatus;
+
     @Size(max = 20, message = "FPT student code must not exceed 20 characters")
     private String fptStudentCode;
 

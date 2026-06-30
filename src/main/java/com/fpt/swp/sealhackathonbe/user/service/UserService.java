@@ -33,6 +33,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -117,23 +118,22 @@ public class UserService {
             // Lưu refresh token để quản lý phiên và hỗ trợ logout.
             String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
-            String studentCode =
-                    user.getFptStudentCode() != null
-                            ? user.getFptStudentCode()
-                            : user.getExternalStudentCode();
+            String roleName = user.getUserType().getTypeName();
+            String accountStatusName = user.getAccountStatus().getStatusName();
 
             UserResponse userResponse =
                     UserResponse.builder()
-                            .id(user.getUserId())
+                            .userId(user.getUserId())
                             .email(user.getEmail())
                             .fullName(user.getFullName())
-                            .userType(user.getUserType().getTypeName())
-                            .studentCode(studentCode)
+                            .role(toApiName(roleName))
+                            .roleName(roleName)
+                            .fptStudentCode(user.getFptStudentCode())
+                            .externalStudentCode(user.getExternalStudentCode())
                             .universityName(user.getUniversityName())
                             .phone(user.getPhone())
-                            .accountStatus(
-                                    user.getAccountStatus().getStatusName()
-                            )
+                            .accountStatus(toApiName(accountStatusName))
+                            .accountStatusName(accountStatusName)
                             .createdAt(user.getCreatedAt())
                             .build();
 
@@ -317,30 +317,36 @@ public class UserService {
 
         User savedUser = userRepo.save(user);
 
-        String studentCode =
-                savedUser.getFptStudentCode() != null
-                        ? savedUser.getFptStudentCode()
-                        : savedUser.getExternalStudentCode();
+        String roleName = savedUser.getUserType().getTypeName();
+        String accountStatusName = savedUser.getAccountStatus().getStatusName();
 
         createAndSendVerificationToken(savedUser);
 
         return UserResponse.builder()
-                .id(savedUser.getUserId())
+                .userId(savedUser.getUserId())
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
-                .userType(
-                        savedUser.getUserType().getTypeName()
-                )
-                .studentCode(studentCode)
+                .role(toApiName(roleName))
+                .roleName(roleName)
+                .fptStudentCode(savedUser.getFptStudentCode())
+                .externalStudentCode(savedUser.getExternalStudentCode())
                 .universityName(
                         savedUser.getUniversityName()
                 )
                 .phone(savedUser.getPhone())
-                .accountStatus(
-                        savedUser.getAccountStatus()
-                                .getStatusName()
-                )
+                .accountStatus(toApiName(accountStatusName))
+                .accountStatusName(accountStatusName)
                 .createdAt(savedUser.getCreatedAt())
                 .build();
+    }
+
+    private String toApiName(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.trim()
+                .replace("-", "_")
+                .replace(" ", "_")
+                .toUpperCase(Locale.ROOT);
     }
 }

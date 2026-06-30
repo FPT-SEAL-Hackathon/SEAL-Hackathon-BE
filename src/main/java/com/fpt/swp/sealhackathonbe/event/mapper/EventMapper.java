@@ -11,10 +11,7 @@ public class EventMapper {
 
     public EventResponse toEventResponse(Event event) {
         return EventResponse.builder()
-                .id(event.getEventId())
                 .eventId(event.getEventId())
-                .name(event.getEventName())
-                .title(event.getEventName())
                 .eventName(event.getEventName())
                 .description(event.getDescription())
                 .location(event.getLocation())
@@ -24,14 +21,11 @@ public class EventMapper {
                 .eventStatusName(event.getEventStatus() != null ? event.getEventStatus().getEventStatusName() : null)
                 .registrationStart(event.getRegistrationStart())
                 .registrationEnd(event.getRegistrationEnd())
-                .registrationDeadline(event.getRegistrationEnd())
-                .startDate(event.getEventStartDate())
                 .eventStartDate(event.getEventStartDate())
-                .endDate(event.getEventEndDate())
                 .eventEndDate(event.getEventEndDate())
                 .maxTeamSize(event.getMaxTeamSize())
                 .minTeamSize(event.getMinTeamSize())
-                .createdById(event.getCreatedBy().getUserId())
+                .createdById(event.getCreatedBy() != null ? event.getCreatedBy().getUserId() : null)
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .build();
@@ -40,10 +34,7 @@ public class EventMapper {
     public EventResponse toEventResponse(Event event, EventParticipant participant) {
         String participationStatus = participationStatus(participant);
         return EventResponse.builder()
-                .id(event.getEventId())
                 .eventId(event.getEventId())
-                .name(event.getEventName())
-                .title(event.getEventName())
                 .eventName(event.getEventName())
                 .description(event.getDescription())
                 .location(event.getLocation())
@@ -53,24 +44,14 @@ public class EventMapper {
                 .eventStatusName(event.getEventStatus() != null ? event.getEventStatus().getEventStatusName() : null)
                 .registrationStart(event.getRegistrationStart())
                 .registrationEnd(event.getRegistrationEnd())
-                .registrationDeadline(event.getRegistrationEnd())
-                .startDate(event.getEventStartDate())
                 .eventStartDate(event.getEventStartDate())
-                .endDate(event.getEventEndDate())
                 .eventEndDate(event.getEventEndDate())
                 .maxTeamSize(event.getMaxTeamSize())
                 .minTeamSize(event.getMinTeamSize())
-                .createdById(event.getCreatedBy().getUserId())
-                .eventParticipantId(participant != null ? participant.getEventParticipantId() : null)
-                .userParticipationStatus(participationStatus)
-                .myParticipantId(participant != null ? participant.getEventParticipantId() : null)
-                .myRegistrationStatus(participationStatus)
+                .createdById(event.getCreatedBy() != null ? event.getCreatedBy().getUserId() : null)
                 .participantStatus(participationStatus)
-                .rejectedReason(participant != null ? participant.getRejectedReason() : null)
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
-                .appliedAt(participant != null ? participant.getAppliedAt() : null)
-                .approvedAt(participant != null ? participant.getApprovedAt() : null)
                 .build();
     }
 
@@ -83,9 +64,6 @@ public class EventMapper {
     }
 
     private String toApiParticipantStatus(String statusName) {
-        if ("PENDING_APPROVAL".equalsIgnoreCase(statusName)) {
-            return "PENDING";
-        }
         return statusName;
     }
 }

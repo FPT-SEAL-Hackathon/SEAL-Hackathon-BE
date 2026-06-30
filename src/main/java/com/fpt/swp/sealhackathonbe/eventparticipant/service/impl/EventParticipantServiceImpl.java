@@ -122,8 +122,8 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         log.info("Event registration mapping response: participantId={}", savedParticipant.getEventParticipantId());
         EventParticipantResponse response = toRegistrationResponse(savedParticipant, event, currentUser, pendingStatus);
         log.info(
-                "Event registration mapped response: participantId={}, eventName={}, eventStatus={}, participantStatus={}",
-                response.getParticipantId(),
+                "Event registration mapped response: eventParticipantId={}, eventName={}, eventStatus={}, participantStatus={}",
+                response.getEventParticipantId(),
                 response.getEventName(),
                 response.getEventStatus(),
                 response.getParticipantStatus()
@@ -368,8 +368,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         User user = participant.getUser();
 
         EventParticipantResponse response = new EventParticipantResponse();
-        response.setId(participant.getEventParticipantId());
-        response.setParticipantId(participant.getEventParticipantId());
+        response.setEventParticipantId(participant.getEventParticipantId());
         response.setEventId(participant.getEventId());
         response.setEventName(event != null ? event.getEventName() : null);
         response.setEventStatus(event != null && event.getEventStatus() != null
@@ -380,9 +379,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         response.setStudentEmail(user != null ? user.getEmail() : null);
         response.setUser(toUserResponse(user));
         response.setEvent(toEventResponse(event));
-        response.setCurrentStatus(participantStatus);
         response.setParticipantStatus(participantStatus);
-        response.setRegisteredAt(participant.getAppliedAt());
         response.setAppliedAt(participant.getAppliedAt());
         response.setApprovedAt(participant.getApprovedAt());
         response.setApprovedBy(toUserResponse(participant.getApprovedByUser()));
@@ -401,8 +398,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
                 : null;
 
         EventParticipantResponse response = new EventParticipantResponse();
-        response.setId(participant.getEventParticipantId());
-        response.setParticipantId(participant.getEventParticipantId());
+        response.setEventParticipantId(participant.getEventParticipantId());
         response.setEventId(event != null ? event.getEventId() : participant.getEventId());
         response.setEventName(event != null ? event.getEventName() : null);
         response.setEventStatus(event != null && event.getEventStatus() != null
@@ -413,9 +409,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         response.setStudentEmail(user != null ? user.getEmail() : null);
         response.setUser(toUserResponse(user));
         response.setEvent(toEventResponse(event));
-        response.setCurrentStatus(statusName);
         response.setParticipantStatus(statusName);
-        response.setRegisteredAt(participant.getAppliedAt());
         response.setAppliedAt(participant.getAppliedAt());
         response.setApprovedAt(participant.getApprovedAt());
         response.setApprovedBy(null);

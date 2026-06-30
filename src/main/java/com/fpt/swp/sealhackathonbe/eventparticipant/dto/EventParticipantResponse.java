@@ -9,8 +9,7 @@ import java.util.UUID;
 @Getter
 @Setter
 public class EventParticipantResponse {
-    private UUID id;
-    private UUID participantId;
+    private UUID eventParticipantId;
     private UUID eventId;
     private String eventName;
     private String eventStatus;
@@ -19,9 +18,7 @@ public class EventParticipantResponse {
     private String studentEmail;
     private EventParticipantUserResponse user;
     private EventParticipantEventResponse event;
-    private String currentStatus;
     private String participantStatus;
-    private LocalDateTime registeredAt;
     private LocalDateTime appliedAt;
     private LocalDateTime approvedAt;
     private EventParticipantUserResponse approvedBy;
