@@ -6,6 +6,7 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -40,19 +41,22 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRepository roundRepository;
     private final EntityManager entityManager;
+    private final EventParticipantService eventParticipantService;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
             TeamsRepository teamsRepository,
             TeamMembersRepository teamMembersRepository,
             RoundRepository roundRepository,
-            EntityManager entityManager
+            EntityManager entityManager,
+            EventParticipantService eventParticipantService
     ) {
         this.submissionsRepository = submissionsRepository;
         this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.roundRepository = roundRepository;
         this.entityManager = entityManager;
+        this.eventParticipantService = eventParticipantService;
     }
 
     @Override
@@ -65,6 +69,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
+        eventParticipantService.assertActiveParticipant(team.getEventId(), currentUserId);
         validateTeamCanSubmit(team);
         validateTeamCanSubmitToRound(team, request.getRoundId());
         validateSubmissionDeadline(request.getRoundId());

@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class EventServiceImplementation implements EventService {
+
+    private static final List<String> PUBLIC_EVENT_STATUSES = List.of(
+            "Registration Open",
+            "Ongoing",
+            "Completed"
+    );
 
     private final EventRepository eventRepository;
     private final EventStatusRepository eventStatusRepository;
@@ -98,6 +105,23 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    public List<EventResponse> getPublicEvents() {
+        return eventRepository
+                .findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(PUBLIC_EVENT_STATUSES)
+                .stream()
+                .map(eventMapper::toEventResponse)
+                .toList();
+    }
+
+    @Override
+    public EventResponse getPublicEventById(UUID eventId) {
+        Event event = eventRepository
+                .findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(eventId, PUBLIC_EVENT_STATUSES)
+                .orElseThrow(() -> new EntityNotFoundException("Public event not found"));
+        return eventMapper.toEventResponse(event);
+    }
+
+    @Override
     public EventResponse update(UUID eventId, UpdateEventRequest request) {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalse(eventId)
@@ -107,9 +131,28 @@ public class EventServiceImplementation implements EventService {
                 .findById(request.getEventStatusId())
                 .orElseThrow(() -> new EntityNotFoundException("Event status not found"));
 
+        LocalDateTime newRegistrationStart = request.getRegistrationStart();
+        LocalDateTime oldRegistrationStart = event.getRegistrationStart();
+        //Check if registration start is provided and modified
+        if (newRegistrationStart != null && oldRegistrationStart != null && !newRegistrationStart.isEqual(oldRegistrationStart)) {
+            //If it's modified, the new time must not be in the past
+            if (newRegistrationStart.isBefore(LocalDateTime.now())) {
+                throw new IllegalArgumentException("When updating registration start date, the new time must be in the present or future");
+            }
+        }
         if (request.getRegistrationStart()!=null && request.getRegistrationEnd()!=null) {
             if(request.getRegistrationStart().isAfter(request.getRegistrationEnd())) {
                 throw new IllegalArgumentException("Registration start date must be before end date");
+            }
+        }
+
+        LocalDate newEventStart = request.getEventStartDate();
+        LocalDate oldEventStart = event.getEventStartDate();
+        //Check if event start date is provided and modified
+        if (newEventStart != null && oldEventStart != null && !newEventStart.isEqual(oldEventStart)) {
+            //If it's modified, the new time must not be in the past
+            if (newEventStart.isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("When updating event start date, the new time must be in present or future");
             }
         }
 

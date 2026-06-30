@@ -4,7 +4,9 @@ import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.RankingAwardCandidateResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.SystemAwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.service.AwardService;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,9 +30,6 @@ public class AwardController {
 
     private final AwardService awardService;
 
-    /**
-     * Cấp giải thưởng cho team, chỉ nên thực hiện bởi người điều phối.
-     */
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
     @PostMapping("/grandAwardToATeam")
     // RBAC:
@@ -60,6 +59,26 @@ public class AwardController {
     public ResponseEntity<List<AwardResponse>> getAwardsByEvent(@PathVariable UUID eventId) {
         List<AwardResponse> responses = awardService.getAwardsByEvent(eventId);
         return ResponseEntity.ok(responses);
+    }
+
+    @Operation(
+            summary = "Get total prize by event",
+            description = "Calculate total prize value of all awards in a specific event, grouped by currency.",
+            operationId = "getEventPrizeTotal"
+    )
+    @GetMapping("/events/{eventId}/total-prize")
+    public ResponseEntity<EventPrizeTotalResponse> getEventPrizeTotal(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(awardService.getEventPrizeTotal(eventId));
+    }
+
+    @Operation(
+            summary = "Get total prize of all events",
+            description = "Calculate total prize value across all active events and per event, grouped by currency.",
+            operationId = "getSystemPrizeTotal"
+    )
+    @GetMapping("/events/total-prize")
+    public ResponseEntity<SystemAwardPrizeTotalResponse> getSystemPrizeTotal() {
+        return ResponseEntity.ok(awardService.getSystemPrizeTotal());
     }
 
     @Operation(

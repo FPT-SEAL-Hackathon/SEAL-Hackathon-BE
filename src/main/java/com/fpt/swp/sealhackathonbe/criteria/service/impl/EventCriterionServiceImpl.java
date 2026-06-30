@@ -63,4 +63,16 @@ public class EventCriterionServiceImpl implements EventCriterionService {
                 .map(mapper::toEventCriterionResponse)
                 .toList();
     }
+
+    @Override
+    public List<EventCriterionResponse> getCriteriaByEvent(UUID eventId) {
+        if (!eventRepository.existsById(eventId)) {
+            throw new EntityNotFoundException("Event not found");
+        }
+
+        return eventCriterionRepository.findByEventEventIdOrderBySortOrderAsc(eventId)
+                .stream()
+                .map(mapper::toEventCriterionResponse)
+                .toList();
+    }
 }
