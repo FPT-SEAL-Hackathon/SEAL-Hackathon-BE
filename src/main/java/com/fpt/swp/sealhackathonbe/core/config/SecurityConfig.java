@@ -51,7 +51,8 @@ public class SecurityConfig {
             "/auth/resend-verification-email",
             "/auth/refresh",
             "/auth/verify-email",
-            "/api/v1/public/**"
+            "/api/v1/public/**",
+            "/api/v1/awards/events/total-prize"  // Public: landing page stats
     };
 
     /**

@@ -3,10 +3,14 @@ package com.fpt.swp.sealhackathonbe.award.service.impl;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternItemRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.AwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalRow;
 import com.fpt.swp.sealhackathonbe.award.dto.HallOfFameResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.RankingAwardCandidateResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.SystemAwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.entity.Award;
 import com.fpt.swp.sealhackathonbe.award.entity.AwardPattern;
 import com.fpt.swp.sealhackathonbe.award.entity.AwardTier;
@@ -35,7 +39,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -117,6 +123,56 @@ public class AwardServiceImpl implements AwardService {
         return awardRepository.findAllByEventEventId(eventId).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventPrizeTotalResponse getEventPrizeTotal(UUID eventId) {
+        Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        List<AwardPrizeTotalResponse> totalPrizes = withDefaultZeroTotal(
+                awardRepository.sumPrizeByEventId(eventId)
+        );
+        return new EventPrizeTotalResponse(event.getEventId(), event.getEventName(), totalPrizes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SystemAwardPrizeTotalResponse getSystemPrizeTotal() {
+        List<AwardPrizeTotalResponse> totalPrizes = withDefaultZeroTotal(
+                awardRepository.sumPrizeForAllActiveEvents()
+        );
+
+        Map<UUID, EventPrizeTotalResponse> eventTotalsById = new LinkedHashMap<>();
+        eventRepository.findAllByIsDeletedFalse().forEach(event ->
+                eventTotalsById.put(
+                        event.getEventId(),
+                        new EventPrizeTotalResponse(
+                                event.getEventId(),
+                                event.getEventName(),
+                                new ArrayList<>()
+                        )
+                )
+        );
+
+        for (EventPrizeTotalRow row : awardRepository.sumPrizeGroupedByActiveEvent()) {
+            EventPrizeTotalResponse eventTotal = eventTotalsById.get(row.getEventId());
+            if (eventTotal != null) {
+                eventTotal.getTotalPrizes().add(
+                        new AwardPrizeTotalResponse(
+                                row.getPrizeCurrency(),
+                                zeroIfNull(row.getTotalPrize())
+                        )
+                );
+            }
+        }
+
+        eventTotalsById.values().forEach(eventTotal ->
+                eventTotal.setTotalPrizes(withDefaultZeroTotal(eventTotal.getTotalPrizes()))
+        );
+
+        return new SystemAwardPrizeTotalResponse(totalPrizes, new ArrayList<>(eventTotalsById.values()));
     }
 
     @Override
@@ -433,5 +489,19 @@ public class AwardServiceImpl implements AwardService {
 
     private String defaultCurrency(String currency) {
         return currency != null && !currency.isBlank() ? currency : "VND";
+    }
+
+    private List<AwardPrizeTotalResponse> withDefaultZeroTotal(List<AwardPrizeTotalResponse> totalPrizes) {
+        if (totalPrizes == null || totalPrizes.isEmpty()) {
+            return List.of(new AwardPrizeTotalResponse("VND", BigDecimal.ZERO));
+        }
+        totalPrizes.forEach(total ->
+                total.setTotalPrize(zeroIfNull(total.getTotalPrize()))
+        );
+        return totalPrizes;
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 }
