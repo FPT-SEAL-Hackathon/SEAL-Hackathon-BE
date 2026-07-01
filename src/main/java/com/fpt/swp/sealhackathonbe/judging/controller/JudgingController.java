@@ -5,6 +5,8 @@ import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
+import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
+import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +29,7 @@ import org.springframework.validation.annotation.Validated;
 @Tag(name = "Judging Controller", description = "APIs for record judge and query judge")
 public class JudgingController {
     private final JudgingService judgingService;
+    private final ResearchDashboardServiceImpl researchDashboardService;
 
     @PostMapping("/judging")
     // RBAC:
@@ -78,5 +81,16 @@ public class JudgingController {
     public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {
         List<EvaluationAuditLogDTO> logs = judgingService.getEvaluationAuditLogsByEvent(eventId);
         return ResponseEntity.ok(logs);
+    }
+
+    @GetMapping(value = "/judging/events/{eventId}/calibration-metrics")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @Operation(summary = "Get calibration metrics", description = "Returns calibration metrics for all judges in the event as JSON")
+    public ResponseEntity<List<ReliabilityMetricResponse>> getCalibrationMetrics(
+            @PathVariable UUID eventId,
+            @RequestParam(required = false) UUID roundId,
+            @RequestParam(required = false) UUID categoryId
+    ) {
+        return ResponseEntity.ok(researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId));
     }
 }
