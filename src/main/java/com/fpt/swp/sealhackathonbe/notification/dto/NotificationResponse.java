@@ -22,9 +22,13 @@ public class NotificationResponse {
     private String body;
     private Instant sentAt;
     private UUID sentByUserId;
+    private String senderName;
     private Boolean isRead;
 
     public static NotificationResponse from(Notification notification) {
+        String senderName = notification.getSentByUserID() != null
+                ? notification.getSentByUserID().getFullName()
+                : "System";
         return NotificationResponse.builder()
                 .id(notification.getId())
                 .eventId(notification.getEventID() != null ? notification.getEventID().getEventId() : null)
@@ -33,6 +37,7 @@ public class NotificationResponse {
                 .body(notification.getBody())
                 .sentAt(notification.getSentAt())
                 .sentByUserId(notification.getSentByUserID() != null ? notification.getSentByUserID().getUserId() : null)
+                .senderName(senderName)
                 .isRead(notification.getIsRead())
                 .build();
     }
