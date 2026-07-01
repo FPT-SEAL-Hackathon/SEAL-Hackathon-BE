@@ -29,4 +29,13 @@ public class CategoryMentorController {
                 .status(HttpStatus.CREATED)
                 .body(categoryMentorService.assignMentors(categoryId, request));
     }
+
+    @GetMapping("/{categoryId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<CategoryMentorResponse>> getCategoryMentors(
+            @PathVariable UUID categoryId
+    ) {
+        return ResponseEntity
+                .ok(categoryMentorService.getCategoryMentors(categoryId));
+    }
 }

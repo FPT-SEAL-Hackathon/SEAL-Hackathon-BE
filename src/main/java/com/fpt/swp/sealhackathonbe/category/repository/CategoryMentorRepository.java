@@ -14,4 +14,7 @@ public interface CategoryMentorRepository extends JpaRepository<CategoryMentor, 
     @Query("SELECT cm.mentor.userId FROM CategoryMentor cm WHERE cm.category.categoryId = :categoryId")
     List<UUID> findMentorIdsByCategoryId(@Param("categoryId") UUID categoryId);
 
+    List<CategoryMentor> findByCategory_CategoryId(UUID categoryId);
+    List<CategoryMentor> findByMentor_UserId(UUID mentorId);
+    java.util.Optional<CategoryMentor> findByCategory_CategoryIdAndMentor_UserId(UUID categoryId, UUID mentorId);
 }

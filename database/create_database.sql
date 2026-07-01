@@ -327,6 +327,7 @@ CREATE TABLE CategoryMentors (
                                  CONSTRAINT UQ_CategoryMentors UNIQUE (CategoryID, MentorUserID)
 );
 GO
+
 -- ============================================================
 -- SECTION 5.5: EVENT PARTICIPANTS
 -- ============================================================
@@ -497,6 +498,44 @@ CREATE TABLE TeamMembers (
                              IsActive BIT NOT NULL DEFAULT 1,
                              CONSTRAINT UQ_TeamMembers UNIQUE (TeamID, UserID)
 );
+GO
+
+CREATE TABLE ConsultationRequests (
+                                      RequestID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
+                                      CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+                                      TeamID UNIQUEIDENTIFIER NOT NULL REFERENCES Teams(TeamID),
+                                      MentorUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      CreatedByUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Title NVARCHAR(150) NOT NULL,
+                                      Description NVARCHAR(MAX) NOT NULL,
+                                      Priority NVARCHAR(20) NOT NULL,
+                                      Status NVARCHAR(20) NOT NULL DEFAULT N'PENDING',
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      ClosedAt DATETIME2 NULL,
+                                      CONSTRAINT CK_ConsultationRequests_Priority CHECK (Priority IN (N'LOW', N'MEDIUM', N'HIGH', N'URGENT')),
+                                      CONSTRAINT CK_ConsultationRequests_Status CHECK (Status IN (N'PENDING', N'ACCEPTED', N'IN_PROGRESS', N'RESOLVED', N'REJECTED', N'CANCELLED'))
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Mentor ON ConsultationRequests(MentorUserID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Team ON ConsultationRequests(TeamID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_CategoryStatus ON ConsultationRequests(CategoryID, Status);
+GO
+
+CREATE TABLE ConsultationMessages (
+                                      MessageID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      RequestID UNIQUEIDENTIFIER NOT NULL REFERENCES ConsultationRequests(RequestID),
+                                      SenderID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Content NVARCHAR(MAX) NULL,
+                                      AttachmentUrl NVARCHAR(500) NULL,
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      SeenAt DATETIME2 NULL
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationMessages_RequestCreatedAt ON ConsultationMessages(RequestID, CreatedAt ASC);
 GO
 
 CREATE TABLE TeamJoinRequests (
@@ -1481,5 +1520,14 @@ THROW 52002, N'Lỗi DB: Một người không thể làm giám khảo cho vòng
 END
 END;
 GO
+CREATE TABLE SystemSettings (
+    SettingKey NVARCHAR(100) NOT NULL PRIMARY KEY,
+    SettingValue NVARCHAR(1000) NOT NULL,
+    SettingType NVARCHAR(20) NULL,
+    Description NVARCHAR(500) NULL,
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
 PRINT N'SEAL_HackathonDB UUID version created successfully.';
 GO
