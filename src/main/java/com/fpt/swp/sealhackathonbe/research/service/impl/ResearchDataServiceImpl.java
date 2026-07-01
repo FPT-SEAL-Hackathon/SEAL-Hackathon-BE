@@ -169,13 +169,15 @@ public class ResearchDataServiceImpl implements ResearchDataService {
                         valueOf(item.comparableScoreCount()),
                         valueOf(item.calibrationScoreCount()),
                         valueOf(item.averageScore()),
+                        valueOf(item.minScore()),
+                        valueOf(item.maxScore()),
                         valueOf(item.biasFromPeerMean()),
                         valueOf(item.averageAbsoluteDeviation()),
                         valueOf(item.rootMeanSquareDeviation())
                 })
                 .toList();
         return new ExportContent(
-                new String[]{"JudgeUserID", "JudgeName", "ScoredItemCount", "ComparableScoreCount", "CalibrationScoreCount", "AverageScore", "BiasFromPeerMean", "AverageAbsoluteDeviation", "RootMeanSquareDeviation"},
+                new String[]{"JudgeUserID", "JudgeName", "ScoredItemCount", "ComparableScoreCount", "CalibrationScoreCount", "AverageScore", "MinScore", "MaxScore", "BiasFromPeerMean", "AverageAbsoluteDeviation", "RootMeanSquareDeviation"},
                 rows
         );
     }

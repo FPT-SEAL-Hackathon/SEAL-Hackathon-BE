@@ -10,6 +10,8 @@ public record ReliabilityMetricResponse(
         Long comparableScoreCount,
         Long calibrationScoreCount,
         BigDecimal averageScore,
+        BigDecimal minScore,
+        BigDecimal maxScore,
         BigDecimal biasFromPeerMean,
         BigDecimal averageAbsoluteDeviation,
         BigDecimal rootMeanSquareDeviation
