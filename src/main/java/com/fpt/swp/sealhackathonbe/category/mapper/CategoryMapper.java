@@ -25,7 +25,7 @@ public class CategoryMapper {
                 .categoryMentorId(categoryMentor.getCategoryMentorId())
                 .categoryId(categoryMentor.getCategory().getCategoryId())
                 .mentorId(categoryMentor.getMentor().getUserId())
-                .mentorName(categoryMentor.getMentor().getProfile().getFirstName() + " " + categoryMentor.getMentor().getProfile().getLastName())
+                .mentorName(categoryMentor.getMentor().getFullName())
                 .mentorEmail(categoryMentor.getMentor().getEmail())
                 .assignedAt(categoryMentor.getAssignedAt())
                 .build();

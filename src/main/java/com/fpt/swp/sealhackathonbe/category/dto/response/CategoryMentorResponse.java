@@ -1,11 +1,6 @@
 package com.fpt.swp.sealhackathonbe.category.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fpt.swp.sealhackathonbe.category.entity.Category;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
