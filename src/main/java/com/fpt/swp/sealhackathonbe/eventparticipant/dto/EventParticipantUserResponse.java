@@ -12,6 +12,8 @@ public class EventParticipantUserResponse {
     private String email;
     private String fullName;
     private String phone;
+    private String fptStudentCode;
+    private String externalStudentCode;
     private String universityName;
     private String userTypeName;
     private String accountStatusName;

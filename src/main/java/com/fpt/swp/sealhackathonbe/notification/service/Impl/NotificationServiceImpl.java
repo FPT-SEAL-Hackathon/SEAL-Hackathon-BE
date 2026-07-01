@@ -262,7 +262,16 @@ public class NotificationServiceImpl implements NotificationService {
 
         long unreadCount = notificationRepository.countByRecipientUserIDAndIsReadFalse(recipient);
         NotificationPushEvent event = new NotificationPushEvent(NotificationResponse.from(notification), unreadCount);
-        notificationRealtimeService.publish(recipient.getUserId(), event);
-        emailService.sendNotificationEmail(recipient.getEmail(), notification.getTitle(), notification.getBody());
+        try {
+            notificationRealtimeService.publish(recipient.getUserId(), event);
+        } catch (Exception ignored) {
+            // Persisted notifications should remain available even if realtime delivery fails.
+        }
+
+        try {
+            emailService.sendNotificationEmail(recipient.getEmail(), notification.getTitle(), notification.getBody());
+        } catch (Exception ignored) {
+            // Email delivery is best-effort for in-app notifications.
+        }
     }
 }

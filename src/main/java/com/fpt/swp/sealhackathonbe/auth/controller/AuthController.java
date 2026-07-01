@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * làm mới token, đăng xuất và xác minh email.
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping({"/auth", "/api/v1/auth"})
 @SecurityRequirement(name = "bearerAuth")
 public class AuthController {
 
@@ -44,7 +44,6 @@ public class AuthController {
     public ResponseEntity<UserResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        System.out.println("REGISTER CALLED");
         UserResponse response = userService.register(request);
         return ResponseEntity.ok(response);
     }
@@ -80,8 +79,6 @@ public class AuthController {
     public ResponseEntity<String> logout(
             @RequestBody LogoutRequest request,
             @RequestHeader("Authorization") String authHeader) {
-
-        String accessToken = authHeader.substring(7);
 
         userService.logout(request.getRefreshToken());
 

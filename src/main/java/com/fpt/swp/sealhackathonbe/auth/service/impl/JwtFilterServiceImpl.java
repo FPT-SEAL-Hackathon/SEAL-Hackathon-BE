@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpMethod;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -48,7 +50,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
         String path = request.getServletPath();
 
-        if (path.equals("/auth/login") || path.equals("/auth/register") || path.equals("/auth/refresh")) {
+        if (isPublicRequest(request, path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -64,7 +66,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
                 refreshTokenRepository.findByTokenHash(token).orElse(null);
 
         if (tokenEntity != null && tokenEntity.getRevokedAt() != null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            writeUnauthorized(request, response, "Token has been revoked");
             return;
         }
 
@@ -77,6 +79,11 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
                 UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
+
+                if (!userDetails.isEnabled()) {
+                    writeUnauthorized(request, response, "User account is not active");
+                    return;
+                }
 
                 if (jwtServiceImpl.validateToken(token, userDetails)) {
                     // RBAC:
@@ -99,7 +106,7 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             }
 
         } catch (JwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            writeUnauthorized(request, response, "Token is invalid or expired");
             return;
         }
 
@@ -109,12 +116,17 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
     /**
      * Trả lỗi 401 dạng JSON khi xác thực thất bại.
      */
-    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+    private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, String message) throws IOException {
+        String responseMessage = isEventRegistrationRequest(request)
+                ? "Authentication is required to register for an event."
+                : message;
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(
-                "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}"
+                "{\"success\":false,\"status\":401,\"error\":\"UNAUTHORIZED\","
+                        + "\"message\":\"" + responseMessage + "\","
+                        + "\"timestamp\":\"" + LocalDateTime.now() + "\"}"
         );
     }
 
@@ -130,5 +142,41 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
         }
 
         return null;
+    }
+
+    private boolean isPublicRequest(HttpServletRequest request, String path) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
+        if (path.equals("/auth/login")
+                || path.equals("/auth/register")
+                || path.equals("/auth/refresh")
+                || path.equals("/auth/resend-verification-email")
+                || path.equals("/auth/verify-email")
+                || path.equals("/api/v1/auth/login")
+                || path.equals("/api/v1/auth/register")
+                || path.equals("/api/v1/auth/refresh")
+                || path.equals("/api/v1/auth/resend-verification-email")
+                || path.equals("/api/v1/auth/verify-email")) {
+            return true;
+        }
+        if (path.startsWith("/api/v1/public/")) {
+            return true;
+        }
+        if (HttpMethod.GET.matches(request.getMethod())
+                && (path.equals("/api/v1/awards/events/total-prize")
+                || path.matches("/api/v1/awards/events/[^/]+/total-prize")
+                || path.matches("/api/v1/awards/events/[^/]+")
+                || path.matches("/api/v1/categories/categories/[^/]+"))) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isEventRegistrationRequest(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return HttpMethod.POST.matches(request.getMethod())
+                && (path.matches("/api/v1/events/[^/]+/participants/register")
+                || path.matches("/api/v1/events/[^/]+/register"));
     }
 }

@@ -17,4 +17,6 @@ public interface AccountStatusRepository extends JpaRepository<AccountStatus, UU
      * Tìm trạng thái theo tên cấu hình trong database.
      */
     Optional<AccountStatus> findByStatusName(String statusName);
+
+    Optional<AccountStatus> findByStatusNameIgnoreCase(String statusName);
 }

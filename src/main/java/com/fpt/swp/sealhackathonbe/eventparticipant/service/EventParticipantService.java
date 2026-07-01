@@ -22,6 +22,7 @@ public interface EventParticipantService {
             String status,
             String keyword,
             String university,
+            UUID requesterUserId,
             Pageable pageable
     );
 

@@ -53,7 +53,7 @@ DECLARE @AT_PRESENTATION      UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000
 DECLARE @AT_SPECIAL           UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000000007';
 
 --ParticipantStatus
-DECLARE @PS_PENDING_APPROVAL UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
+DECLARE @PS_PENDING          UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
 DECLARE @PS_ACTIVE           UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000002';
 DECLARE @PS_REJECTED         UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000003';
 DECLARE @PS_SUSPENDED        UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000004';
@@ -284,6 +284,9 @@ CREATE TABLE Events (
                         UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
                         IsDeleted BIT NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX UQ_Events_EventName_Active
+    ON Events(EventName)
+    WHERE IsDeleted = 0;
 GO
 
 CREATE TABLE EventCriteria (
@@ -340,7 +343,7 @@ CREATE TABLE dbo.ParticipantStatus (
                                        CONSTRAINT UQ_ParticipantStatus_Name UNIQUE (StatusName),
                                        CONSTRAINT CK_ParticipantStatus_Name CHECK (
                                            StatusName IN (
-                                               N'PENDING_APPROVAL',
+                                               N'PENDING',
                                                N'ACTIVE',
                                                N'REJECTED',
                                                N'SUSPENDED',
@@ -352,7 +355,7 @@ CREATE TABLE dbo.ParticipantStatus (
 
 INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
 VALUES
-    (@PS_PENDING_APPROVAL, N'PENDING_APPROVAL'),
+    (@PS_PENDING,          N'PENDING'),
     (@PS_ACTIVE,           N'ACTIVE'),
     (@PS_REJECTED,         N'REJECTED'),
     (@PS_SUSPENDED,        N'SUSPENDED'),
