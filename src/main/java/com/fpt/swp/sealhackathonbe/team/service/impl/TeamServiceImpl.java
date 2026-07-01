@@ -3,6 +3,7 @@ package com.fpt.swp.sealhackathonbe.team.service.impl;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
@@ -18,7 +19,9 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,11 +64,11 @@ public class TeamServiceImpl implements TeamService {
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
         if (teamsRepository.existsByEventIdAndTeamName(request.getEventId(), request.getTeamName())) {
-            throw new RuntimeException("Team name already exists in this event");
+            throw new BusinessConflictException("Team name already exists in this event");
         }
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, event.getEventId())) {
-            throw new RuntimeException("User already belongs to an active team in this event");
+            throw new BusinessConflictException("User already belongs to an active team in this event");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -127,12 +130,12 @@ public class TeamServiceImpl implements TeamService {
     @Transactional
     public TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId) {
         Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
         Event event = requireActiveEvent(team.getEvent());
 
         TeamEligibilityReviewResponse review = toEligibilityReviewResponse(team, event);
         if (!Boolean.TRUE.equals(review.getEligibleForCompetition())) {
-            throw new RuntimeException("Team is not eligible for competition");
+            throw new BusinessConflictException("Team is not eligible for competition");
         }
 
         team.setTeamStatusId(TEAM_STATUS_ACTIVE);
@@ -149,7 +152,7 @@ public class TeamServiceImpl implements TeamService {
     public TeamResponse getById(UUID teamId) {
         // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
         Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
         return TeamMapper.toTeamResponse(team, members);
@@ -161,10 +164,10 @@ public class TeamServiceImpl implements TeamService {
         // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
         // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
         teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
-                .orElseThrow(() -> new RuntimeException("You do not belong to this team"));
+                .orElseThrow(() -> new AccessDeniedException("You do not belong to this team"));
 
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
-                .orElseThrow(() -> new RuntimeException("Active team member not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Active team member not found"));
 
         User user = member.getUser();
 
@@ -177,7 +180,7 @@ public class TeamServiceImpl implements TeamService {
         // Luồng rời/kick member: tìm đúng membership active trong team -> kiểm tra quyền leader hoặc tự rời
         // -> kiểm tra MinTeamSize của event -> đánh dấu inactive, không xóa cứng.
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
-                .orElseThrow(() -> new RuntimeException("Active team member not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Active team member not found"));
 
         Teams team = member.getTeam();
 
@@ -185,11 +188,11 @@ public class TeamServiceImpl implements TeamService {
         boolean isSelfLeaving = userId.equals(currentUserId);
 
         if (!isLeader && !isSelfLeaving) {
-            throw new RuntimeException("You do not have permission to remove this member");
+            throw new AccessDeniedException("You do not have permission to remove this member");
         }
 
         if (team.getLeaderUserId().equals(userId)) {
-            throw new RuntimeException("Team leader cannot be removed");
+            throw new BusinessConflictException("Team leader cannot be removed");
         }
 
         validateTeamWillNotBeBelowMinimum(team);
@@ -354,13 +357,13 @@ public class TeamServiceImpl implements TeamService {
     private Event getActiveEvent(UUID eventId) {
         // Team chi duoc tao trong event ton tai va chua bi soft delete.
         return eventRepository.findByEventIdAndIsDeletedFalse(eventId)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
     }
 
     private void validateCategoryBelongsToEvent(UUID categoryId, UUID eventId) {
         boolean exists = categoryRepository.existsByCategoryIdAndEventEventIdAndIsActiveTrue(categoryId, eventId);
         if (!exists) {
-            throw new RuntimeException("Category does not belong to this event");
+            throw new BusinessConflictException("Category does not belong to this event");
         }
     }
 
@@ -370,15 +373,15 @@ public class TeamServiceImpl implements TeamService {
         Integer maxTeamSize = event.getMaxTeamSize();
 
         if (minTeamSize != null && minTeamSize < 1) {
-            throw new RuntimeException("Minimum team size must be at least 1");
+            throw new BusinessConflictException("Minimum team size must be at least 1");
         }
 
         if (maxTeamSize != null && maxTeamSize < 1) {
-            throw new RuntimeException("Maximum team size must be at least 1");
+            throw new BusinessConflictException("Maximum team size must be at least 1");
         }
 
         if (minTeamSize != null && maxTeamSize != null && minTeamSize > maxTeamSize) {
-            throw new RuntimeException("Minimum team size cannot be greater than maximum team size");
+            throw new BusinessConflictException("Minimum team size cannot be greater than maximum team size");
         }
     }
 
@@ -391,14 +394,14 @@ public class TeamServiceImpl implements TeamService {
         long activeMemberCount = teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
 
         if (minTeamSize != null && activeMemberCount - 1 < minTeamSize) {
-            throw new RuntimeException("Cannot remove member because team would be below minimum size");
+            throw new BusinessConflictException("Cannot remove member because team would be below minimum size");
         }
     }
 
     private Event requireActiveEvent(Event event) {
         // Quan he lazy co the null; nghiep vu team khong xu ly event da bi soft delete.
         if (event == null || Boolean.TRUE.equals(event.getIsDeleted())) {
-            throw new RuntimeException("Event not found");
+            throw new EntityNotFoundException("Event not found");
         }
 
         return event;

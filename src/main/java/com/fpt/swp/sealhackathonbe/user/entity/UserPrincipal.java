@@ -93,6 +93,8 @@ public class UserPrincipal implements UserDetails {
      */
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.getAccountStatus() != null
+                && user.getAccountStatus().getStatusName() != null
+                && "Active".equalsIgnoreCase(user.getAccountStatus().getStatusName());
     }
 }
