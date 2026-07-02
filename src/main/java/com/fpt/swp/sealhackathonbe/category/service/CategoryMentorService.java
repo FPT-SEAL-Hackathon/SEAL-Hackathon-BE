@@ -11,4 +11,5 @@ import java.util.UUID;
 @Service
 public interface CategoryMentorService {
     List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request);
+    List<CategoryMentorResponse> getCategoryMentors(UUID categoryId);
 }

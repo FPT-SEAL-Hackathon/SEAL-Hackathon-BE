@@ -53,7 +53,7 @@ DECLARE @AT_PRESENTATION      UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000
 DECLARE @AT_SPECIAL           UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000000007';
 
 --ParticipantStatus
-DECLARE @PS_PENDING_APPROVAL UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
+DECLARE @PS_PENDING          UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
 DECLARE @PS_ACTIVE           UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000002';
 DECLARE @PS_REJECTED         UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000003';
 DECLARE @PS_SUSPENDED        UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000004';
@@ -284,6 +284,9 @@ CREATE TABLE Events (
                         UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
                         IsDeleted BIT NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX UQ_Events_EventName_Active
+    ON Events(EventName)
+    WHERE IsDeleted = 0;
 GO
 
 CREATE TABLE EventCriteria (
@@ -324,6 +327,7 @@ CREATE TABLE CategoryMentors (
                                  CONSTRAINT UQ_CategoryMentors UNIQUE (CategoryID, MentorUserID)
 );
 GO
+
 -- ============================================================
 -- SECTION 5.5: EVENT PARTICIPANTS
 -- ============================================================
@@ -340,7 +344,7 @@ CREATE TABLE dbo.ParticipantStatus (
                                        CONSTRAINT UQ_ParticipantStatus_Name UNIQUE (StatusName),
                                        CONSTRAINT CK_ParticipantStatus_Name CHECK (
                                            StatusName IN (
-                                               N'PENDING_APPROVAL',
+                                               N'PENDING',
                                                N'ACTIVE',
                                                N'REJECTED',
                                                N'SUSPENDED',
@@ -352,7 +356,7 @@ CREATE TABLE dbo.ParticipantStatus (
 
 INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
 VALUES
-    (@PS_PENDING_APPROVAL, N'PENDING_APPROVAL'),
+    (@PS_PENDING,          N'PENDING'),
     (@PS_ACTIVE,           N'ACTIVE'),
     (@PS_REJECTED,         N'REJECTED'),
     (@PS_SUSPENDED,        N'SUSPENDED'),
@@ -494,6 +498,44 @@ CREATE TABLE TeamMembers (
                              IsActive BIT NOT NULL DEFAULT 1,
                              CONSTRAINT UQ_TeamMembers UNIQUE (TeamID, UserID)
 );
+GO
+
+CREATE TABLE ConsultationRequests (
+                                      RequestID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
+                                      CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+                                      TeamID UNIQUEIDENTIFIER NOT NULL REFERENCES Teams(TeamID),
+                                      MentorUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      CreatedByUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Title NVARCHAR(150) NOT NULL,
+                                      Description NVARCHAR(MAX) NOT NULL,
+                                      Priority NVARCHAR(20) NOT NULL,
+                                      Status NVARCHAR(20) NOT NULL DEFAULT N'PENDING',
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      ClosedAt DATETIME2 NULL,
+                                      CONSTRAINT CK_ConsultationRequests_Priority CHECK (Priority IN (N'LOW', N'MEDIUM', N'HIGH', N'URGENT')),
+                                      CONSTRAINT CK_ConsultationRequests_Status CHECK (Status IN (N'PENDING', N'ACCEPTED', N'IN_PROGRESS', N'RESOLVED', N'REJECTED', N'CANCELLED'))
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Mentor ON ConsultationRequests(MentorUserID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Team ON ConsultationRequests(TeamID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_CategoryStatus ON ConsultationRequests(CategoryID, Status);
+GO
+
+CREATE TABLE ConsultationMessages (
+                                      MessageID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      RequestID UNIQUEIDENTIFIER NOT NULL REFERENCES ConsultationRequests(RequestID),
+                                      SenderID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Content NVARCHAR(MAX) NULL,
+                                      AttachmentUrl NVARCHAR(500) NULL,
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      SeenAt DATETIME2 NULL
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationMessages_RequestCreatedAt ON ConsultationMessages(RequestID, CreatedAt ASC);
 GO
 
 CREATE TABLE TeamJoinRequests (
@@ -1478,5 +1520,14 @@ THROW 52002, N'Lỗi DB: Một người không thể làm giám khảo cho vòng
 END
 END;
 GO
+CREATE TABLE SystemSettings (
+    SettingKey NVARCHAR(100) NOT NULL PRIMARY KEY,
+    SettingValue NVARCHAR(1000) NOT NULL,
+    SettingType NVARCHAR(20) NULL,
+    Description NVARCHAR(500) NULL,
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
 PRINT N'SEAL_HackathonDB UUID version created successfully.';
 GO

@@ -20,6 +20,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.time.LocalDateTime;
+
 /**
  * Cấu hình bảo mật stateless bằng JWT và bật kiểm tra quyền theo method.
  */
@@ -51,6 +53,11 @@ public class SecurityConfig {
             "/auth/resend-verification-email",
             "/auth/refresh",
             "/auth/verify-email",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/resend-verification-email",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/verify-email",
             "/api/v1/public/**",
             "/api/v1/awards/events/total-prize"  // Public: landing page stats
     };
@@ -74,6 +81,15 @@ public class SecurityConfig {
                         .requestMatchers(SWAGGER_WHITELIST)
                         .permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/*")
+                        .permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/total-prize", "/api/v1/awards/events/*/total-prize")
+                        .permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/*", "/api/v1/categories/categories/*")
+                        .permitAll()
+
                         .anyRequest()
                         .authenticated()
                 )
@@ -83,17 +99,30 @@ public class SecurityConfig {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
                             response.setCharacterEncoding("UTF-8");
+                            String message = isEventRegistrationRequest(request.getMethod(), request.getServletPath())
+                                    ? "Authentication is required to register for an event."
+                                    : "Authorization header is missing or token was not accepted";
                             response.getWriter().write(
-                                    "{\"status\":401,\"error\":\"Unauthorized\","
-                                            + "\"message\":\"Authorization header is missing or token was not accepted\"}"
+                                    "{\"success\":false,\"status\":401,\"error\":\"UNAUTHORIZED\","
+                                            + "\"message\":\"" + message + "\","
+                                            + "\"timestamp\":\"" + LocalDateTime.now() + "\"}"
                             );
                         })
-                        .accessDeniedHandler((request, response, accessDeniedException) ->
-                                response.sendError(
-                                        HttpServletResponse.SC_FORBIDDEN,
-                                        "Access is denied"
-                                )
-                        )
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            String message = accessDeniedException.getMessage() != null
+                                    && !accessDeniedException.getMessage().isBlank()
+                                    && !"Access Denied".equals(accessDeniedException.getMessage())
+                                    ? accessDeniedException.getMessage()
+                                    : "You don't have permission to do this.";
+                            response.getWriter().write(
+                                    "{\"success\":false,\"status\":403,\"error\":\"ACCESS_DENIED\","
+                                            + "\"message\":\"" + message + "\","
+                                            + "\"timestamp\":\"" + LocalDateTime.now() + "\"}"
+                            );
+                        })
                 )
 
                 .sessionManagement(session ->
@@ -132,5 +161,11 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    private boolean isEventRegistrationRequest(String method, String path) {
+        return HttpMethod.POST.matches(method)
+                && (path.matches("/api/v1/events/[^/]+/participants/register")
+                || path.matches("/api/v1/events/[^/]+/register"));
     }
 }

@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.studentdownload.service.impl;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.studentdownload.dto.DownloadFileResponse;
@@ -27,6 +28,7 @@ public class StudentDownloadServiceImpl implements StudentDownloadService {
 
     private final RoundRepository roundRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final EventParticipantService eventParticipantService;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,6 +70,7 @@ public class StudentDownloadServiceImpl implements StudentDownloadService {
                 .orElseThrow(() -> new RuntimeException("Round not found"));
         Category category = round.getCategory();
         Event event = category.getEvent();
+        eventParticipantService.assertActiveParticipant(event.getEventId(), currentUserId);
 
         boolean canDownload = teamMembersRepository.existsActiveMemberInEventCategory(
                 currentUserId,

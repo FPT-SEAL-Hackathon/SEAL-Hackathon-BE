@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.event.dto.request.CreateEventRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.request.UpdateEventRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.request.UpdateEventStatusRequest;
@@ -10,18 +11,24 @@ import com.fpt.swp.sealhackathonbe.event.mapper.EventMapper;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.event.repository.EventStatusRepository;
 import com.fpt.swp.sealhackathonbe.event.service.EventService;
+import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
+import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,38 +44,44 @@ public class EventServiceImplementation implements EventService {
     private final EventStatusRepository eventStatusRepository;
     private final EventMapper eventMapper;
     private final UserRepository userRepository;
+    private final EventParticipantRepository eventParticipantRepository;
 
     @Override
     public EventResponse create(CreateEventRequest request) {
+        validateRequiredCreateFields(request);
+        String eventName = request.getEventName().trim();
+
         EventStatus eventStatus = eventStatusRepository
                 .findById(request.getEventStatusId())
                 .orElseThrow(() -> new EntityNotFoundException("Event status not found"));
 
-        if (request.getRegistrationStart()!=null && request.getRegistrationEnd()!=null) {
-            if(request.getRegistrationStart().isAfter(request.getRegistrationEnd())) {
-                throw new IllegalArgumentException("Registration start date must be before end date");
-            }
+        validateEventTimeline(
+                request.getRegistrationStart(),
+                request.getRegistrationEnd(),
+                request.getEventStartDate(),
+                request.getEventEndDate()
+        );
+
+        validateTeamSize(request.getMinTeamSize(), request.getMaxTeamSize());
+
+        if (eventRepository.existsByEventNameIgnoreCaseAndIsDeletedFalse(eventName)) {
+            throw new BadRequestException("Event name already exists");
         }
 
-        if (request.getEventStartDate()!=null && request.getEventEndDate()!=null) {
-            if(request.getEventStartDate().isAfter(request.getEventEndDate())) {
-                throw new IllegalArgumentException("Event start date must be before end date");
-            }
-        }
-
-        if (request.getMinTeamSize() > request.getMaxTeamSize()) {
-            throw new IllegalArgumentException("Minimum team size cannot exceed maximum team size");
-        }
-
-        if (!eventStatus.getEventStatusName().equalsIgnoreCase("DRAFT") &&
-                !eventStatus.getEventStatusName().equalsIgnoreCase("REGISTRATION OPEN")) {
-            throw new IllegalStateException("New event must have DRAFT or REGISTRATION OPEN status");
+        String statusName = eventStatus.getEventStatusName();
+        if (statusName == null
+                || (!statusName.equalsIgnoreCase("DRAFT")
+                && !statusName.equalsIgnoreCase("REGISTRATION OPEN"))) {
+            throw new BadRequestException("New event must have DRAFT or REGISTRATION OPEN status");
         }
 
         //Get current user
         Authentication authentication = SecurityContextHolder
                 .getContext()
                 .getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new BadRequestException("User is not authenticated");
+        }
         String email = authentication.getName();
         User user = userRepository.findByEmail(email);
         if (user == null) {
@@ -77,9 +90,9 @@ public class EventServiceImplementation implements EventService {
 
         Event event = Event.builder()
                 .eventId(UUID.randomUUID())
-                .eventName(request.getEventName())
+                .eventName(eventName)
                 .description(request.getDescription())
-                .location(request.getLocation())
+                .location(request.getLocation().trim())
                 .bannerImageUrl(request.getBannerImageUrl())
                 .eventStatus(eventStatus)
                 .registrationStart(request.getRegistrationStart())
@@ -96,11 +109,73 @@ public class EventServiceImplementation implements EventService {
         return eventMapper.toEventResponse(eventRepository.save(event));
     }
 
+    private void validateRequiredCreateFields(CreateEventRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Event request is required");
+        }
+        if (request.getEventName() == null || request.getEventName().isBlank()) {
+            throw new BadRequestException("Event name must not be empty");
+        }
+        if (request.getLocation() == null || request.getLocation().isBlank()) {
+            throw new BadRequestException("Location is required");
+        }
+        if (request.getEventStatusId() == null) {
+            throw new BadRequestException("Event status is required");
+        }
+        if (request.getRegistrationStart() == null) {
+            throw new BadRequestException("Registration start time is required");
+        }
+        if (request.getRegistrationEnd() == null) {
+            throw new BadRequestException("Registration end time is required");
+        }
+        if (request.getEventStartDate() == null) {
+            throw new BadRequestException("Event start date is required");
+        }
+        if (request.getEventEndDate() == null) {
+            throw new BadRequestException("Event end date is required");
+        }
+        if (request.getMinTeamSize() == null) {
+            throw new BadRequestException("Min team size is required");
+        }
+        if (request.getMaxTeamSize() == null) {
+            throw new BadRequestException("Max team size is required");
+        }
+    }
+
+    private void validateEventTimeline(
+            LocalDateTime registrationStart,
+            LocalDateTime registrationEnd,
+            LocalDate eventStartDate,
+            LocalDate eventEndDate
+    ) {
+        if (registrationStart.isAfter(registrationEnd)) {
+            throw new BadRequestException("Registration start time must be before or equal to registration end time");
+        }
+
+        if (eventStartDate.isAfter(eventEndDate)) {
+            throw new BadRequestException("Event start date must be before or equal to event end date");
+        }
+
+        if (registrationEnd.toLocalDate().isAfter(eventStartDate)) {
+            throw new BadRequestException("Registration end date must be on or before event start date");
+        }
+    }
+
+    private void validateTeamSize(Integer minTeamSize, Integer maxTeamSize) {
+        if (minTeamSize > maxTeamSize) {
+            throw new BadRequestException("Min team size cannot be greater than max team size");
+        }
+    }
+
     @Override
     public List<EventResponse> getAll() {
-        return eventRepository.findAllByIsDeletedFalse()
-                .stream()
-                .map(eventMapper::toEventResponse)
+        List<Event> events = isCurrentUserOrganizer()
+                ? eventRepository.findAllByIsDeletedFalse()
+                : eventRepository.findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(PUBLIC_EVENT_STATUSES);
+        Map<UUID, EventParticipant> participationByEventId = getCurrentUserParticipationByEventId(events);
+
+        return events.stream()
+                .map(event -> eventMapper.toEventResponse(event, participationByEventId.get(event.getEventId())))
                 .toList();
     }
 
@@ -162,6 +237,16 @@ public class EventServiceImplementation implements EventService {
             }
         }
 
+        if (request.getRegistrationEnd()!=null && request.getEventStartDate()!=null) {
+            if (request.getRegistrationEnd().isAfter(request.getEventStartDate().atStartOfDay())) {
+                throw new IllegalArgumentException("Registration end date must be on or before event start date");
+            }
+        }
+
+        if (eventRepository.existsByEventNameIgnoreCaseAndIsDeletedFalseAndEventIdNot(request.getEventName(), eventId)) {
+            throw new IllegalArgumentException("Event name already exists");
+        }
+
         if (request.getMinTeamSize() > request.getMaxTeamSize()) {
             throw new IllegalArgumentException("Minimum team size cannot exceed maximum team size");
         }
@@ -187,7 +272,11 @@ public class EventServiceImplementation implements EventService {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
-        return eventMapper.toEventResponse(event);
+        UUID currentUserId = currentUserIdOrNull();
+        EventParticipant participant = currentUserId != null
+                ? getCurrentUserParticipation(eventId, currentUserId)
+                : null;
+        return eventMapper.toEventResponse(event, participant);
     }
 
     @Override
@@ -218,5 +307,51 @@ public class EventServiceImplementation implements EventService {
         event.setUpdatedAt(LocalDateTime.now());
         eventRepository.save(event);
     };
+
+    private Map<UUID, EventParticipant> getCurrentUserParticipationByEventId(List<Event> events) {
+        if (events.isEmpty()) {
+            return Map.of();
+        }
+
+        UUID currentUserId = currentUserIdOrNull();
+        if (currentUserId == null) {
+            return Map.of();
+        }
+
+        List<UUID> eventIds = events.stream()
+                .map(Event::getEventId)
+                .toList();
+
+        return eventParticipantRepository.findByUserIdAndEventIdIn(currentUserId, eventIds)
+                .stream()
+                .collect(Collectors.toMap(EventParticipant::getEventId, Function.identity()));
+    }
+
+    private EventParticipant getCurrentUserParticipation(UUID eventId, UUID currentUserId) {
+        return eventParticipantRepository.findByEventIdAndUserId(eventId, currentUserId)
+                .orElse(null);
+    }
+
+    private UUID currentUserIdOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken
+                || "anonymousUser".equals(authentication.getName())) {
+            return null;
+        }
+
+        User user = userRepository.findByEmail(authentication.getName());
+        return user != null ? user.getUserId() : null;
+    }
+
+    private boolean isCurrentUserOrganizer() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority()));
+    }
 
 }
