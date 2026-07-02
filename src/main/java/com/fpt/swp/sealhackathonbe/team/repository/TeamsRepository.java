@@ -11,4 +11,5 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
     boolean existsByEventIdAndTeamName(UUID eventId, String teamName);
 
     List<Teams> findByEventId(UUID eventId);
+    List<Teams> findByLeaderUserId(UUID leaderUserId);
 }

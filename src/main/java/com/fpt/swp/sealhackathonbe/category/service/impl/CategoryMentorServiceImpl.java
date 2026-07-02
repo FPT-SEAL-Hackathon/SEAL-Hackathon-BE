@@ -50,4 +50,12 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .map(categoryMapper::categoryMentorResponse)
                 .toList();
     }
+
+    @Override
+    public List<CategoryMentorResponse> getCategoryMentors(UUID categoryId) {
+        List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(categoryId);
+        return categoryMentors.stream()
+                .map(categoryMapper::categoryMentorResponse)
+                .toList();
+    }
 }

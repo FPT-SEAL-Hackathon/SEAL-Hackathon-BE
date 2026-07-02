@@ -12,6 +12,8 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
+import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -29,6 +31,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundJudgeRepository roundJudgeRepository;
     private final UserRepository userRepository;
     private final RoundMapper roundMapper;
+    private final CategoryMentorRepository categoryMentorRepository;
 
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
@@ -47,6 +50,16 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new EntityNotFoundException("Current user not found");
+        }
+
+        // BR-19: A Mentor can be a Judge in another Category, but must not judge the same Category where they are assigned as Mentor.
+        List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(round.getCategory().getCategoryId());
+        for (User judge : judges) {
+            boolean isMentorInCategory = categoryMentors.stream()
+                    .anyMatch(cm -> cm.getMentor().getUserId().equals(judge.getUserId()));
+            if (isMentorInCategory) {
+                throw new IllegalArgumentException("Judge " + judge.getFullName() + " is already a mentor in this category");
+            }
         }
 
         List<RoundJudge> roundJudges = judges
