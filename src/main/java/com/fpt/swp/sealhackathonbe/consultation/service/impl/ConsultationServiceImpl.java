@@ -93,16 +93,51 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     public List<AssignedCategoryResponse> getAssignedCategoriesForMentor(User mentor) {
+        List<ConsultationStatus> openStatuses = List.of(
+                ConsultationStatus.PENDING,
+                ConsultationStatus.ACCEPTED,
+                ConsultationStatus.IN_PROGRESS
+        );
         return categoryMentorRepository.findByMentor_UserId(mentor.getUserId()).stream()
-                .map(cm -> AssignedCategoryResponse.builder()
-                        .categoryId(cm.getCategory().getCategoryId())
-                        .categoryName(cm.getCategory().getCategoryName())
-                        .eventId(cm.getCategory().getEvent().getEventId())
-                        .eventName(cm.getCategory().getEvent().getEventName())
-                        .numberOfTeams(0) // Could optimize with a specific count query later
-                        .numberOfOpenRequests(0)
-                        .build())
+                .map(cm -> {
+                    UUID catId = cm.getCategory().getCategoryId();
+                    long teamCount = teamsRepository.countByCategoryId(catId);
+                    long openRequests = requestRepository.countByMentor_UserIdAndCategory_CategoryIdAndStatusIn(
+                            mentor.getUserId(), catId, openStatuses
+                    );
+                    return AssignedCategoryResponse.builder()
+                            .categoryId(catId)
+                            .categoryName(cm.getCategory().getCategoryName())
+                            .eventId(cm.getCategory().getEvent().getEventId())
+                            .eventName(cm.getCategory().getEvent().getEventName())
+                            .numberOfTeams((int) teamCount)
+                            .numberOfOpenRequests((int) openRequests)
+                            .build();
+                })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TeamSummaryForMentorResponse> getTeamsForMentorCategory(User mentor, UUID categoryId) {
+        // Xác nhận mentor được assign vào category này
+        categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(categoryId, mentor.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not assigned to this category"));
+
+        List<ConsultationStatus> openStatuses = List.of(
+                ConsultationStatus.PENDING,
+                ConsultationStatus.ACCEPTED,
+                ConsultationStatus.IN_PROGRESS
+        );
+
+        List<Teams> teams = teamsRepository.findByCategoryId(categoryId);
+        return teams.stream().map(team -> {
+            int memberCount = (int) teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
+            long openRequests = requestRepository.countByMentor_UserIdAndCategory_CategoryIdAndStatusIn(
+                    mentor.getUserId(), categoryId, openStatuses
+            );
+            long totalRequests = requestRepository.countByTeam_TeamId(team.getTeamId());
+            return TeamSummaryForMentorResponse.from(team, memberCount, openRequests, totalRequests);
+        }).collect(Collectors.toList());
     }
 
     @Override

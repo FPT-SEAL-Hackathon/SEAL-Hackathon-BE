@@ -20,4 +20,10 @@ public interface ConsultationRequestRepository extends JpaRepository<Consultatio
     Page<ConsultationRequest> findByMentor_UserIdAndCategory_CategoryId(UUID mentorId, UUID categoryId, Pageable pageable);
     
     List<ConsultationRequest> findByCategory_CategoryIdAndStatusIn(UUID categoryId, List<ConsultationStatus> statuses);
+
+    // Đếm số request mở (PENDING/ACCEPTED/IN_PROGRESS) của mentor trong 1 category
+    long countByMentor_UserIdAndCategory_CategoryIdAndStatusIn(UUID mentorId, UUID categoryId, List<ConsultationStatus> statuses);
+
+    // Đếm tổng request của 1 team
+    long countByTeam_TeamId(UUID teamId);
 }

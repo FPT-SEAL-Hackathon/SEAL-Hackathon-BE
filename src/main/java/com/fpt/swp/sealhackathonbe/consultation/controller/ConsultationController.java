@@ -82,6 +82,14 @@ public class ConsultationController {
         return ResponseEntity.ok(consultationService.getAssignedCategoriesForMentor(getCurrentUser(auth)));
     }
 
+    @GetMapping("/mentor/categories/{categoryId}/teams")
+    @PreAuthorize("hasRole('INTERNAL_JUDGE')")
+    @Operation(summary = "Get all teams in a category assigned to the mentor")
+    public ResponseEntity<List<TeamSummaryForMentorResponse>> getTeamsForMentorCategory(
+            Authentication auth, @PathVariable UUID categoryId) {
+        return ResponseEntity.ok(consultationService.getTeamsForMentorCategory(getCurrentUser(auth), categoryId));
+    }
+
     @GetMapping("/mentor/consultation-requests")
     @PreAuthorize("hasRole('INTERNAL_JUDGE')")
     @Operation(summary = "Get mentor's consultation requests")
