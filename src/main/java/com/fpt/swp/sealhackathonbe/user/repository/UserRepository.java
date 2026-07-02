@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     Optional<User> findByUserIdAndIsDeletedFalse(UUID userId);
+
+    @Query("""
+            SELECT COUNT(u)
+            FROM User u
+            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND u.userType.typeName IN :typeNames
+            """)
+    Long countActiveUsersByTypeNames(@Param("typeNames") Collection<String> typeNames);
 
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     @Query("""

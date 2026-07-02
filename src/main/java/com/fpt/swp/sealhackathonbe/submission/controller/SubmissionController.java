@@ -79,7 +79,7 @@ public class SubmissionController {
             description = "Get all submissions in one round. Use an organizer account."
     )
     @GetMapping("/admin/rounds/{roundId}/submissions")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
@@ -92,7 +92,7 @@ public class SubmissionController {
             description = "Get submissions in one round that have not been scored yet."
     )
     @GetMapping("/admin/rounds/{roundId}/unreview-submissions")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     public ResponseEntity<List<SubmissionResponse>> getUnreviewSubmissionByRound(
             @PathVariable UUID roundId
     ) {

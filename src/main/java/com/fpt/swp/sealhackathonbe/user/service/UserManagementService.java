@@ -42,6 +42,7 @@ public class UserManagementService {
     private static final String ROLE_ORGANIZER = "Organizer";
     private static final String ROLE_INTERNAL_JUDGE = "Internal Judge";
     private static final String ROLE_GUEST_JUDGE = "Guest Judge";
+    private static final String ROLE_EXPERT = "Expert";
     private static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
@@ -406,7 +407,8 @@ public class UserManagementService {
 
         if (ROLE_ORGANIZER.equalsIgnoreCase(typeName)
                 || ROLE_INTERNAL_JUDGE.equalsIgnoreCase(typeName)
-                || ROLE_GUEST_JUDGE.equalsIgnoreCase(typeName)) {
+                || ROLE_GUEST_JUDGE.equalsIgnoreCase(typeName)
+                || ROLE_EXPERT.equalsIgnoreCase(typeName)) {
             user.setFptStudentCode(null);
             user.setExternalStudentCode(null);
             user.setUniversityName(null);
