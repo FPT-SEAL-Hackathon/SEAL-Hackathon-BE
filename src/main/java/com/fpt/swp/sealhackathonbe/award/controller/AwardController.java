@@ -1,12 +1,10 @@
 package com.fpt.swp.sealhackathonbe.award.controller;
 
-import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
+import com.fpt.swp.sealhackathonbe.award.dto.AwardRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
-import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.RankingAwardCandidateResponse;
-import com.fpt.swp.sealhackathonbe.award.dto.SystemAwardPrizeTotalResponse;
 import com.fpt.swp.sealhackathonbe.award.service.AwardService;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,7 +15,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,53 +36,19 @@ public class AwardController {
 
     @Operation(summary = "Grant award to a team", description = "Create an award for a team in an event.", operationId = "grantAwardToTeam")
     @PostMapping("/grandAwardToATeam")
-    // RBAC:
-    // Chỉ ORGANIZER được tạo award để tránh user thường can thiệp kết quả.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<AwardResponse> grantAwardToTeam(@Valid @RequestBody AwardRequest request, @AuthenticationPrincipal UserPrincipal principal) {
-
+    public ResponseEntity<AwardResponse> grantAwardToTeam(
+            @Valid @RequestBody AwardRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
         AwardResponse response = awardService.grantAward(request, principal.getUser().getUserId());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    /**
-     * Xem chi tiết một award theo id.
-     */
     @Operation(summary = "Get award details", description = "Get the details of a specific award by its ID.", operationId = "getAwardById")
     @GetMapping("/{id}")
     public ResponseEntity<AwardResponse> getAwardById(@PathVariable UUID id) {
-        AwardResponse response = awardService.getAwardById(id);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Xem danh sách award thuộc một event.
-     */
-    @Operation(summary = "Get awards by event", description = "Get all awards belonging to a specific event.", operationId = "getAwardsByEvent")
-    @GetMapping("/events/{eventId}")
-    public ResponseEntity<List<AwardResponse>> getAwardsByEvent(@PathVariable UUID eventId) {
-        List<AwardResponse> responses = awardService.getAwardsByEvent(eventId);
-        return ResponseEntity.ok(responses);
-    }
-
-    @Operation(
-            summary = "Get total prize by event",
-            description = "Calculate total prize value of all awards in a specific event, grouped by currency.",
-            operationId = "getEventPrizeTotal"
-    )
-    @GetMapping("/events/{eventId}/total-prize")
-    public ResponseEntity<EventPrizeTotalResponse> getEventPrizeTotal(@PathVariable UUID eventId) {
-        return ResponseEntity.ok(awardService.getEventPrizeTotal(eventId));
-    }
-
-    @Operation(
-            summary = "Get total prize of all events",
-            description = "Calculate total prize value across all active events and per event, grouped by currency.",
-            operationId = "getSystemPrizeTotal"
-    )
-    @GetMapping("/events/total-prize")
-    public ResponseEntity<SystemAwardPrizeTotalResponse> getSystemPrizeTotal() {
-        return ResponseEntity.ok(awardService.getSystemPrizeTotal());
+        return ResponseEntity.ok(awardService.getAwardById(id));
     }
 
     @Operation(
@@ -87,8 +57,6 @@ public class AwardController {
             operationId = "saveAwardPatterns"
     )
     @PostMapping("/templates/categories/{categoryId}/award-patterns")
-    // RBAC:
-    // Chỉ ORGANIZER được đổi mẫu award vì ảnh hưởng kết quả xếp hạng.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardPatternResponse>> saveAwardPatterns(
             @PathVariable UUID categoryId,
@@ -127,8 +95,6 @@ public class AwardController {
             operationId = "autoGrantTopAwards"
     )
     @PostMapping("/categories/{categoryId}/auto-grant-top")
-    // RBAC:
-    // Chỉ ORGANIZER được tự động cấp award từ bảng xếp hạng.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<AwardResponse>> autoGrantTopAwards(
             @PathVariable UUID categoryId,
