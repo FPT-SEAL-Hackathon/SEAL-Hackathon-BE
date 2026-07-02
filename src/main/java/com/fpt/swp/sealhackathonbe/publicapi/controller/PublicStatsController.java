@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Public Statistics", description = "Public APIs for system-wide statistics")
 public class PublicStatsController {
-    private static final List<String> JUDGE_TYPE_NAMES = List.of("Internal Judge", "Guest Judge");
+    private static final List<String> JUDGE_TYPE_NAMES = List.of("Internal Judge", "Guest Judge", "Expert");
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamService teamService;
