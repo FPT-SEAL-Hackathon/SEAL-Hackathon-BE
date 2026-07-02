@@ -1,5 +1,20 @@
 package com.fpt.swp.sealhackathonbe.judging.controller;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
@@ -7,20 +22,11 @@ import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
 import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
-import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
-import org.springframework.security.access.prepost.PreAuthorize;
-
-import org.springframework.validation.annotation.Validated;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -83,11 +89,11 @@ public class JudgingController {
         return ResponseEntity.ok(logs);
     }
 
-    @GetMapping(value = "/judging/events/{eventId}/calibration-metrics")
+    @GetMapping(value = "/judging/calibration-metrics")
     @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
-    @Operation(summary = "Get calibration metrics", description = "Returns calibration metrics for all judges in the event as JSON")
+    @Operation(summary = "Get calibration metrics", description = "Returns calibration metrics for all judges as JSON")
     public ResponseEntity<List<ReliabilityMetricResponse>> getCalibrationMetrics(
-            @PathVariable UUID eventId,
+            @RequestParam(required = false) UUID eventId,
             @RequestParam(required = false) UUID roundId,
             @RequestParam(required = false) UUID categoryId
     ) {
