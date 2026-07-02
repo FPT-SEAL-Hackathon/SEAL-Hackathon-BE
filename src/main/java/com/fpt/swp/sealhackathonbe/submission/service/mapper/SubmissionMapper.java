@@ -19,6 +19,9 @@ public class SubmissionMapper {
         response.setTeamId(submission.getTeam() != null
                 ? submission.getTeam().getTeamId()
                 : submission.getTeamId());
+        response.setTeamName(submission.getTeam() != null
+                ? submission.getTeam().getTeamName()
+                : null);
         response.setRoundId(submission.getRoundId());
         response.setSubmissionStatusId(submission.getSubmissionStatus() != null
                 ? submission.getSubmissionStatus().getStatusId()
