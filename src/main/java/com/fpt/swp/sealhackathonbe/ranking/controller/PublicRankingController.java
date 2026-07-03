@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.publicapi.controller;
+package com.fpt.swp.sealhackathonbe.ranking.controller;
 
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;

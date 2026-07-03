@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.publicapi.dto;
+package com.fpt.swp.sealhackathonbe.submission.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

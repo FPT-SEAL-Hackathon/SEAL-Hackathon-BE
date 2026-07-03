@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.publicapi.controller;
+package com.fpt.swp.sealhackathonbe.category.controller;
 
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryResponse;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryService;

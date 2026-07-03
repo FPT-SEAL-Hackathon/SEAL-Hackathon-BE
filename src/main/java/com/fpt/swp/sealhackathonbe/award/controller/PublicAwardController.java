@@ -1,4 +1,4 @@
-package com.fpt.swp.sealhackathonbe.publicapi.controller;
+package com.fpt.swp.sealhackathonbe.award.controller;
 
 import com.fpt.swp.sealhackathonbe.award.dto.AwardResponse;
 import com.fpt.swp.sealhackathonbe.award.dto.EventPrizeTotalResponse;
