@@ -23,7 +23,7 @@ import java.util.Locale;
 @RestController
 @RequestMapping("/api/v1/me")
 @RequiredArgsConstructor
-public class MeController {
+public class ProfileController {
 
     private final AuthenticationServiceImpl authService;
     private final UserRepository userRepository;
