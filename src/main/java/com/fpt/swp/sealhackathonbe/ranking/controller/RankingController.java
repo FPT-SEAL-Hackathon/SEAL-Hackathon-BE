@@ -2,17 +2,13 @@ package com.fpt.swp.sealhackathonbe.ranking.controller;
 
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
-import com.fpt.swp.sealhackathonbe.ranking.entity.EventRanking;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
-import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.ArrayList;
 import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,22 +69,4 @@ public class RankingController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Public leaderboard API.
-     */
-    @GetMapping("/public/leaderboard/{eventId}/{categoryId}")
-    @Operation(summary = "Get public leaderboard", description = "Retrieves the public leaderboard for a specific event and category")
-    public ResponseEntity<List<EventRankingDTO>> getEventLeaderboardByCategory(
-            @PathVariable("eventId") UUID eventId,
-            @PathVariable("categoryId") UUID categoryId) {
-
-        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
-
-        // Sort by rank position and filter only published
-        rankings = rankings.stream()
-                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
-                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(rankings);
-    }
 }
