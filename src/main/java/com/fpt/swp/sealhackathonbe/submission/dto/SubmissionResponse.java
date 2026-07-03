@@ -30,4 +30,5 @@ public class SubmissionResponse {
     private LocalDateTime lastUpdatedAt;
     private UUID submittedByUserId;
     private String notes;
+    private Boolean isScoreApproved;
 }

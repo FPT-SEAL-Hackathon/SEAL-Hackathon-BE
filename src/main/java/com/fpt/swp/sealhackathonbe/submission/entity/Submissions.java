@@ -87,4 +87,7 @@ public class Submissions {
 
     @Column(name = "Notes", columnDefinition = "NVARCHAR(MAX)")
     private String notes;
+
+    @Column(name = "IsScoreApproved", nullable = false)
+    private Boolean isScoreApproved = false;
 }

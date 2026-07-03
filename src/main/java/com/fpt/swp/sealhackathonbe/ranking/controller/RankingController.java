@@ -91,4 +91,24 @@ public class RankingController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(rankings);
     }
+    @GetMapping("/admin/rounds/{roundId}/rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Get rankings for a round", description = "Fetches the existing rankings for a specific round and category without computing")
+    public ResponseEntity<List<RoundRankingDTO>> getRoundRankings(
+            @PathVariable("roundId") UUID roundId,
+            @RequestParam UUID categoryId) {
+
+        List<RoundRankingDTO> rankings = rankingService.getRoundRankings(roundId, categoryId);
+        return ResponseEntity.ok(rankings);
+    }
+
+    @GetMapping("/admin/events/{eventId}/rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Get rankings for an event", description = "Fetches the existing final rankings for a specific event without computing")
+    public ResponseEntity<List<EventRankingDTO>> getEventRankings(
+            @PathVariable("eventId") UUID eventId) {
+
+        List<EventRankingDTO> rankings = rankingService.getAdminEventRankings(eventId);
+        return ResponseEntity.ok(rankings);
+    }
 }
