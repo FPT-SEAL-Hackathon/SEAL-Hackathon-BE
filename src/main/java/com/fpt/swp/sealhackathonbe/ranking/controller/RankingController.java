@@ -2,17 +2,13 @@ package com.fpt.swp.sealhackathonbe.ranking.controller;
 
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
-import com.fpt.swp.sealhackathonbe.ranking.entity.EventRanking;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
-import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.ArrayList;
 import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

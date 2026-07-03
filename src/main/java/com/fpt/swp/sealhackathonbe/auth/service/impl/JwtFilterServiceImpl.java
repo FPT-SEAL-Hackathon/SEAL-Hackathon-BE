@@ -164,7 +164,9 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             return true;
         }
         if (HttpMethod.GET.matches(request.getMethod())
-                && (path.equals("/api/v1/awards/events/total-prize")
+                && (path.equals("/api/v1/events")
+                || path.matches("/api/v1/events/[^/]+")
+                || path.equals("/api/v1/awards/events/total-prize")
                 || path.matches("/api/v1/awards/events/[^/]+/total-prize")
                 || path.matches("/api/v1/awards/events/[^/]+")
                 || path.matches("/api/v1/categories/categories/[^/]+"))) {
