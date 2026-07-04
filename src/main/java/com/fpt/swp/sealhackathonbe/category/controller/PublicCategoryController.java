@@ -17,7 +17,7 @@ public class PublicCategoryController {
     private final CategoryService categoryService;
 
     @GetMapping({
-            "/api/v1/categories/categories/{eventId}",
+            "/api/v1/categories/{eventId}",
             "/api/v1/public/categories/events/{eventId}"
     })
     public ResponseEntity<List<CategoryResponse>> getByEvent(@PathVariable UUID eventId) {
