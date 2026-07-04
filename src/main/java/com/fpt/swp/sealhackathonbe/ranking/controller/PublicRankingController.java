@@ -21,15 +21,16 @@ public class PublicRankingController {
     @GetMapping("/api/v1/public/leaderboard/{eventId}/{categoryId}")
     @Operation(summary = "Get public leaderboard", description = "Retrieves the public leaderboard for a specific event and category")
     public ResponseEntity<List<EventRankingDTO>> getEventLeaderboardByCategory(
-            @PathVariable UUID eventId,
-            @PathVariable UUID categoryId
-    ) {
-        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId, categoryId)
-                .stream()
-                .filter(ranking -> Boolean.TRUE.equals(ranking.getIsPublished()))
-                .sorted(Comparator.comparing(EventRankingDTO::getRankPosition))
-                .toList();
+            @PathVariable("eventId") UUID eventId,
+            @PathVariable("categoryId") UUID categoryId) {
 
+        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
+
+        // Sort by rank position and filter only published
+        rankings = rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(rankings);
     }
 }

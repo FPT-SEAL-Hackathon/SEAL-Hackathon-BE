@@ -61,7 +61,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .stream()
                 .filter(user -> user.getUserType().getTypeName().equalsIgnoreCase("Internal Judge"))
                 .map(user -> UserResponse.builder()
-                        .id(user.getUserId())
+                        .userId(user.getUserId())
                         .fullName(user.getFullName())
                         .email(user.getEmail())
                         .build()
@@ -84,7 +84,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<CategoryMentorResponse> getCategoryMentors(UUID categoryId) {
         List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(categoryId);
         return categoryMentors.stream()
-                .map(categoryMapper::categoryMentorResponse)
+                .map(categoryMapper::toCategoryMentorResponse)
                 .toList();
     }
 }
