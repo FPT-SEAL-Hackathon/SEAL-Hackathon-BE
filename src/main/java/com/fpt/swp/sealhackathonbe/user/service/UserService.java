@@ -10,6 +10,8 @@ import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
@@ -245,18 +247,18 @@ public class UserService {
     /**
      * Đăng xuất:
      * Thu hồi refresh token để phiên hiện tại không thể refresh tiếp.
+     * Idempotent: nếu token không tồn tại hoặc đã bị thu hồi thì coi như đã logout.
      */
     @Transactional
     public void logout(String refreshToken) {
 
-        RefreshToken token = refreshTokenRepository
+        refreshTokenRepository
                 .findByTokenHash(refreshToken)
-                .orElseThrow(() ->
-                        new RuntimeException("Token not found"));
-
-        token.setRevokedAt(LocalDateTime.now());
-
-        refreshTokenRepository.save(token);
+                .filter(token -> token.getRevokedAt() == null)
+                .ifPresent(token -> {
+                    token.setRevokedAt(LocalDateTime.now());
+                    refreshTokenRepository.save(token);
+                });
     }
 
     /**
@@ -274,19 +276,19 @@ public class UserService {
         }
 
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new BusinessConflictException("Email already exists");
         }
 
         UserType userType = userTypeRepo
                 .findById(request.getUserTypeId())
                 .orElseThrow(() ->
-                        new RuntimeException("User type not found"));
+                        new BadRequestException("User type not found"));
 
         // RBAC:
         // Chặn tự đăng ký role đặc quyền như ORGANIZER/JUDGE từ API public.
         if (!FPT_STUDENT_ID.equals(userType.getUserTypeId())
                 && !EXTERNAL_STUDENT_ID.equals(userType.getUserTypeId())) {
-            throw new RuntimeException("This user type cannot be self-registered");
+            throw new BadRequestException("This user type cannot be self-registered");
         }
 
         AccountStatus accountStatus = accountStatusRepo

@@ -7,6 +7,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtService;
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -18,6 +19,8 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -108,13 +111,13 @@ public class JwtServiceImpl implements JwtService {
                 refreshTokenRepository
                         .findByTokenHash(refreshToken)
                         .orElseThrow(
-                                () -> new RuntimeException(
+                                () -> new BadCredentialsException(
                                         "Refresh token not found"
                                 )
                         );
 
         if (tokenEntity.getRevokedAt() != null) {
-            throw new RuntimeException(
+            throw new BadCredentialsException(
                     "Refresh token revoked"
             );
         }
@@ -122,7 +125,7 @@ public class JwtServiceImpl implements JwtService {
         if (tokenEntity.getExpiresAt()
                 .isBefore(LocalDateTime.now())) {
 
-            throw new RuntimeException(
+            throw new CredentialsExpiredException(
                     "Refresh token expired"
             );
         }
@@ -206,7 +209,7 @@ public class JwtServiceImpl implements JwtService {
     @Transactional
     public void verifyEmail(String token) {
         if (token == null || token.isBlank()) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Invalid verification token"
             );
         }
@@ -215,13 +218,13 @@ public class JwtServiceImpl implements JwtService {
                 verificationTokenRepository
                         .findByTokenHash(tokenHashUtil.hash(token))
                         .orElseThrow(
-                                () -> new RuntimeException(
+                                () -> new BadRequestException(
                                         "Invalid verification token"
                                 )
                         );
 
         if (verificationToken.getUsedAt() != null) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Verification token already used"
             );
         }
@@ -229,7 +232,7 @@ public class JwtServiceImpl implements JwtService {
         if (verificationToken.getExpiresAt()
                 .isBefore(LocalDateTime.now())) {
 
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Verification token expired"
             );
         }
