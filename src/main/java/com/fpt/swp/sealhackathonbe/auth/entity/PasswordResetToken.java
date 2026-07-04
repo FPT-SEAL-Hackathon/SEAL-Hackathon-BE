@@ -33,7 +33,7 @@ public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "PasswordResetTokenID", nullable = false, updatable = false)
+    @Column(name = "TokenID", nullable = false, updatable = false)
     private UUID passwordResetTokenId;
 
     @ManyToOne(fetch = FetchType.LAZY)

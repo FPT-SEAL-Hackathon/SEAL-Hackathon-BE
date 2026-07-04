@@ -73,6 +73,8 @@ public class OAuth2LoginService {
 
         User user = createTemporaryOAuthUser(info);
 
+        // UpdatedAt được set ngay khi tạo vì một số schema định nghĩa cột này NOT NULL.
+        LocalDateTime now = LocalDateTime.now();
         UserOAuthAccount oauthAccount = UserOAuthAccount.builder()
                 .user(user)
                 .provider(info.getProvider())
@@ -81,7 +83,8 @@ public class OAuth2LoginService {
                 .emailVerified(info.getEmailVerified())
                 .displayName(info.getDisplayName())
                 .avatarUrl(info.getAvatarUrl())
-                .createdAt(LocalDateTime.now())
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
         userOAuthAccountRepository.save(oauthAccount);
 

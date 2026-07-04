@@ -33,7 +33,10 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
             HttpServletResponse response,
             AuthenticationException exception
     ) throws IOException {
-        log.warn("OAuth authentication failed: {}", exception.getClass().getSimpleName());
+        // Log đủ chi tiết để chẩn đoán (sai client-id/secret, redirect URI, mất session...)
+        // nhưng không đưa chi tiết nội bộ lên URL redirect.
+        log.warn("OAuth authentication failed: {} - {}",
+                exception.getClass().getSimpleName(), exception.getMessage());
 
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(appProperties.getFrontendUrl())
