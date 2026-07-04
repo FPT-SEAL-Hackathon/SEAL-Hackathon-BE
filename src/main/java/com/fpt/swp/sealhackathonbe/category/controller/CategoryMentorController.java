@@ -40,6 +40,7 @@ public class CategoryMentorController {
     @GetMapping("/category/mentors/{categoryId}")
     public ResponseEntity<List<CategoryMentorResponse>> getMentorsByCategory(@PathVariable UUID categoryId) {
         return ResponseEntity.ok(categoryMentorService.getMentorsByCategory(categoryId));
+    }
     @GetMapping("/{categoryId}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> getCategoryMentors(

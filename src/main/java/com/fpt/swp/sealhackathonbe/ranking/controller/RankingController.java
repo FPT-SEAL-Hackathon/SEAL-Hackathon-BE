@@ -1,15 +1,23 @@
 package com.fpt.swp.sealhackathonbe.ranking.controller;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
-import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
@@ -69,24 +77,6 @@ public class RankingController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Public leaderboard API.
-     */
-    @GetMapping("/public/leaderboard/{eventId}/{categoryId}")
-    @Operation(summary = "Get public leaderboard", description = "Retrieves the public leaderboard for a specific event and category")
-    public ResponseEntity<List<EventRankingDTO>> getEventLeaderboardByCategory(
-            @PathVariable("eventId") UUID eventId,
-            @PathVariable("categoryId") UUID categoryId) {
-
-        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
-
-        // Sort by rank position and filter only published
-        rankings = rankings.stream()
-                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
-                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(rankings);
-    }
     @GetMapping("/admin/rounds/{roundId}/rankings")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     @Operation(summary = "Get rankings for a round", description = "Fetches the existing rankings for a specific round and category without computing")
