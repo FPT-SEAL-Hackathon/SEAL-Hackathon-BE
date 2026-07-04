@@ -18,4 +18,6 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
 
     // Đếm số teams trong một category
     long countByCategoryId(UUID categoryId);
+
+    long countByEventId(UUID eventId);
 }

@@ -34,7 +34,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
-        List<User> mentors = userRepository.findAllById(request.getMentorIds());
+        List<User> mentors = userRepository.findAllById(request.getExpertIds());
         if (mentors.isEmpty()) {
             throw new IllegalArgumentException("No any mentors found");
         }

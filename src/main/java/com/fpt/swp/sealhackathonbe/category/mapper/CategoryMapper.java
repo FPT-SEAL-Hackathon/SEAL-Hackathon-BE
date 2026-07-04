@@ -25,14 +25,14 @@ public class CategoryMapper {
 
     public CategoryMentorResponse toCategoryMentorResponse(CategoryMentor categoryMentor) {
         return CategoryMentorResponse.builder()
-                .categoryMentorId(categoryMentor.getCategoryMentorId())
+                .categoryExpertId(categoryMentor.getCategoryMentorId())
                 .categoryId(categoryMentor.getCategory().getCategoryId())
-                .mentorId(categoryMentor.getMentor().getUserId())
+                .expertId(categoryMentor.getMentor().getUserId())
                 .fullName(categoryMentor.getMentor().getFullName())
                 .email(categoryMentor.getMentor().getEmail())
                 .phone(categoryMentor.getMentor().getPhone())
-                .mentorName(categoryMentor.getMentor().getFullName())
-                .mentorEmail(categoryMentor.getMentor().getEmail())
+                .expertName(categoryMentor.getMentor().getFullName())
+                .expertEmail(categoryMentor.getMentor().getEmail())
                 .assignedAt(categoryMentor.getAssignedAt())
                 .build();
     }

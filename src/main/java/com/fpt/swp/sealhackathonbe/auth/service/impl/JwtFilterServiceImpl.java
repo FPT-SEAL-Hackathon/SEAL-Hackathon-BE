@@ -141,6 +141,11 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             return bearer.substring(7);
         }
 
+        String tokenParam = request.getParameter("token");
+        if (tokenParam != null && !tokenParam.trim().isEmpty()) {
+            return tokenParam;
+        }
+
         return null;
     }
 

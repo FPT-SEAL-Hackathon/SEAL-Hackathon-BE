@@ -21,7 +21,7 @@ import java.util.UUID;
 public class CategoryMentorController {
     private final CategoryMentorService categoryMentorService;
 
-    @PostMapping("/category/mentor/{categoryId}")
+    @PostMapping("/category/expert/{categoryId}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> assignMentors(
             @PathVariable UUID categoryId,
@@ -37,7 +37,7 @@ public class CategoryMentorController {
         return ResponseEntity.ok(categoryMentorService.getAllMentors());
     }
 
-    @GetMapping("/category/mentors/{categoryId}")
+    @GetMapping("/category/experts/{categoryId}")
     public ResponseEntity<List<CategoryMentorResponse>> getMentorsByCategory(@PathVariable UUID categoryId) {
         return ResponseEntity.ok(categoryMentorService.getMentorsByCategory(categoryId));
     }
