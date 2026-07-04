@@ -112,51 +112,63 @@ public class UserService {
                 );
             }
 
-            // JWT:
-            // Cấp access token ngắn hạn sau khi xác thực thành công.
-            String accessToken = jwtServiceImpl.generateAccessToken(user);
-
-            // Token làm mới:
-            // Lưu refresh token để quản lý phiên và hỗ trợ logout.
-            String refreshToken = jwtServiceImpl.generateRefreshToken(user);
-
-            String roleName = user.getUserType().getTypeName();
-            String accountStatusName = user.getAccountStatus().getStatusName();
-
-            UserResponse userResponse =
-                    UserResponse.builder()
-                            .userId(user.getUserId())
-                            .email(user.getEmail())
-                            .fullName(user.getFullName())
-                            .role(toApiName(roleName))
-                            .roleName(roleName)
-                            .fptStudentCode(user.getFptStudentCode())
-                            .externalStudentCode(user.getExternalStudentCode())
-                            .universityName(user.getUniversityName())
-                            .phone(user.getPhone())
-                            .accountStatus(toApiName(accountStatusName))
-                            .accountStatusName(accountStatusName)
-                            .createdAt(user.getCreatedAt())
-                            .build();
-
-            RefreshToken tokenEntity = RefreshToken.builder()
-                    .user(user)
-                    .tokenHash(refreshToken)
-                    .issuedAt(LocalDateTime.now())
-                    .expiresAt(LocalDateTime.now().plusDays(7))
-                    .revokedAt(null)
-                    .deviceInfo("WEB")
-                    .build();
-
-            refreshTokenRepository.save(tokenEntity);
-            return LoginResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken)
-                    .user(userResponse)
-                    .build();
+            return issueSession(user);
         }
 
         throw new RuntimeException("Invalid email or password");
+    }
+
+    /**
+     * Cấp phiên đăng nhập (access + refresh token + hồ sơ) cho một user.
+     * Dùng chung cho login local, đổi code OAuth và sau khi liên kết tài khoản
+     * để mọi luồng trả về đúng một hình dạng LoginResponse.
+     */
+    public LoginResponse issueSession(User user) {
+
+        String accessToken = jwtServiceImpl.generateAccessToken(user);
+        String refreshToken = jwtServiceImpl.generateRefreshToken(user);
+
+        RefreshToken tokenEntity = RefreshToken.builder()
+                .user(user)
+                .tokenHash(refreshToken)
+                .issuedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revokedAt(null)
+                .deviceInfo("WEB")
+                .build();
+
+        refreshTokenRepository.save(tokenEntity);
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(toUserResponse(user))
+                .build();
+    }
+
+    /**
+     * Ánh xạ hồ sơ an toàn trả về cho client (không có password hash).
+     */
+    public UserResponse toUserResponse(User user) {
+        String roleName = user.getUserType() != null ? user.getUserType().getTypeName() : null;
+        String accountStatusName = user.getAccountStatus() != null
+                ? user.getAccountStatus().getStatusName()
+                : null;
+
+        return UserResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(toApiName(roleName))
+                .roleName(roleName)
+                .fptStudentCode(user.getFptStudentCode())
+                .externalStudentCode(user.getExternalStudentCode())
+                .universityName(user.getUniversityName())
+                .phone(user.getPhone())
+                .accountStatus(toApiName(accountStatusName))
+                .accountStatusName(accountStatusName)
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 
     /**

@@ -20,10 +20,18 @@ public class MyUserDetailsService implements UserDetailsService {
 
     /**
      * Tạo UserPrincipal để Spring kiểm tra mật khẩu và quyền ROLE_*.
+     * Đăng nhập local chỉ xét tài khoản LOCAL-enabled: email có thể trùng
+     * với tài khoản OAuth nhưng tài khoản OAuth không đăng nhập bằng mật khẩu.
      */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email);
+        User user = userRepository
+                .findFirstByEmailAndLocalLoginEnabledTrueAndIsDeletedFalseOrderByCreatedAtAsc(email)
+                .orElse(null);
+        if (user == null) {
+            // Fallback cho phiên JWT của user OAuth-only (không có mật khẩu local).
+            user = userRepository.findByEmail(email);
+        }
         if (user == null) {
             throw new UsernameNotFoundException("user not found");
         }

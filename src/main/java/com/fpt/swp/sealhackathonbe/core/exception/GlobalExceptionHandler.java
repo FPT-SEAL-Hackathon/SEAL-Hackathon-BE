@@ -118,6 +118,48 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Hồ sơ trùng tài khoản khác: trả field trùng để frontend gợi ý liên kết,
+    // tuyệt đối không auto-merge theo email.
+    @ExceptionHandler(ProfileConflictException.class)
+    public ResponseEntity<ErrorResponse> handleProfileConflict(ProfileConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("PROFILE_CONFLICT")
+                .message(ex.getMessage() != null ? ex.getMessage() : "Profile conflicts with an existing account")
+                .path(currentPath())
+                .details(Map.of(
+                        "conflictFields", ex.getConflictFields(),
+                        "canLinkAccount", ex.isCanLinkAccount()
+                ))
+                .build());
+    }
+
+    // Tài khoản tạm đã có dữ liệu nghiệp vụ: chặn gộp tự động.
+    @ExceptionHandler(MergeBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleMergeBlocked(MergeBlockedException ex) {
+        return build(
+                HttpStatus.CONFLICT,
+                "MERGE_BLOCKED",
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "This account already has activity and requires manual support to merge",
+                null
+        );
+    }
+
+    // TEMPORARY/hồ sơ thiếu: chưa đủ điều kiện đăng ký sự kiện.
+    @ExceptionHandler(ProfileIncompleteException.class)
+    public ResponseEntity<ErrorResponse> handleProfileIncomplete(ProfileIncompleteException ex) {
+        return build(
+                HttpStatus.FORBIDDEN,
+                "PROFILE_INCOMPLETE",
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "Please complete your profile before registering for an event",
+                null
+        );
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.error("Data integrity violation at path {}", request.getRequestURI(), ex);

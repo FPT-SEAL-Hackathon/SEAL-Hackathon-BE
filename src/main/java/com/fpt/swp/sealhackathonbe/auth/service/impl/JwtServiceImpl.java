@@ -157,6 +157,15 @@ public class JwtServiceImpl implements JwtService {
 
     /**
      * JWT:
+     * Lấy claim userId để nạp đúng user khi email không còn duy nhất.
+     */
+    public String extractUserId(String token) {
+        Object userId = extractAllClaims(token).get("userId");
+        return userId != null ? userId.toString() : null;
+    }
+
+    /**
+     * JWT:
      * Lấy thời điểm hết hạn để kiểm tra vòng đời token.
      */
     public Date extractExpiration(String token) {
