@@ -121,7 +121,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                             || type.equalsIgnoreCase("Guest Judge");
                 })
                 .map(user -> UserResponse.builder()
-                        .id(user.getUserId())
+                        .userId(user.getUserId())
                         .fullName(user.getFullName())
                         .email(user.getEmail())
                         .build())
