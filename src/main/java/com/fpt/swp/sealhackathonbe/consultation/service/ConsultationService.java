@@ -16,7 +16,7 @@ public interface ConsultationService {
 
     // Mentor
     List<AssignedCategoryResponse> getAssignedCategoriesForMentor(User mentor);
-    // getTeamsForMentorCategory will reuse TeamResponse from team module if possible
+    List<TeamSummaryForMentorResponse> getTeamsForMentorCategory(User mentor, UUID categoryId);
     Page<ConsultationRequestResponse> getMentorRequests(User mentor, UUID categoryId, UUID teamId, String status, String priority, Pageable pageable);
     ConsultationRequestResponse acceptRequest(User mentor, UUID requestId);
     ConsultationRequestResponse rejectRequest(User mentor, UUID requestId, String reason);

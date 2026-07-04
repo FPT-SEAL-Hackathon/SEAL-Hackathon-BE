@@ -40,7 +40,7 @@ public class JudgingController {
     @PostMapping("/judging")
     // RBAC:
     // Chỉ judge nội bộ/khách được ghi điểm.
-    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     @Operation(summary = "Record judging scores", description = "Allows internal and guest judges to submit scores for a submission")
     public ResponseEntity<Void> recordJudging(
             @Valid @RequestBody List<ScoreSubmissionDTO> scoreSubmissionDTOs) {
@@ -51,7 +51,7 @@ public class JudgingController {
     @PatchMapping("/judging")
     // RBAC:
     // Chỉ judge nội bộ/khách được cập nhật điểm đã chấm.
-    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     @Operation(summary = "Update judging scores", description = "Allows internal and guest judges to update previously submitted scores")
     public ResponseEntity<Void> updateJudging(
             @Valid @RequestBody List<UpdateScoreSubmissionDTO> updateScoreSubmissionDTOs,
@@ -62,7 +62,7 @@ public class JudgingController {
     @GetMapping("/judging/submission/{submissionId}")
     // RBAC:
     // ORGANIZER và judge được xem điểm của submission phục vụ quản lý/chấm.
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     @Operation(summary = "Get judging scores by submission ID", description = "Retrieves all scores given to a specific submission")
     public ResponseEntity<List<JudgingDTO>> getJudgingBySubmission(@PathVariable UUID submissionId) {
         List<JudgingDTO> scores = judgingService.getScoresBySubmissionAndJudgeId(submissionId);
@@ -89,9 +89,9 @@ public class JudgingController {
         return ResponseEntity.ok(logs);
     }
 
-    @GetMapping(value = "/judging/calibration-metrics")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE')")
-    @Operation(summary = "Get calibration metrics", description = "Returns calibration metrics for all judges as JSON")
+    @GetMapping(value = "/judging/events/{eventId}/calibration-metrics")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Get calibration metrics", description = "Returns calibration metrics for all judges in the event as JSON")
     public ResponseEntity<List<ReliabilityMetricResponse>> getCalibrationMetrics(
             @RequestParam(required = false) UUID eventId,
             @RequestParam(required = false) UUID roundId,

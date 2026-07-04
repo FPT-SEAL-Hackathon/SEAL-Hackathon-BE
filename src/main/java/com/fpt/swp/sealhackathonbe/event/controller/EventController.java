@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -22,22 +21,7 @@ public class EventController {
 
     private final EventService eventService;
 
-    @GetMapping("/events")
-    public ResponseEntity<List<EventResponse>> getAll() {
-        return ResponseEntity.ok(eventService.getAll());
-    }
-
-    @GetMapping("/public/events")
-    public ResponseEntity<List<EventResponse>> getPublicEvents() {
-        return ResponseEntity.ok(eventService.getPublicEvents());
-    }
-
-    @GetMapping("/public/events/{id}")
-    public ResponseEntity<EventResponse> getPublicEventById(@PathVariable UUID id) {
-        return ResponseEntity.ok(eventService.getPublicEventById(id));
-    }
-
-    @GetMapping({"/event/{id}", "/events/{id}"})
+    @GetMapping("/event/{id}")
     public ResponseEntity<EventResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.getById(id));
     }
