@@ -4,6 +4,7 @@ import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
+import com.fpt.swp.sealhackathonbe.core.exception.ProfileIncompleteException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.dto.EventParticipantBulkStatusUpdateRequest;
@@ -485,6 +486,14 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         String accountStatusName = user.getAccountStatus() != null
                 ? user.getAccountStatus().getStatusName()
                 : null;
+
+        // User OAuth TEMPORARY phải hoàn thiện hồ sơ trước khi đăng ký sự kiện.
+        if (STATUS_TEMPORARY.equalsIgnoreCase(accountStatusName)) {
+            throw new ProfileIncompleteException(
+                    "Please complete your profile before registering for an event."
+            );
+        }
+
         if (!ACCOUNT_STATUS_ACTIVE.equalsIgnoreCase(accountStatusName)) {
             throw new AccessDeniedException("Only active verified students can register for events.");
         }
@@ -494,7 +503,23 @@ public class EventParticipantServiceImpl implements EventParticipantService {
             throw new AccessDeniedException("Only students can register for events.");
         }
 
+        // Hồ sơ student phải đầy đủ (code/trường) trước khi tạo EventParticipant.
+        boolean profileIncomplete =
+                (FPT_STUDENT_ID.equals(userTypeId)
+                        && isBlank(user.getFptStudentCode()))
+                || (EXTERNAL_STUDENT_ID.equals(userTypeId)
+                        && (isBlank(user.getExternalStudentCode()) || isBlank(user.getUniversityName())));
+        if (profileIncomplete) {
+            throw new ProfileIncompleteException(
+                    "Please complete your profile before registering for an event."
+            );
+        }
+
         return user;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private ParticipantStatus getStatus(String statusName) {

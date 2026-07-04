@@ -78,6 +78,8 @@ public class EmailService {
 
     private void sendPlainTextEmail(String recipient, String subject, String content) {
         if (!mailEnabled) {
+            // Dev không bật mail: chỉ log lý do, không log nội dung (tránh lộ link/token).
+            log.info("Email \"{}\" skipped: mail is disabled (set NOTIFICATION_MAIL_ENABLED=true to enable)", subject);
             return;
         }
         if (recipient == null || recipient.isBlank()) {

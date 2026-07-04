@@ -26,6 +26,12 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     List<RefreshToken> findByUser_UserId(UUID userId);
 
     /**
+     * Các phiên còn hiệu lực của user (phục vụ thu hồi hàng loạt khi
+     * reset mật khẩu hoặc gộp tài khoản).
+     */
+    List<RefreshToken> findByUser_UserIdAndRevokedAtIsNull(UUID userId);
+
+    /**
      * Xóa phiên theo giá trị refresh token.
      */
     void deleteByTokenHash(String tokenHash);
