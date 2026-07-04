@@ -17,7 +17,9 @@ public class RoundRankingDTO {
     private UUID id;
     private UUID roundId;
     private UUID categoryId;
+    private String categoryName;
     private UUID teamId;
+    private String teamName;
     private UUID submissionId;
     private BigDecimal totalScore;
     private BigDecimal averageScore;
