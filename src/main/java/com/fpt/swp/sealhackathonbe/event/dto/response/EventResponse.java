@@ -23,10 +23,7 @@ public class EventResponse {
     private UUID eventStatusId;
     private String eventStatusName;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationStart;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registrationEnd;
 
     private LocalDate eventStartDate;

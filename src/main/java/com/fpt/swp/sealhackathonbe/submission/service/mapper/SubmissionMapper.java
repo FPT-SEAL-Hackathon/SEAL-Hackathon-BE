@@ -46,6 +46,7 @@ public class SubmissionMapper {
                 ? submission.getSubmittedByUser().getUserId()
                 : submission.getSubmittedByUserId());
         response.setNotes(submission.getNotes());
+        response.setIsScoreApproved(submission.getIsScoreApproved());
 
         return response;
     }

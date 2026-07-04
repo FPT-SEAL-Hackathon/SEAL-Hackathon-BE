@@ -26,4 +26,6 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
 
+    boolean existsByCategoryCategoryIdAndRoundNameIgnoreCase(UUID categoryId, String roundName);
+
 }

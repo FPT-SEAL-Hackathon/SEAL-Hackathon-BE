@@ -136,4 +136,19 @@ public class SubmissionController {
     private UUID currentUserId() {
         return authenticationServiceImpl.getCurrentUser().getUserId();
     }
+
+    @Operation(
+            summary = "Approve score",
+            description = "Approve or unapprove a submission's judging score"
+    )
+    @PostMapping("/admin/submissions/{submissionId}/approve")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<SubmissionResponse> approveScore(
+            @PathVariable UUID submissionId,
+            @RequestBody java.util.Map<String, Boolean> request
+    ) {
+        boolean approve = request.getOrDefault("approve", true);
+        SubmissionResponse response = submissionCommandService.approveScore(submissionId, approve);
+        return ResponseEntity.ok(response);
+    }
 }

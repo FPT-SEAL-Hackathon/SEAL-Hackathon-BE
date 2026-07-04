@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.controller;
 
+import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
@@ -50,6 +51,11 @@ public class RoundJudgeController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void removeJudge(@PathVariable UUID id) {
         roundJudgeService.removeJudge(id);
+    }
+
+    @GetMapping("/users/judges")
+    public ResponseEntity<List<UserResponse>> getAllMentors() {
+        return ResponseEntity.ok(roundJudgeService.getAllJudges());
     }
 
 }

@@ -27,6 +27,7 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RankingServiceImpl implements RankingService {
 
     private final JudgingService judgingService;
@@ -161,7 +163,9 @@ public class RankingServiceImpl implements RankingService {
                 .id(r.getId())
                 .roundId(roundId)
                 .categoryId(categoryId)
-                .teamId(r.getTeam().getTeamId()) // May throw lazy initialization exception if ID is not accessible directly, but Hibernate proxy usually handles getId().
+                .categoryName(r.getCategory().getCategoryName())
+                .teamId(r.getTeam().getTeamId())
+                .teamName(r.getTeam().getTeamName())
                 .submissionId(r.getSubmission().getSubmissionId())
                 .totalScore(r.getTotalScore())
                 .averageScore(r.getAverageScore())
@@ -199,15 +203,23 @@ public class RankingServiceImpl implements RankingService {
             UUID categoryId = categoryRef.getCategoryId();
             List<EventRanking> rankings = new ArrayList<>();
 
-            RoundResponse finalRound = roundService.getFinalRound(categoryId);
+            RoundResponse finalRound = null;
+            try {
+                finalRound = roundService.getFinalRound(categoryId);
+            } catch (RuntimeException e) {
+                log.warn("Skipping Event Ranking computation for Category {} because it has no rounds.", categoryRef.getCategoryName());
+                continue;
+            }
 
             if (finalRound == null) {
-                throw new IllegalStateException("Không tìm thấy vòng chung kết cho category: " + categoryRef.getCategoryName());
+                log.warn("Skipping Event Ranking computation for Category {} because final round is null.", categoryRef.getCategoryName());
+                continue;
             }
 
             UUID completedStatusId = UUID.fromString("40000000-0000-0000-0000-000000000004");
             if (!completedStatusId.equals(finalRound.getRoundStatusId())) {
-                throw new IllegalStateException("Vòng chung kết chưa hoàn thành (Completed) cho category: " + categoryRef.getCategoryName());
+                log.warn("Skipping Event Ranking computation for Category {} because final round is not Completed.", categoryRef.getCategoryName());
+                continue;
             }
 
             List<UUID> teamIds = entityManager.createQuery(
@@ -277,7 +289,9 @@ public class RankingServiceImpl implements RankingService {
                     .id(r.getId())
                     .eventId(eventId)
                     .categoryId(categoryId)
+                    .categoryName(r.getCategory().getCategoryName())
                     .teamId(r.getTeam().getTeamId())
+                    .teamName(r.getTeam().getTeamName())
                     .finalScore(r.getFinalScore())
                     .rankPosition(r.getRankPosition())
                     .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
@@ -319,5 +333,44 @@ public class RankingServiceImpl implements RankingService {
         ).collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoundRankingDTO> getRoundRankings(UUID roundId, UUID categoryId) {
+        List<RoundRanking> rankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
+        return rankings.stream().map(r -> RoundRankingDTO.builder()
+                .id(r.getId())
+                .roundId(roundId)
+                .categoryId(categoryId)
+                .categoryName(r.getCategory().getCategoryName())
+                .teamId(r.getTeam().getTeamId())
+                .teamName(r.getTeam().getTeamName())
+                .submissionId(r.getSubmission().getSubmissionId())
+                .totalScore(r.getTotalScore())
+                .averageScore(r.getAverageScore())
+                .rankPosition(r.getRankPosition())
+                .isAdvanced(r.getIsAdvanced())
+                .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .isPublished(r.getIsPublished())
+                .build()
+        ).sorted(Comparator.comparingInt(RoundRankingDTO::getRankPosition)).collect(Collectors.toList());
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventRankingDTO> getAdminEventRankings(UUID eventId) {
+        List<EventRanking> rankings = eventRankingRepository.findByEvent_EventId(eventId);
+        return rankings.stream().map(r -> EventRankingDTO.builder()
+                .id(r.getId())
+                .eventId(eventId)
+                .categoryId(r.getCategory().getCategoryId())
+                .categoryName(r.getCategory().getCategoryName())
+                .teamId(r.getTeam().getTeamId())
+                .teamName(r.getTeam().getTeamName())
+                .finalScore(r.getFinalScore())
+                .rankPosition(r.getRankPosition())
+                .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .isPublished(r.getIsPublished())
+                .build()
+        ).sorted(Comparator.comparingInt(EventRankingDTO::getRankPosition)).collect(Collectors.toList());
+    }
 }

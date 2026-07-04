@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.dto.response;
 
+import com.fpt.swp.sealhackathonbe.round.entity.RoundStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

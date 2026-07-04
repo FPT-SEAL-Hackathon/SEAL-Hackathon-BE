@@ -13,8 +13,15 @@ import java.util.UUID;
 @Builder
 public class RoundJudgeResponse {
     private UUID roundJudgeId;
+
     private UUID roundId;
+
     private UUID judgeId;
+    private String fullName;
+    private String email;
+    private String phone;
+
     private LocalDateTime assignedAt;
+
     private UUID assignedById;
 }
