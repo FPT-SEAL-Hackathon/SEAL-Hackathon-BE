@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.category.repository;
 
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,11 @@ import java.util.UUID;
 public interface CategoryMentorRepository extends JpaRepository<CategoryMentor, UUID> {
     @Query("SELECT cm.mentor.userId FROM CategoryMentor cm WHERE cm.category.categoryId = :categoryId")
     List<UUID> findMentorIdsByCategoryId(@Param("categoryId") UUID categoryId);
+
+    @Query("SELECT cm.mentor FROM CategoryMentor cm WHERE cm.category.categoryId = :categoryId")
+    List<User> findMentorsByCategoryCategoryId(@Param("categoryId") UUID categoryId);
+
+    List<CategoryMentor> findByCategoryCategoryId(UUID categoryId);
 
     List<CategoryMentor> findByCategory_CategoryId(UUID categoryId);
     List<CategoryMentor> findByMentor_UserId(UUID mentorId);
