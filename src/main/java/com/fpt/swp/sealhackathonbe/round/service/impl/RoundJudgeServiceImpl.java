@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.service.impl;
 
+import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
@@ -108,5 +109,22 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                 .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
         //Add constraints before delete later
         roundJudgeRepository.delete(roundJudge);
+    }
+
+    @Override
+    public List<UserResponse> getAllJudges() {
+        return userRepository.findAll()
+                .stream()
+                .filter(user -> {
+                    String type = user.getUserType().getTypeName();
+                    return type.equalsIgnoreCase("Internal Judge")
+                            || type.equalsIgnoreCase("Guest Judge");
+                })
+                .map(user -> UserResponse.builder()
+                        .id(user.getUserId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .build())
+                .toList();
     }
 }

@@ -224,8 +224,17 @@ public class JudgingServiceImpl implements JudgingService {
         if (actor == null) {
             throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
         }
-        return judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId())
-                .stream()
+        
+        boolean isOrganizer = actor.getUserType() != null && "Organizer".equalsIgnoreCase(actor.getUserType().getTypeName());
+        
+        List<Judging> judgings;
+        if (isOrganizer) {
+            judgings = judgingRepository.findBySubmission_SubmissionIdIn(java.util.Collections.singletonList(submissionId));
+        } else {
+            judgings = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId());
+        }
+        
+        return judgings.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

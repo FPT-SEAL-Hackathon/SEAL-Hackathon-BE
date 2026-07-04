@@ -17,7 +17,9 @@ public class EventRankingDTO {
     private UUID id;
     private UUID eventId;
     private UUID categoryId;
+    private String categoryName;
     private UUID teamId;
+    private String teamName;
     private BigDecimal finalScore;
     private Integer rankPosition;
     private LocalDateTime computedAt;

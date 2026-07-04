@@ -13,11 +13,15 @@ import java.util.UUID;
 @Builder
 public class CategoryMentorResponse {
     private UUID categoryMentorId;
+
     private UUID categoryId;
+
     private UUID mentorId;
+    private String fullName;
+    private String email;
+    private String phone;
     private String mentorName;
     private String mentorEmail;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime assignedAt;
 }
