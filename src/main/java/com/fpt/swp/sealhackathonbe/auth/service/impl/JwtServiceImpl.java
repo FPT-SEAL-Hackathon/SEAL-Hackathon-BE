@@ -238,7 +238,7 @@ public class JwtServiceImpl implements JwtService {
 
         AccountStatus activeStatus =
                 accountStatusRepo
-                        .findByStatusName("ACTIVE")
+                        .findByStatusNameIgnoreCase("Active")
                         .orElseThrow();
 
         user.setAccountStatus(activeStatus);

@@ -14,6 +14,8 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    // Tim membership active cua user, dung cho chuc nang xem team hien tai va roi team.
    Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
 
+   Optional<TeamMembers> findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(UUID userId);
+
    // Xac nhan user dang la member active cua dung team truoc khi tra thong tin chi tiet.
    Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
 

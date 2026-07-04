@@ -14,4 +14,6 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     List<Event> findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(List<String> statusNames);
     Optional<Event> findByEventIdAndIsDeletedFalse(UUID eventId);
     Optional<Event> findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(UUID eventId, List<String> statusNames);
+    boolean existsByEventNameIgnoreCaseAndIsDeletedFalse(String eventName);
+    boolean existsByEventNameIgnoreCaseAndIsDeletedFalseAndEventIdNot(String eventName, UUID eventId);
 }

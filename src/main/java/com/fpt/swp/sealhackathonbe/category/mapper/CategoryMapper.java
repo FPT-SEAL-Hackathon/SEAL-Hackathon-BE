@@ -31,6 +31,8 @@ public class CategoryMapper {
                 .fullName(categoryMentor.getMentor().getFullName())
                 .email(categoryMentor.getMentor().getEmail())
                 .phone(categoryMentor.getMentor().getPhone())
+                .mentorName(categoryMentor.getMentor().getFullName())
+                .mentorEmail(categoryMentor.getMentor().getEmail())
                 .assignedAt(categoryMentor.getAssignedAt())
                 .build();
     }

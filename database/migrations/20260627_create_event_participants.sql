@@ -7,7 +7,7 @@ BEGIN
         CONSTRAINT UQ_ParticipantStatus_Name UNIQUE (StatusName),
         CONSTRAINT CK_ParticipantStatus_Name CHECK (
             StatusName IN (
-                N'PENDING_APPROVAL',
+                N'PENDING',
                 N'ACTIVE',
                 N'REJECTED',
                 N'SUSPENDED',
@@ -19,9 +19,9 @@ BEGIN
 END;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'PENDING_APPROVAL')
+IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'PENDING')
     INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
-    VALUES ('80000000-0000-0000-0000-000000000001', N'PENDING_APPROVAL');
+    VALUES ('80000000-0000-0000-0000-000000000001', N'PENDING');
 
 IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'ACTIVE')
     INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)

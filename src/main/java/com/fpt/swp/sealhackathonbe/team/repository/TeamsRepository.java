@@ -11,4 +11,11 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
     boolean existsByEventIdAndTeamName(UUID eventId, String teamName);
 
     List<Teams> findByEventId(UUID eventId);
+    List<Teams> findByLeaderUserId(UUID leaderUserId);
+
+    // Lấy tất cả teams trong một category (dùng cho mentor dashboard)
+    List<Teams> findByCategoryId(UUID categoryId);
+
+    // Đếm số teams trong một category
+    long countByCategoryId(UUID categoryId);
 }

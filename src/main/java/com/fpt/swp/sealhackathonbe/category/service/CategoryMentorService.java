@@ -15,4 +15,5 @@ public interface CategoryMentorService {
     List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request);
     List<UserResponse> getAllMentors();
     List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId);
+    List<CategoryMentorResponse> getCategoryMentors(UUID categoryId);
 }
