@@ -137,7 +137,11 @@ public class TeamServiceImpl implements TeamService {
 
         TeamEligibilityReviewResponse review = toEligibilityReviewResponse(team, event);
         if (!Boolean.TRUE.equals(review.getEligibleForCompetition())) {
-            throw new BusinessConflictException("Team is not eligible for competition");
+            // Nêu rõ lý do (size min/max, hồ sơ thiếu...) để organizer biết cần gì trước khi duyệt.
+            String reasons = review.getIssues() != null && !review.getIssues().isEmpty()
+                    ? String.join("; ", review.getIssues())
+                    : "unknown reason";
+            throw new BusinessConflictException("Team is not eligible for competition: " + reasons);
         }
 
         team.setTeamStatusId(TEAM_STATUS_ACTIVE);
