@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.controller;
 
+import com.fpt.swp.sealhackathonbe.eventparticipant.dto.EventParticipantResponse;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -44,6 +46,7 @@ public class TeamController {
     private final TeamService teamService;
     private final TeamJoinRequestService teamJoinRequestService;
     private final TeamDisqualificationService teamDisqualificationService;
+    private final EventParticipantService eventParticipantService;
     private final UserRepository userRepository;
 
     // Quyen hien tai: moi tai khoan co JWT hop le deu co the tao team.
@@ -109,6 +112,8 @@ public class TeamController {
 
         if (Boolean.TRUE.equals(request.getApproved())) {
             TeamResponse team = teamService.activateTeam(teamId, request.getNote(), currentUserId(authentication));
+            // Duyệt team = duyệt luôn toàn bộ EventParticipant PENDING của thành viên.
+            eventParticipantService.applyTeamDecision(teamId, true, request.getNote(), currentUserId(authentication));
             response.setTeam(team);
             response.setMessage("Team approved for competition");
         } else {
@@ -124,11 +129,45 @@ public class TeamController {
                     disqualifyRequest,
                     currentUserId(authentication)
             );
+            // Từ chối team = từ chối toàn bộ participant PENDING của thành viên.
+            eventParticipantService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
             response.setDisqualification(disqualification);
             response.setMessage("Team disqualified from competition");
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Team-first: leader đăng ký cả team vào sự kiện của team.
+     * Tạo EventParticipant PENDING cho mọi thành viên, chờ organizer duyệt theo team.
+     */
+    @Operation(summary = "Register the whole team for its event (leader only)")
+    @PostMapping("/teams/{teamId}/register-event")
+    public ResponseEntity<List<EventParticipantResponse>> registerTeamForEvent(
+            @PathVariable UUID teamId,
+            Authentication authentication
+    ) {
+        List<EventParticipantResponse> response =
+                eventParticipantService.registerTeam(teamId, currentUserId(authentication));
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Leader rút đăng ký khi organizer chưa xử lý (toàn bộ còn PENDING)
+     * để chỉnh đội hình rồi đăng ký lại.
+     */
+    @Operation(summary = "Withdraw the team's event registration while still pending (leader only)")
+    @DeleteMapping("/teams/{teamId}/register-event")
+    public ResponseEntity<java.util.Map<String, Object>> withdrawTeamRegistration(
+            @PathVariable UUID teamId,
+            Authentication authentication
+    ) {
+        eventParticipantService.withdrawTeamRegistration(teamId, currentUserId(authentication));
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", "Team registration withdrawn"
+        ));
     }
 
     // Quyen hien tai: chi tai khoan dang la member active cua teamId.

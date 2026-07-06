@@ -9,6 +9,8 @@ import com.fpt.swp.sealhackathonbe.event.mapper.EventMapper;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.event.repository.EventStatusRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -47,6 +49,12 @@ class EventServiceImplementationCreateTest {
     @Mock
     private EventParticipantRepository eventParticipantRepository;
 
+    @Mock
+    private TeamsRepository teamsRepository;
+
+    @Mock
+    private RoundRepository roundRepository;
+
     private EventServiceImplementation eventService;
 
     @BeforeEach
@@ -56,7 +64,9 @@ class EventServiceImplementationCreateTest {
                 eventStatusRepository,
                 new EventMapper(),
                 userRepository,
-                eventParticipantRepository
+                eventParticipantRepository,
+                teamsRepository,
+                roundRepository
         );
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("organizer@example.com", "password")

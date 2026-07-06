@@ -59,7 +59,9 @@ public class TeamServiceImpl implements TeamService {
         // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt động
         // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
-        eventParticipantService.assertActiveParticipant(event.getEventId(), currentUserId);
+        // Team-first: tạo team không cần là EventParticipant — chỉ cần student
+        // ACTIVE với hồ sơ đầy đủ; đăng ký event là bước sau do leader thực hiện.
+        eventParticipantService.assertEligibleStudent(currentUserId);
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
@@ -193,6 +195,13 @@ public class TeamServiceImpl implements TeamService {
 
         if (team.getLeaderUserId().equals(userId)) {
             throw new BusinessConflictException("Team leader cannot be removed");
+        }
+
+        // Khóa đội hình sau khi team đã đăng ký event; leader phải rút đăng ký
+        // (khi còn PENDING) mới được chỉnh sửa thành viên.
+        if (eventParticipantService.hasRegistration(team.getEventId(), team.getLeaderUserId())) {
+            throw new BusinessConflictException(
+                    "Team roster is locked after event registration. Withdraw the registration first.");
         }
 
         validateTeamWillNotBeBelowMinimum(team);
