@@ -15,6 +15,8 @@ import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -45,6 +47,8 @@ public class EventServiceImplementation implements EventService {
     private final EventMapper eventMapper;
     private final UserRepository userRepository;
     private final EventParticipantRepository eventParticipantRepository;
+    private final TeamsRepository teamsRepository;
+    private final RoundRepository roundRepository;
 
     @Override
     public EventResponse create(CreateEventRequest request) {
@@ -175,7 +179,12 @@ public class EventServiceImplementation implements EventService {
         Map<UUID, EventParticipant> participationByEventId = getCurrentUserParticipationByEventId(events);
 
         return events.stream()
-                .map(event -> eventMapper.toEventResponse(event, participationByEventId.get(event.getEventId())))
+                .map(event -> {
+                    EventResponse response = eventMapper.toEventResponse(event, participationByEventId.get(event.getEventId()));
+                    response.setTeamCount((int) teamsRepository.countByEventId(event.getEventId()));
+                    response.setRoundCount((int) roundRepository.countByEventId(event.getEventId()));
+                    return response;
+                })
                 .toList();
     }
 
@@ -184,7 +193,12 @@ public class EventServiceImplementation implements EventService {
         return eventRepository
                 .findAllByIsDeletedFalseAndEventStatusEventStatusNameInOrderByEventStartDateAsc(PUBLIC_EVENT_STATUSES)
                 .stream()
-                .map(eventMapper::toEventResponse)
+                .map(event -> {
+                    EventResponse response = eventMapper.toEventResponse(event);
+                    response.setTeamCount((int) teamsRepository.countByEventId(event.getEventId()));
+                    response.setRoundCount((int) roundRepository.countByEventId(event.getEventId()));
+                    return response;
+                })
                 .toList();
     }
 
@@ -193,7 +207,10 @@ public class EventServiceImplementation implements EventService {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(eventId, PUBLIC_EVENT_STATUSES)
                 .orElseThrow(() -> new EntityNotFoundException("Public event not found"));
-        return eventMapper.toEventResponse(event);
+        EventResponse response = eventMapper.toEventResponse(event);
+        response.setTeamCount((int) teamsRepository.countByEventId(event.getEventId()));
+        response.setRoundCount((int) roundRepository.countByEventId(event.getEventId()));
+        return response;
     }
 
     @Override
@@ -276,7 +293,10 @@ public class EventServiceImplementation implements EventService {
         EventParticipant participant = currentUserId != null
                 ? getCurrentUserParticipation(eventId, currentUserId)
                 : null;
-        return eventMapper.toEventResponse(event, participant);
+        EventResponse response = eventMapper.toEventResponse(event, participant);
+        response.setTeamCount((int) teamsRepository.countByEventId(eventId));
+        response.setRoundCount((int) roundRepository.countByEventId(eventId));
+        return response;
     }
 
     @Override

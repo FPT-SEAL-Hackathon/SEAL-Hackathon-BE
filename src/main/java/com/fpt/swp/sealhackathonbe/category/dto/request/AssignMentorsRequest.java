@@ -11,5 +11,5 @@ import java.util.UUID;
 @Setter
 @Builder
 public class AssignMentorsRequest {
-    private List<UUID> mentorIds;
+    private List<UUID> expertIds;
 }

@@ -31,6 +31,11 @@ public class EventResponse {
 
     private Integer maxTeamSize;
     private Integer minTeamSize;
+    
+    @Setter
+    private Integer teamCount;
+    @Setter
+    private Integer roundCount;
 
     private UUID createdById;
 
