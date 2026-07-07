@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -28,6 +29,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TeamServiceImplLeadershipTest {
+    private static final UUID ACTIVE_STATUS =
+            UUID.fromString("60000000-0000-0000-0000-000000000002");
     private static final UUID WITHDRAWN_STATUS =
             UUID.fromString("60000000-0000-0000-0000-000000000004");
 
@@ -36,6 +39,9 @@ class TeamServiceImplLeadershipTest {
 
     @Mock
     private TeamMembersRepository teamMembersRepository;
+
+    @Mock
+    private EventParticipantService eventParticipantService;
 
     @InjectMocks
     private TeamServiceImpl teamService;
@@ -99,6 +105,25 @@ class TeamServiceImplLeadershipTest {
         assertFalse(member.getActive());
         verify(teamsRepository, never()).save(team);
         verify(teamMembersRepository, never()).countByTeamIdAndActiveTrue(teamId);
+    }
+
+    @Test
+    void activeTeamRosterCannotBeChanged() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(ACTIVE_STATUS);
+        TeamMembers member = member(team, memberId);
+
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
+                .thenReturn(Optional.of(member));
+
+        assertThrows(
+                BusinessConflictException.class,
+                () -> teamService.removeMember(teamId, memberId, leaderId)
+        );
     }
 
     @Test

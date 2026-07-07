@@ -269,6 +269,15 @@ public class EventParticipantServiceImpl implements EventParticipantService {
 
     @Override
     @Transactional
+    public void removePendingRegistration(UUID eventId, UUID userId) {
+        eventParticipantRepository
+                .findByEventIdAndUserId(eventId, userId)
+                .filter(participant -> isPendingStatus(currentStatusName(participant)))
+                .ifPresent(eventParticipantRepository::delete);
+    }
+
+    @Override
+    @Transactional
     public List<EventParticipantResponse> registerTeam(UUID teamId, UUID currentUserId) {
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
@@ -309,21 +318,27 @@ public class EventParticipantServiceImpl implements EventParticipantService {
                         "Member \"" + who + "\" must complete their profile before the team can register.");
             }
 
-            // Đã là participant của event (team này hoặc team khác) thì chặn.
-            if (eventParticipantRepository.existsByEventIdAndUserId(event.getEventId(), member.getUserId())) {
-                throw new BusinessConflictException(
-                        "Member \"" + memberUser.getFullName()
-                                + "\" is already registered for this event. Withdraw first if re-registering.");
-            }
-
-            EventParticipant participant = new EventParticipant();
-            participant.setEventId(event.getEventId());
-            participant.setUserId(member.getUserId());
-            participant.setParticipantStatusId(pendingStatus.getStatusId());
-            participant.setAppliedAt(now);
-
-            EventParticipant saved = saveRegistration(participant);
-            writeTeamRegistrationAuditLog("TEAM_EVENT_REGISTERED", saved, team, currentUserId);
+            EventParticipant saved = eventParticipantRepository
+                    .findByEventIdAndUserId(event.getEventId(), member.getUserId())
+                    .map(existing -> {
+                        if (!isPendingStatus(currentStatusName(existing))) {
+                            throw new BusinessConflictException(
+                                    "Member \"" + memberUser.getFullName()
+                                            + "\" registration has already been processed for this event.");
+                        }
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        EventParticipant participant = new EventParticipant();
+                        participant.setEventId(event.getEventId());
+                        participant.setUserId(member.getUserId());
+                        participant.setParticipantStatusId(pendingStatus.getStatusId());
+                        participant.setParticipantStatus(pendingStatus);
+                        participant.setAppliedAt(now);
+                        EventParticipant created = saveRegistration(participant);
+                        writeTeamRegistrationAuditLog("TEAM_EVENT_REGISTERED", created, team, currentUserId);
+                        return created;
+                    });
 
             try {
                 notificationService.sendNotification(
@@ -388,18 +403,29 @@ public class EventParticipantServiceImpl implements EventParticipantService {
 
         String targetStatus = approved ? STATUS_ACTIVE : STATUS_REJECTED;
 
-        // Duyệt team = duyệt toàn bộ thành viên còn PENDING trong một lượt.
+        ParticipantStatus pendingStatus = getRegistrationPendingStatus();
+
+        // Duyệt team = đồng bộ registration cho roster hiện tại rồi duyệt toàn bộ thành viên trong một lượt.
         for (TeamMembers member : teamMembersRepository.findByTeamIdAndActiveTrue(teamId)) {
-            eventParticipantRepository
+            EventParticipant participant = eventParticipantRepository
                     .findByEventIdAndUserId(team.getEventId(), member.getUserId())
-                    .filter(participant -> isPendingStatus(currentStatusName(participant)))
-                    .ifPresent(participant -> {
-                        String oldStatusName = currentStatusName(participant);
-                        applyStatus(participant, targetStatus, note, organizerUserId);
-                        EventParticipant saved = eventParticipantRepository.save(participant);
-                        writeStatusAuditLog(saved, oldStatusName, currentStatusName(saved), organizerUserId);
-                        notifyParticipantAfterStatusChange(saved, oldStatusName, currentStatusName(saved), organizerUserId);
+                    .orElseGet(() -> {
+                        EventParticipant created = new EventParticipant();
+                        created.setEventId(team.getEventId());
+                        created.setUserId(member.getUserId());
+                        created.setParticipantStatusId(pendingStatus.getStatusId());
+                        created.setParticipantStatus(pendingStatus);
+                        created.setAppliedAt(LocalDateTime.now());
+                        return saveRegistration(created);
                     });
+
+            if (isPendingStatus(currentStatusName(participant))) {
+                String oldStatusName = currentStatusName(participant);
+                applyStatus(participant, targetStatus, note, organizerUserId);
+                EventParticipant saved = eventParticipantRepository.save(participant);
+                writeStatusAuditLog(saved, oldStatusName, currentStatusName(saved), organizerUserId);
+                notifyParticipantAfterStatusChange(saved, oldStatusName, currentStatusName(saved), organizerUserId);
+            }
         }
     }
 

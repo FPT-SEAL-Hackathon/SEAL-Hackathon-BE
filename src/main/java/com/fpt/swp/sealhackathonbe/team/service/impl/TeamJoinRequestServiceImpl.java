@@ -31,6 +31,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
+    private static final UUID TEAM_STATUS_ACTIVE =
+            UUID.fromString("60000000-0000-0000-0000-000000000002");
     private static final UUID TEAM_STATUS_DISQUALIFIED =
             UUID.fromString("60000000-0000-0000-0000-000000000003");
     private static final UUID TEAM_STATUS_WITHDRAWN =
@@ -170,12 +172,10 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         return TeamMapper.toJoinTeamRequestResponse(savedRequest);
     }
 
-    // Khóa đội hình: team đã đăng ký event (leader có participant) thì không
-    // nhận thêm thành viên cho tới khi leader rút đăng ký.
+    // Roster chi bi khoa sau khi organizer duyet team thanh ACTIVE.
     private void assertRosterNotLocked(Teams team) {
-        if (eventParticipantService.hasRegistration(team.getEventId(), team.getLeaderUserId())) {
-            throw new BusinessConflictException(
-                    "Team roster is locked after event registration. Withdraw the registration first.");
+        if (TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Team roster is locked after organizer approval");
         }
     }
 

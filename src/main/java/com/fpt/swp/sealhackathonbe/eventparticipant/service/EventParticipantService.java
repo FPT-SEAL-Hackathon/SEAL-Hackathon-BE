@@ -45,6 +45,12 @@ public interface EventParticipantService {
     boolean hasRegistration(UUID eventId, UUID userId);
 
     /**
+     * Xoa registration PENDING cua member khi roster team pending thay doi.
+     * Neu member chua co registration thi khong lam gi; neu da duoc xu ly thi giu nguyen lich su.
+     */
+    void removePendingRegistration(UUID eventId, UUID userId);
+
+    /**
      * Leader đăng ký cả team vào event: tạo participant PENDING cho mọi thành viên.
      */
     List<EventParticipantResponse> registerTeam(UUID teamId, UUID currentUserId);
