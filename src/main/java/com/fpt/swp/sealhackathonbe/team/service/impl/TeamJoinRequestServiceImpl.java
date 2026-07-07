@@ -52,7 +52,10 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         validateTeamCanReceiveJoinRequest(team);
-        eventParticipantService.assertActiveParticipant(team.getEventId(), currentUserId);
+        // Team-first: xin vào team chỉ cần là student đủ điều kiện, không cần
+        // là EventParticipant; nhưng đội hình bị khóa sau khi team đã đăng ký event.
+        eventParticipantService.assertEligibleStudent(currentUserId);
+        assertRosterNotLocked(team);
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, team.getEventId())) {
             throw new BusinessConflictException("User already belongs to an active team in this event");
@@ -114,7 +117,8 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         if (REQUEST_STATUS_APPROVED.equals(request.getAction())) {
             validateTeamCanReceiveJoinRequest(team);
-            eventParticipantService.assertActiveParticipant(team.getEventId(), joinRequest.getUserId());
+            eventParticipantService.assertEligibleStudent(joinRequest.getUserId());
+            assertRosterNotLocked(team);
 
             if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(
                     joinRequest.getUserId(),
@@ -156,6 +160,15 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         TeamJoinRequests savedRequest = teamJoinRequestsRepository.save(joinRequest);
         return TeamMapper.toJoinTeamRequestResponse(savedRequest);
+    }
+
+    // Khóa đội hình: team đã đăng ký event (leader có participant) thì không
+    // nhận thêm thành viên cho tới khi leader rút đăng ký.
+    private void assertRosterNotLocked(Teams team) {
+        if (eventParticipantService.hasRegistration(team.getEventId(), team.getLeaderUserId())) {
+            throw new BusinessConflictException(
+                    "Team roster is locked after event registration. Withdraw the registration first.");
+        }
     }
 
     private void validateTeamCanReceiveJoinRequest(Teams team) {
