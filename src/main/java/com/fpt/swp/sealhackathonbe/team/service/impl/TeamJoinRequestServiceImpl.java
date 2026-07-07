@@ -4,7 +4,7 @@ import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
-import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
+import com.fpt.swp.sealhackathonbe.team.event.TeamJoinApprovedEvent;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamJoinRequests;
@@ -20,6 +20,7 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +45,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
     private final EventParticipantService eventParticipantService;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -129,27 +130,28 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 throw new BusinessConflictException("User already belongs to an active team in this event");
             }
 
-            TeamMembers member = new TeamMembers();
-            member.setTeamId(team.getTeamId());
-            member.setUserId(joinRequest.getUserId());
-            member.setJoinedAt(LocalDateTime.now());
+            LocalDateTime approvedAt = LocalDateTime.now();
+            TeamMembers member = teamMembersRepository
+                    .findByTeamIdAndUserId(team.getTeamId(), joinRequest.getUserId())
+                    .orElseGet(() -> {
+                        TeamMembers newMember = new TeamMembers();
+                        newMember.setTeamId(team.getTeamId());
+                        newMember.setUserId(joinRequest.getUserId());
+                        return newMember;
+                    });
+            member.setJoinedAt(approvedAt);
+            member.setLeftAt(null);
             member.setActive(true);
 
             teamMembersRepository.save(member);
 
             joinRequest.setRequestStatus(REQUEST_STATUS_APPROVED);
-
-            try {
-                notificationService.sendNotification(
-                        joinRequest.getUserId(),
-                        leaderUserId,
-                        team.getEventId(),
-                        "Team Join Request Approved",
-                        "Your request to join team " + team.getTeamName() + " has been approved."
-                );
-            } catch (Exception ignored) {
-                // Notification failure shouldn't rollback team join
-            }
+            eventPublisher.publishEvent(new TeamJoinApprovedEvent(
+                    joinRequest.getUserId(),
+                    leaderUserId,
+                    team.getEventId(),
+                    team.getTeamName()
+            ));
         } else if (REQUEST_STATUS_REJECTED.equals(request.getAction())) {
             joinRequest.setRequestStatus(REQUEST_STATUS_REJECTED);
         } else {
