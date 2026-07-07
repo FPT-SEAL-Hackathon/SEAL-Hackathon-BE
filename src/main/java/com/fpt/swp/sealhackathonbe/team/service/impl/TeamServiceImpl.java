@@ -59,7 +59,9 @@ public class TeamServiceImpl implements TeamService {
         // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt động
         // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
-        eventParticipantService.assertActiveParticipant(event.getEventId(), currentUserId);
+        // Team-first: tạo team không cần là EventParticipant — chỉ cần student
+        // ACTIVE với hồ sơ đầy đủ; đăng ký event là bước sau do leader thực hiện.
+        eventParticipantService.assertEligibleStudent(currentUserId);
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
@@ -135,7 +137,11 @@ public class TeamServiceImpl implements TeamService {
 
         TeamEligibilityReviewResponse review = toEligibilityReviewResponse(team, event);
         if (!Boolean.TRUE.equals(review.getEligibleForCompetition())) {
-            throw new BusinessConflictException("Team is not eligible for competition");
+            // Nêu rõ lý do (size min/max, hồ sơ thiếu...) để organizer biết cần gì trước khi duyệt.
+            String reasons = review.getIssues() != null && !review.getIssues().isEmpty()
+                    ? String.join("; ", review.getIssues())
+                    : "unknown reason";
+            throw new BusinessConflictException("Team is not eligible for competition: " + reasons);
         }
 
         team.setTeamStatusId(TEAM_STATUS_ACTIVE);
@@ -192,10 +198,13 @@ public class TeamServiceImpl implements TeamService {
             throw new AccessDeniedException("You do not have permission to remove this member");
         }
 
+        assertRosterEditable(team);
+
         LocalDateTime now = LocalDateTime.now();
         member.setActive(false);
         member.setLeftAt(now);
         teamMembersRepository.save(member);
+        eventParticipantService.removePendingRegistration(team.getEventId(), userId);
 
         if (team.getLeaderUserId().equals(userId)) {
             List<TeamMembers> remainingMembers =
@@ -222,10 +231,11 @@ public class TeamServiceImpl implements TeamService {
             throw new AccessDeniedException("Only the current team leader can transfer leadership");
         }
 
+        assertRosterEditable(team);
+
         if (currentUserId.equals(newLeaderUserId)) {
             throw new BusinessConflictException("New leader must be a different team member");
         }
-
         teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, newLeaderUserId)
                 .orElseThrow(() -> new BusinessConflictException(
                         "New leader must be an active member of this team"
@@ -418,6 +428,12 @@ public class TeamServiceImpl implements TeamService {
 
         if (minTeamSize != null && maxTeamSize != null && minTeamSize > maxTeamSize) {
             throw new BusinessConflictException("Minimum team size cannot be greater than maximum team size");
+        }
+    }
+
+    private void assertRosterEditable(Teams team) {
+        if (TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Team roster is locked after organizer approval");
         }
     }
 
