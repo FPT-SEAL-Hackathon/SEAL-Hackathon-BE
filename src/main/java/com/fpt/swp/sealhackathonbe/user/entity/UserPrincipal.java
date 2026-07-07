@@ -93,8 +93,14 @@ public class UserPrincipal implements UserDetails {
      */
     @Override
     public boolean isEnabled() {
-        return user.getAccountStatus() != null
-                && user.getAccountStatus().getStatusName() != null
-                && "Active".equalsIgnoreCase(user.getAccountStatus().getStatusName());
+        // TEMPORARY (user OAuth chưa hoàn thiện hồ sơ) vẫn được dùng JWT
+        // để gọi /users/me, complete-profile, link account, set-password.
+        // Đăng nhập local của user TEMPORARY vốn không thể xảy ra vì
+        // tài khoản OAuth-only có password hash ngẫu nhiên không dùng được.
+        if (user.getAccountStatus() == null || user.getAccountStatus().getStatusName() == null) {
+            return false;
+        }
+        String status = user.getAccountStatus().getStatusName();
+        return "Active".equalsIgnoreCase(status) || "Temporary".equalsIgnoreCase(status);
     }
 }

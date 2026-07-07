@@ -3,6 +3,9 @@ package com.fpt.swp.sealhackathonbe.auth.service.impl;
 import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtFilterService;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,6 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Lọc JWT trên mỗi request để thiết lập người dùng và quyền trong SecurityContext.
@@ -36,6 +40,9 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * JWT:
@@ -73,12 +80,14 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
         try {
             String username = jwtServiceImpl.extractUserName(token);
             String role = jwtServiceImpl.extractRole(token);
+            String userIdClaim = jwtServiceImpl.extractUserId(token);
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(username);
+                // Email có thể trùng giữa tài khoản local và OAuth,
+                // nên ưu tiên nạp đúng user theo claim userId trong JWT.
+                UserDetails userDetails = resolveUserDetails(userIdClaim, username);
 
                 if (!userDetails.isEnabled()) {
                     writeUnauthorized(request, response, "User account is not active");
@@ -114,6 +123,27 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
     }
 
     /**
+     * Nạp user theo claim userId (chính xác tuyệt đối); fallback theo email
+     * cho các token cũ không có claim userId.
+     */
+    private UserDetails resolveUserDetails(String userIdClaim, String username) {
+        if (userIdClaim != null && !userIdClaim.isBlank()) {
+            try {
+                UUID userId = UUID.fromString(userIdClaim);
+                User user = userRepository
+                        .findByUserIdAndIsDeletedFalse(userId)
+                        .orElse(null);
+                if (user != null) {
+                    return new UserPrincipal(user);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Claim userId không hợp lệ thì dùng email.
+            }
+        }
+        return userDetailsService.loadUserByUsername(username);
+    }
+
+    /**
      * Trả lỗi 401 dạng JSON khi xác thực thất bại.
      */
     private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, String message) throws IOException {
@@ -141,6 +171,11 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             return bearer.substring(7);
         }
 
+        String tokenParam = request.getParameter("token");
+        if (tokenParam != null && !tokenParam.trim().isEmpty()) {
+            return tokenParam;
+        }
+
         return null;
     }
 
@@ -157,7 +192,12 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
                 || path.equals("/api/v1/auth/register")
                 || path.equals("/api/v1/auth/refresh")
                 || path.equals("/api/v1/auth/resend-verification-email")
-                || path.equals("/api/v1/auth/verify-email")) {
+                || path.equals("/api/v1/auth/verify-email")
+                || path.equals("/api/v1/auth/forgot-password")
+                || path.equals("/api/v1/auth/reset-password")
+                || path.startsWith("/api/v1/auth/oauth2/")
+                || path.startsWith("/oauth2/authorization/")
+                || path.startsWith("/login/oauth2/code/")) {
             return true;
         }
         if (path.startsWith("/api/v1/public/")) {

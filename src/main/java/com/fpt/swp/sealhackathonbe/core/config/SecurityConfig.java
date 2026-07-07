@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.core.config;
 
+import com.fpt.swp.sealhackathonbe.auth.oauth.OAuth2AuthenticationFailureHandler;
+import com.fpt.swp.sealhackathonbe.auth.oauth.OAuth2AuthenticationSuccessHandler;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtFilterServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,12 @@ public class SecurityConfig {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private OAuth2AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
+
+    @Autowired
+    private OAuth2AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
+
     /**
      * RBAC:
      * Các endpoint công khai không cần JWT để bootstrap xác thực.
@@ -58,6 +66,14 @@ public class SecurityConfig {
             "/api/v1/auth/resend-verification-email",
             "/api/v1/auth/refresh",
             "/api/v1/auth/verify-email",
+            "/auth/forgot-password",
+            "/auth/reset-password",
+            "/auth/oauth2/**",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password",
+            "/api/v1/auth/oauth2/**",
+            "/oauth2/authorization/**",
+            "/login/oauth2/code/**",
             "/api/v1/public/**",
             "/api/v1/awards/events/total-prize"  // Public: landing page stats
     };
@@ -129,6 +145,14 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
+                )
+
+                // OAuth:
+                // Đăng nhập Google; kết quả được đổi qua code một lần,
+                // không đưa JWT thô lên URL redirect.
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oauth2AuthenticationSuccessHandler)
+                        .failureHandler(oauth2AuthenticationFailureHandler)
                 )
 
                 .addFilterBefore(

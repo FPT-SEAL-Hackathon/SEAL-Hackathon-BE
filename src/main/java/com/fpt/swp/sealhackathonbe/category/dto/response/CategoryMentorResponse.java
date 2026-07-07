@@ -12,16 +12,16 @@ import java.util.UUID;
 @Setter
 @Builder
 public class CategoryMentorResponse {
-    private UUID categoryMentorId;
+    private UUID categoryExpertId;
 
     private UUID categoryId;
 
-    private UUID mentorId;
+    private UUID expertId;
     private String fullName;
     private String email;
     private String phone;
-    private String mentorName;
-    private String mentorEmail;
+    private String expertName;
+    private String expertEmail;
 
     private LocalDateTime assignedAt;
 }

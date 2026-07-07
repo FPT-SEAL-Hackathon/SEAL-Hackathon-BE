@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,14 +24,39 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /**
      * RBAC:
      * Nạp kèm role/status để quyết định xác thực và phân quyền.
+     * Email không còn UNIQUE toàn cục (local + OAuth có thể trùng email),
+     * nên phương thức này được định nghĩa TẤT ĐỊNH: ưu tiên tài khoản
+     * local-enabled, chưa xóa, tạo sớm nhất.
+     */
+    default User findByEmail(String email) {
+        return findFirstByEmailAndIsDeletedFalseOrderByLocalLoginEnabledDescCreatedAtAsc(email)
+                .orElse(null);
+    }
+
+    @EntityGraph(attributePaths = {"userType", "accountStatus"})
+    Optional<User> findFirstByEmailAndIsDeletedFalseOrderByLocalLoginEnabledDescCreatedAtAsc(String email);
+
+    /**
+     * Tìm đúng tài khoản LOCAL (đăng nhập được bằng mật khẩu) theo email.
      */
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
-    User findByEmail(String email);
+    Optional<User> findFirstByEmailAndLocalLoginEnabledTrueAndIsDeletedFalseOrderByCreatedAtAsc(String email);
 
     /**
      * Kiểm tra email đã được đăng ký để tránh trùng tài khoản.
      */
     boolean existsByEmail(String email);
+
+    List<User> findByEmailAndIsDeletedFalse(String email);
+
+    // Phát hiện hồ sơ trùng khi complete-profile (loại trừ chính user hiện tại).
+    boolean existsByEmailAndIsDeletedFalseAndUserIdNot(String email, UUID userId);
+
+    boolean existsByPhoneAndIsDeletedFalseAndUserIdNot(String phone, UUID userId);
+
+    boolean existsByFptStudentCodeAndIsDeletedFalseAndUserIdNot(String fptStudentCode, UUID userId);
+
+    boolean existsByExternalStudentCodeAndIsDeletedFalseAndUserIdNot(String externalStudentCode, UUID userId);
 
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     Optional<User> findByUserIdAndIsDeletedFalse(UUID userId);
