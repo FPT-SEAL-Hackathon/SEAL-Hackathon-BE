@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,12 +26,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "Users",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = "Email")
-        }
-)
+// Email không còn UNIQUE toàn cục: tài khoản LOCAL và tài khoản GOOGLE
+// được phép tồn tại song song với cùng một email (xem migration 20260704).
+@Table(name = "Users")
 public class User {
     @Id
     @Column(name = "UserID", nullable = false, updatable = false)
@@ -88,6 +84,10 @@ public class User {
 
     @Column(name = "IsDeleted", nullable = false)
     private Boolean isDeleted = false;
+
+    // Tài khoản OAuth-only có LocalLoginEnabled = false cho tới khi tự đặt mật khẩu local.
+    @Column(name = "LocalLoginEnabled", nullable = false)
+    private Boolean localLoginEnabled = true;
 
     /**
      * RBAC:
