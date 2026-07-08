@@ -1,5 +1,9 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
@@ -23,9 +27,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamDisqualificationServiceImpl implements TeamDisqualificationService {
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            UUID.fromString("60000000-0000-0000-0000-000000000003");
+            TeamStatusConstants.APPROVED;
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
-            UUID.fromString("50000000-0000-0000-0000-000000000004");
+            SubmissionStatusConstants.DISQUALIFIED;
 
     private final TeamsRepository teamsRepository;
     private final DisqualificationsRepository disqualificationsRepository;

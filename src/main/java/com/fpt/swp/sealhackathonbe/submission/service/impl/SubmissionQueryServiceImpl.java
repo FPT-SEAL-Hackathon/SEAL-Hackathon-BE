@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
@@ -17,10 +19,10 @@ import java.util.UUID;
 public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     // Phan query cua luong submission: repository doc bang Submissions, mapper chuyen entity sang DTO.
     private static final UUID SUBMISSION_STATUS_SCORED =
-            UUID.fromString("50000000-0000-0000-0000-000000000005");
+            SubmissionStatusConstants.SCORED;
 
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
-            UUID.fromString("50000000-0000-0000-0000-000000000004");
+            SubmissionStatusConstants.DISQUALIFIED;
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamMembersRepository teamMembersRepository;
