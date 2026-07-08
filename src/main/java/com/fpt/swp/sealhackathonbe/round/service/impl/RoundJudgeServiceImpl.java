@@ -12,7 +12,9 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +33,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
     private final RoundMapper roundMapper;
     private final CategoryMentorRepository categoryMentorRepository;
 
@@ -63,6 +66,17 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             if (isMentorInCategory) {
                 throw new IllegalArgumentException(
                         "Judge " + judge.getFullName() + " is already a mentor in this category");
+            }
+        }
+
+        UserType expertType = userTypeRepository.findByTypeName("Expert")
+                .orElseThrow(() -> new RuntimeException("Expert role not found"));
+
+        for (User judge : judges) {
+            String typeName = judge.getUserType().getTypeName();
+            if (typeName.toLowerCase().contains("mentor")) {
+                judge.setUserType(expertType);
+                userRepository.save(judge);
             }
         }
 

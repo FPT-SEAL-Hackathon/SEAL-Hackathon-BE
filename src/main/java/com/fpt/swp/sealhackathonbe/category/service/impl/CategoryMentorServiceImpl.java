@@ -11,7 +11,9 @@ import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final CategoryMentorRepository categoryMentorRepository;
     private final CategoryMapper categoryMapper;
     private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
 
     @Override
     public List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request) {
@@ -39,6 +42,17 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
             throw new IllegalArgumentException("No any mentors found");
         }
         List<UUID> existingMentorIds = categoryMentorRepository.findMentorIdsByCategoryId(categoryId);
+
+        UserType expertType = userTypeRepository.findByTypeName("Expert")
+                .orElseThrow(() -> new RuntimeException("Expert role not found"));
+
+        for (User mentor : mentors) {
+            String typeName = mentor.getUserType().getTypeName();
+            if (typeName.toLowerCase().contains("judge")) {
+                mentor.setUserType(expertType);
+                userRepository.save(mentor);
+            }
+        }
 
         List<CategoryMentor> categoryMentors = mentors
                 .stream()
