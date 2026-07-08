@@ -28,4 +28,7 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
 
     boolean existsByCategoryCategoryIdAndRoundNameIgnoreCase(UUID categoryId, String roundName);
 
+    @Query("SELECT COUNT(r) FROM Round r WHERE r.category.event.eventId = :eventId")
+    long countByEventId(@Param("eventId") UUID eventId);
+
 }

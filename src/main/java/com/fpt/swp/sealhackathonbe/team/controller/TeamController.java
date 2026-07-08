@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.controller;
 
+import com.fpt.swp.sealhackathonbe.eventparticipant.dto.EventParticipantResponse;
+import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -10,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TransferTeamLeadershipRequest;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
@@ -44,6 +47,7 @@ public class TeamController {
     private final TeamService teamService;
     private final TeamJoinRequestService teamJoinRequestService;
     private final TeamDisqualificationService teamDisqualificationService;
+    private final EventParticipantService eventParticipantService;
     private final UserRepository userRepository;
 
     // Quyen hien tai: moi tai khoan co JWT hop le deu co the tao team.
@@ -109,6 +113,8 @@ public class TeamController {
 
         if (Boolean.TRUE.equals(request.getApproved())) {
             TeamResponse team = teamService.activateTeam(teamId, request.getNote(), currentUserId(authentication));
+            // Duyệt team = duyệt luôn toàn bộ EventParticipant PENDING của thành viên.
+            eventParticipantService.applyTeamDecision(teamId, true, request.getNote(), currentUserId(authentication));
             response.setTeam(team);
             response.setMessage("Team approved for competition");
         } else {
@@ -124,11 +130,45 @@ public class TeamController {
                     disqualifyRequest,
                     currentUserId(authentication)
             );
+            // Từ chối team = từ chối toàn bộ participant PENDING của thành viên.
+            eventParticipantService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
             response.setDisqualification(disqualification);
             response.setMessage("Team disqualified from competition");
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Team-first: leader đăng ký cả team vào sự kiện của team.
+     * Tạo EventParticipant PENDING cho mọi thành viên, chờ organizer duyệt theo team.
+     */
+    @Operation(summary = "Register the whole team for its event (leader only)")
+    @PostMapping("/teams/{teamId}/register-event")
+    public ResponseEntity<List<EventParticipantResponse>> registerTeamForEvent(
+            @PathVariable UUID teamId,
+            Authentication authentication
+    ) {
+        List<EventParticipantResponse> response =
+                eventParticipantService.registerTeam(teamId, currentUserId(authentication));
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Leader rút đăng ký khi organizer chưa xử lý (toàn bộ còn PENDING)
+     * để chỉnh đội hình rồi đăng ký lại.
+     */
+    @Operation(summary = "Withdraw the team's event registration while still pending (leader only)")
+    @DeleteMapping("/teams/{teamId}/register-event")
+    public ResponseEntity<java.util.Map<String, Object>> withdrawTeamRegistration(
+            @PathVariable UUID teamId,
+            Authentication authentication
+    ) {
+        eventParticipantService.withdrawTeamRegistration(teamId, currentUserId(authentication));
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", "Team registration withdrawn"
+        ));
     }
 
     // Quyen hien tai: chi tai khoan dang la member active cua teamId.
@@ -202,11 +242,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    // Quyen hien tai: leader duoc kick member cua team; member duoc tu roi team.
-    // Leader khong the bi xoa va team khong duoc thap hon MinTeamSize.
-    // Seed ban dau moi team co 2 nguoi, bang MinTeamSize = 2, nen chua the xoa thanh cong.
-    // Ca thanh cong: alpha leader duyet applicant vao Alpha truoc, sau do dang nhap
-    // api.alpha.leader@seal.test va xoa userId A1000000-0000-0000-0000-000000000011.
+    // Leader duoc kick member hoac tu roi; member duoc tu roi team.
+    // Neu leader roi, service tu chuyen quyen hoac chuyen team sang Withdrawn neu khong con ai.
     @Operation(summary = "Remove a member or leave a team")
     @DeleteMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
@@ -217,6 +254,24 @@ public class TeamController {
         // Service phan biet leader kick member va member tu roi team.
         teamService.removeMember(teamId, userId, currentUserId(authentication));
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Transfer team leadership",
+            description = "The current leader transfers leadership to another active member of the same team."
+    )
+    @PutMapping("/teams/{teamId}/leader")
+    public ResponseEntity<TeamResponse> transferLeadership(
+            @PathVariable UUID teamId,
+            @Valid @RequestBody TransferTeamLeadershipRequest request,
+            Authentication authentication
+    ) {
+        TeamResponse response = teamService.transferLeadership(
+                teamId,
+                request.getNewLeaderUserId(),
+                currentUserId(authentication)
+        );
+        return ResponseEntity.ok(response);
     }
 
     @Operation(

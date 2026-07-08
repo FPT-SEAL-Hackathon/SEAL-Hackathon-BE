@@ -547,11 +547,15 @@ CREATE TABLE TeamJoinRequests (
                                   RespondedAt DATETIME2 NULL,
                                   RespondedByID UNIQUEIDENTIFIER NULL REFERENCES Users(UserID),
                                   ResponseNote NVARCHAR(500) NULL,
-                                  CONSTRAINT UQ_TeamJoinRequests_Pending UNIQUE (TeamID, UserID, RequestStatus),
                                   CONSTRAINT CK_TeamJoinRequests_Status CHECK (
                                       RequestStatus IN (N'PENDING', N'APPROVED', N'REJECTED', N'CANCELLED')
                                       )
 );
+GO
+
+CREATE UNIQUE INDEX UQ_TeamJoinRequests_Pending
+    ON TeamJoinRequests(TeamID, UserID)
+    WHERE RequestStatus = N'PENDING';
 GO
 
 -- ============================================================
