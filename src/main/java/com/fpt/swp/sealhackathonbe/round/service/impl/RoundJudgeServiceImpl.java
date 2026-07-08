@@ -38,7 +38,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
         Round round = roundRepository
                 .findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
-        List<User> judges = userRepository.findAllById(request.getUserIds());
+        List<User> judges = userRepository.findAllById(request.getJudgeIds());
         if (judges.isEmpty()) {
             throw new IllegalArgumentException("Judges not found");
         }
@@ -112,19 +112,16 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
-    public List<UserResponse> getAllJudges() {
+    public List<JudgeResponse> getAllJudges() {
         return userRepository.findAll()
                 .stream()
                 .filter(user -> {
                     String type = user.getUserType().getTypeName();
                     return type.equalsIgnoreCase("Internal Judge")
-                            || type.equalsIgnoreCase("Guest Judge");
+                            || type.equalsIgnoreCase("Guest Judge")
+                            || type.equalsIgnoreCase("Expert");
                 })
-                .map(user -> UserResponse.builder()
-                        .userId(user.getUserId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .build())
+                .map(roundMapper::toJudgeResponse)
                 .toList();
     }
 }

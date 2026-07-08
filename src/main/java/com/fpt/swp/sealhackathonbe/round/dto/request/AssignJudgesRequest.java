@@ -10,5 +10,5 @@ import java.util.UUID;
 @Getter
 @Setter
 public class AssignJudgesRequest {
-    private List<UUID> userIds;
+    private List<UUID> judgeIds;
 }

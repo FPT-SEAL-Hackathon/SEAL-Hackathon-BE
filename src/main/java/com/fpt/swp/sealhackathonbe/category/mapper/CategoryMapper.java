@@ -39,7 +39,7 @@ public class CategoryMapper {
 
     public MentorResponse toMentorResponse(User mentor) {
         return MentorResponse.builder()
-                .mentorId(mentor.getUserId())
+                .id(mentor.getUserId())
                 .fullName(mentor.getFullName())
                 .email(mentor.getEmail())
                 .phone(mentor.getPhone())
