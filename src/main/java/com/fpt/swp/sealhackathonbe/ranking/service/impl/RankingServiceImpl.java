@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ranking.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.RankingStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judging.entity.Judging;
@@ -216,7 +218,7 @@ public class RankingServiceImpl implements RankingService {
                 continue;
             }
 
-            UUID completedStatusId = UUID.fromString("40000000-0000-0000-0000-000000000004");
+            UUID completedStatusId = RankingStatusConstants.RANKING_COMPLETED;
             if (!completedStatusId.equals(finalRound.getRoundStatusId())) {
                 log.warn("Skipping Event Ranking computation for Category {} because final round is not Completed.", categoryRef.getCategoryName());
                 continue;

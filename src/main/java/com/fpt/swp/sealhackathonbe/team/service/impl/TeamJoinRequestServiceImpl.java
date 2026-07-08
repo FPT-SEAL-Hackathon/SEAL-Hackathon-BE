@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
@@ -32,11 +34,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+            TeamStatusConstants.PENDING;
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            UUID.fromString("60000000-0000-0000-0000-000000000003");
+            TeamStatusConstants.APPROVED;
     private static final UUID TEAM_STATUS_WITHDRAWN =
-            UUID.fromString("60000000-0000-0000-0000-000000000004");
+            TeamStatusConstants.DISQUALIFIED;
 
     private static final String REQUEST_STATUS_PENDING = "PENDING";
     private static final String REQUEST_STATUS_APPROVED = "APPROVED";

@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.auth.oauth;
 
+import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
+
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserOAuthAccount;
@@ -26,7 +28,7 @@ import java.util.UUID;
 public class OAuth2LoginService {
 
     private static final UUID EXTERNAL_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000002");
+            UserRoleConstants.ROLE_USER;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
