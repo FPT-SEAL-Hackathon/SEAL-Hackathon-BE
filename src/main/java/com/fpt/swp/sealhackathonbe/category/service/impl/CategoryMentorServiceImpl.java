@@ -38,10 +38,12 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
         if (mentors.isEmpty()) {
             throw new IllegalArgumentException("No any mentors found");
         }
+        List<UUID> existingMentorIds = categoryMentorRepository.findMentorIdsByCategoryId(categoryId);
+
         List<CategoryMentor> categoryMentors = mentors
                 .stream()
+                .filter(mentor -> !existingMentorIds.contains(mentor.getUserId()))
                 .map(mentor -> CategoryMentor.builder()
-                        .categoryMentorId(UUID.randomUUID())
                         .category(category)
                         .mentor(mentor)
                         .assignedAt(LocalDateTime.now())
@@ -49,7 +51,9 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 )
                 .toList();
 
-        categoryMentors = categoryMentorRepository.saveAll(categoryMentors);
+        if (!categoryMentors.isEmpty()) {
+            categoryMentors = categoryMentorRepository.saveAll(categoryMentors);
+        }
 
         return categoryMentors.stream()
                 .map(categoryMapper::toCategoryMentorResponse)
