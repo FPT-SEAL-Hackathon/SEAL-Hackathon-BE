@@ -43,7 +43,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new IllegalArgumentException("Judges not found");
         }
 
-        //Get current user
+        // Get current user
         Authentication authentication = SecurityContextHolder
                 .getContext()
                 .getAuthentication();
@@ -53,13 +53,16 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new EntityNotFoundException("Current user not found");
         }
 
-        // BR-19: A Mentor can be a Judge in another Category, but must not judge the same Category where they are assigned as Mentor.
-        List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(round.getCategory().getCategoryId());
+        // BR-19: A Mentor can be a Judge in another Category, but must not judge the
+        // same Category where they are assigned as Mentor.
+        List<CategoryMentor> categoryMentors = categoryMentorRepository
+                .findByCategory_CategoryId(round.getCategory().getCategoryId());
         for (User judge : judges) {
             boolean isMentorInCategory = categoryMentors.stream()
                     .anyMatch(cm -> cm.getMentor().getUserId().equals(judge.getUserId()));
             if (isMentorInCategory) {
-                throw new IllegalArgumentException("Judge " + judge.getFullName() + " is already a mentor in this category");
+                throw new IllegalArgumentException(
+                        "Judge " + judge.getFullName() + " is already a mentor in this category");
             }
         }
 
@@ -71,8 +74,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .judge(judge)
                         .assignedAt(LocalDateTime.now())
                         .assignedBy(user)
-                        .build()
-                )
+                        .build())
                 .toList();
         roundJudges = roundJudgeRepository.saveAll(roundJudges);
         return roundJudges.stream()
@@ -107,7 +109,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     public void removeJudge(UUID roundJudgeId) {
         RoundJudge roundJudge = roundJudgeRepository.findById(roundJudgeId)
                 .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
-        //Add constraints before delete later
+        // Add constraints before delete later
         roundJudgeRepository.delete(roundJudge);
     }
 

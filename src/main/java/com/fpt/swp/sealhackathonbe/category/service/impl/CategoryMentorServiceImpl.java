@@ -47,8 +47,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                         .category(category)
                         .mentor(mentor)
                         .assignedAt(LocalDateTime.now())
-                        .build()
-                )
+                        .build())
                 .toList();
 
         if (!categoryMentors.isEmpty()) {
@@ -63,13 +62,15 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<UserResponse> getAllMentors() {
         return userRepository.findAll()
                 .stream()
-                .filter(user -> user.getUserType().getTypeName().equalsIgnoreCase("Internal Judge"))
+                .filter(user -> {
+                    String type = user.getUserType().getTypeName();
+                    return type.equalsIgnoreCase("Mentor") || type.equalsIgnoreCase("Expert");
+                })
                 .map(user -> UserResponse.builder()
                         .userId(user.getUserId())
                         .fullName(user.getFullName())
                         .email(user.getEmail())
-                        .build()
-                )
+                        .build())
                 .toList();
     }
 
@@ -77,7 +78,8 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new EntityNotFoundException("Category not found");
-        };
+        }
+        ;
         return categoryMentorRepository.findByCategoryCategoryId(categoryId)
                 .stream()
                 .map(categoryMapper::toCategoryMentorResponse)

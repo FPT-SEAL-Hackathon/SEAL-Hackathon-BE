@@ -386,6 +386,6 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     private boolean isMentorRole(User user) {
         String roleName = getRoleName(user);
-        return "Internal Judge".equalsIgnoreCase(roleName) || "Expert".equalsIgnoreCase(roleName);
+        return "Mentor".equalsIgnoreCase(roleName) || "Expert".equalsIgnoreCase(roleName);
     }
 }
