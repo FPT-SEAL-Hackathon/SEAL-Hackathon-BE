@@ -8,7 +8,6 @@ import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -18,6 +17,7 @@ import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -53,7 +53,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final AuditLogRepository auditLogRepository;
-    private final EventParticipantService eventParticipantService;
+    private final TeamEventRegistrationService teamEventRegistrationService;
 
     @Override
     @Transactional
@@ -63,7 +63,7 @@ public class TeamServiceImpl implements TeamService {
         Event event = getActiveEvent(request.getEventId());
         // Team-first: tạo team không cần là EventParticipant — chỉ cần student
         // ACTIVE với hồ sơ đầy đủ; đăng ký event là bước sau do leader thực hiện.
-        eventParticipantService.assertEligibleStudent(currentUserId);
+        teamEventRegistrationService.assertEligibleStudent(currentUserId);
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
@@ -206,7 +206,7 @@ public class TeamServiceImpl implements TeamService {
         member.setActive(false);
         member.setLeftAt(now);
         teamMembersRepository.save(member);
-        eventParticipantService.removePendingRegistration(team.getEventId(), userId);
+        teamEventRegistrationService.removePendingRegistration(team.getEventId(), userId);
 
         if (team.getLeaderUserId().equals(userId)) {
             List<TeamMembers> remainingMembers =

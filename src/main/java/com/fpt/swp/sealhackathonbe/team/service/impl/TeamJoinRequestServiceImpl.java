@@ -5,7 +5,6 @@ import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.event.TeamJoinApprovedEvent;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
@@ -15,6 +14,7 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -47,7 +47,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
-    private final EventParticipantService eventParticipantService;
+    private final TeamEventRegistrationService teamEventRegistrationService;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -62,7 +62,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         validateTeamCanReceiveJoinRequest(team);
         // Team-first: xin vào team chỉ cần là student đủ điều kiện, không cần
         // là EventParticipant; nhưng đội hình bị khóa sau khi team đã đăng ký event.
-        eventParticipantService.assertEligibleStudent(currentUserId);
+        teamEventRegistrationService.assertEligibleStudent(currentUserId);
         assertRosterNotLocked(team);
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, team.getEventId())) {
@@ -128,7 +128,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         if (REQUEST_STATUS_APPROVED.equals(request.getAction())) {
             validateTeamCanReceiveJoinRequest(team);
-            eventParticipantService.assertEligibleStudent(joinRequest.getUserId());
+            teamEventRegistrationService.assertEligibleStudent(joinRequest.getUserId());
             assertRosterNotLocked(team);
 
             if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(
