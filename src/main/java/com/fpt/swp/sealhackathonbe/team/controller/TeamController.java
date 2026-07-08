@@ -12,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TransferTeamLeadershipRequest;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
@@ -241,11 +242,8 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    // Quyen hien tai: leader duoc kick member cua team; member duoc tu roi team.
-    // Leader khong the bi xoa va team khong duoc thap hon MinTeamSize.
-    // Seed ban dau moi team co 2 nguoi, bang MinTeamSize = 2, nen chua the xoa thanh cong.
-    // Ca thanh cong: alpha leader duyet applicant vao Alpha truoc, sau do dang nhap
-    // api.alpha.leader@seal.test va xoa userId A1000000-0000-0000-0000-000000000011.
+    // Leader duoc kick member hoac tu roi; member duoc tu roi team.
+    // Neu leader roi, service tu chuyen quyen hoac chuyen team sang Withdrawn neu khong con ai.
     @Operation(summary = "Remove a member or leave a team")
     @DeleteMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
@@ -256,6 +254,24 @@ public class TeamController {
         // Service phan biet leader kick member va member tu roi team.
         teamService.removeMember(teamId, userId, currentUserId(authentication));
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Transfer team leadership",
+            description = "The current leader transfers leadership to another active member of the same team."
+    )
+    @PutMapping("/teams/{teamId}/leader")
+    public ResponseEntity<TeamResponse> transferLeadership(
+            @PathVariable UUID teamId,
+            @Valid @RequestBody TransferTeamLeadershipRequest request,
+            Authentication authentication
+    ) {
+        TeamResponse response = teamService.transferLeadership(
+                teamId,
+                request.getNewLeaderUserId(),
+                currentUserId(authentication)
+        );
+        return ResponseEntity.ok(response);
     }
 
     @Operation(

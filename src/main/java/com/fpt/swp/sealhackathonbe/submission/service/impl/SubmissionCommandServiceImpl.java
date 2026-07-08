@@ -69,7 +69,6 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
-        eventParticipantService.assertActiveParticipant(team.getEventId(), currentUserId);
         validateTeamCanSubmit(team);
         validateTeamCanSubmitToRound(team, request.getRoundId());
         validateSubmissionDeadline(request.getRoundId());
