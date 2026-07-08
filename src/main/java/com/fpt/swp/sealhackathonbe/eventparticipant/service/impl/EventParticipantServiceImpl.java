@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.eventparticipant.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
+
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
@@ -56,9 +58,9 @@ public class EventParticipantServiceImpl implements EventParticipantService {
     private static final String STATUS_TEMPORARY = "TEMPORARY";
     private static final String STATUS_UNVERIFIED = "UNVERIFIED";
     private static final UUID FPT_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000001");
+            UserRoleConstants.ROLE_ADMIN;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000002");
+            UserRoleConstants.ROLE_USER;
 
     private final EventParticipantRepository eventParticipantRepository;
     private final ParticipantStatusRepository participantStatusRepository;

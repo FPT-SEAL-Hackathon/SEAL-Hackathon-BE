@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
@@ -34,17 +36,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
-            UUID.fromString("60000000-0000-0000-0000-000000000001");
+            TeamStatusConstants.DRAFT;
     private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+            TeamStatusConstants.PENDING;
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            UUID.fromString("60000000-0000-0000-0000-000000000003");
+            TeamStatusConstants.APPROVED;
     private static final UUID TEAM_STATUS_WITHDRAWN =
-            UUID.fromString("60000000-0000-0000-0000-000000000004");
+            TeamStatusConstants.DISQUALIFIED;
     // Dư thừa hiện tại: chưa có nghiệp vụ nào trong class này chuyển team sang ACTIVE.
     // Giữ comment để khi bổ sung luồng kích hoạt team có thể dùng lại đúng status ID.
     // private static final UUID TEAM_STATUS_ACTIVE =
-    //         UUID.fromString("60000000-0000-0000-0000-000000000002");
+    //         TeamStatusConstants.PENDING;
 
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;

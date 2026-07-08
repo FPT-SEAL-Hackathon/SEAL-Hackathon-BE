@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
+import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
+
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
@@ -45,9 +47,9 @@ import java.util.UUID;
 @Service
 public class UserService {
     private static final UUID FPT_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000001");
+            UserRoleConstants.ROLE_ADMIN;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000002");
+            UserRoleConstants.ROLE_USER;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int VERIFICATION_TOKEN_BYTES = 32;
 

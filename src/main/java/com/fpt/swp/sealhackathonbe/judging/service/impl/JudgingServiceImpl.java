@@ -8,6 +8,7 @@ import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
@@ -15,8 +16,10 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,14 +61,14 @@ public class JudgingServiceImpl implements JudgingService {
         // 2. Fetch & validate that the actor (audit user) exists
         User actor = authenticationServiceImpl.getCurrentUser();
         if (actor == null) {
-            throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
+            throw new AccessDeniedException("Actor not found from token");
         }
 
         // 3. Verify that the actor is a judge in this round using RoundJudgeService
         List<JudgeResponse> judgesInRound = roundJudgeService.getJudgesByRound(submission.getRoundId());
         boolean isJudge = judgesInRound.stream().anyMatch(j -> j.getJudgeId().equals(actor.getUserId()));
         if (!isJudge) {
-            throw new org.springframework.security.access.AccessDeniedException("You are not assigned as a judge for this round.");
+            throw new AccessDeniedException("You are not assigned as a judge for this round.");
         }
 
         // Fetch the RoundJudge entity
@@ -144,6 +147,12 @@ public class JudgingServiceImpl implements JudgingService {
 
         judgingRepository.saveAll(newJudgings);
         evaluationAuditLogRepository.saveAll(auditLogs);
+        
+        // Update submission status to In Progress if it's not Disqualified
+        if (!submission.getSubmissionStatusId().equals(SubmissionStatusConstants.DISQUALIFIED)) {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+            submissionRepository.save(submission);
+        }
     }
 
     @Override
