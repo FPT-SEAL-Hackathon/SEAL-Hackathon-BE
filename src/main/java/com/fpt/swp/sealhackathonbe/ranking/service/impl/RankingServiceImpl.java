@@ -70,9 +70,6 @@ public class RankingServiceImpl implements RankingService {
                 .map(DisqualifiedSubmissionResponse::getSubmissionId)
                 .toList();
 
-        List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(roundId).stream()
-                .map(SubmissionResponse::getTeamId)
-                .toList();
 
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
                 .stream()
