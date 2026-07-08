@@ -22,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
+import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
+import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +37,8 @@ public class JudgingServiceImpl implements JudgingService {
     private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundCriterionRepository roundCriterionRepository;
     private final AuthenticationServiceImpl authenticationServiceImpl;
-    private final com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService roundJudgeService;
-    private final com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository roundJudgeRepository;
+    private final RoundJudgeService roundJudgeService;
+    private final RoundJudgeRepository roundJudgeRepository;
 
 
     @Override
@@ -67,7 +72,15 @@ public class JudgingServiceImpl implements JudgingService {
         RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
                 .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
 
-        // 4. Extract Team and Event from the submission hierarchy
+        // 4. Check Judging Deadline
+        Round round = judge.getRound();
+        if (round != null && round.getJudgingDeadline() != null) {
+            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                throw new IllegalStateException("The judging deadline for this round has passed.");
+            }
+        }
+
+        // 5. Extract Team and Event from the submission hierarchy
         Teams team = submission.getTeam();
         Event event = (team != null) ? team.getEvent() : null;
         if (event == null) {
@@ -135,7 +148,7 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional
-    public void updateJudging(List<com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO> dtos) {
+    public void updateJudging(List<UpdateScoreSubmissionDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             throw new IllegalArgumentException("Score update list cannot be empty");
         }
@@ -149,7 +162,7 @@ public class JudgingServiceImpl implements JudgingService {
         List<Judging> updatedJudgings = new ArrayList<>();
         List<EvaluationAuditLog> auditLogs = new ArrayList<>();
 
-        for (com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO dto : dtos) {
+        for (UpdateScoreSubmissionDTO dto : dtos) {
             // 2. Fetch & validate that the judging exists
             Judging existingJudging = judgingRepository.findById(dto.getJudgingId())
                     .orElseThrow(() -> new EntityNotFoundException("Judging not found with ID: " + dto.getJudgingId()));
@@ -161,7 +174,15 @@ public class JudgingServiceImpl implements JudgingService {
 
             RoundCriterion criterion = existingJudging.getRoundCriterion();
 
-            // 4. Validate that the score value does not exceed the maximum allowed value
+            // 4. Check Judging Deadline
+            Round round = existingJudging.getRoundJudge().getRound();
+            if (round != null && round.getJudgingDeadline() != null) {
+                if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                    throw new IllegalStateException("The judging deadline for this round has passed.");
+                }
+            }
+
+            // 5. Validate that the score value does not exceed the maximum allowed value
             if (dto.getScoreValue() != null && dto.getScoreValue().compareTo(criterion.getMaxScore()) > 0) {
                 throw new IllegalArgumentException(String.format(
                         "Score value %s exceeds the maximum allowed value %s for criterion '%s'.",
@@ -278,10 +299,10 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
+    public List<EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
         return evaluationAuditLogRepository.findByEvent_EventIdOrderByCreatedAtDesc(eventId)
                 .stream()
-                .map(log -> com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO.builder()
+                .map(log -> EvaluationAuditLogDTO.builder()
                         .id(log.getId())
                         .eventId(log.getEvent() != null ? log.getEvent().getEventId() : null)
                         .actionType(log.getActionType())
