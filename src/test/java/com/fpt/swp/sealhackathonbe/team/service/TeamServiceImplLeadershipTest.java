@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -41,7 +40,7 @@ class TeamServiceImplLeadershipTest {
     private TeamMembersRepository teamMembersRepository;
 
     @Mock
-    private EventParticipantService eventParticipantService;
+    private TeamEventRegistrationService teamEventRegistrationService;
 
     @InjectMocks
     private TeamServiceImpl teamService;

@@ -43,7 +43,7 @@ public class CategoryMentorController {
     }
 
     @GetMapping("/users/mentors")
-    public ResponseEntity<List<UserResponse>> getAllMentors() {
+    public ResponseEntity<List<MentorResponse>> getAllMentors() {
         return ResponseEntity.ok(categoryMentorService.getAllMentors());
     }
 
