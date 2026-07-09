@@ -104,4 +104,12 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .map(categoryMapper::toCategoryMentorResponse)
                 .toList();
     }
+
+    @Override
+    public void removeMentor(UUID categoryId, UUID mentorId) {
+        CategoryMentor cm = categoryMentorRepository
+                .findByCategory_CategoryIdAndMentor_UserId(categoryId, mentorId)
+                .orElseThrow(() -> new EntityNotFoundException("Mentor is not assigned to this category"));
+        categoryMentorRepository.delete(cm);
+    }
 }

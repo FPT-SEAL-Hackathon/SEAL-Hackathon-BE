@@ -14,4 +14,6 @@ public interface CategoryMentorService {
     List<UserResponse> getAllMentors();
     List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId);
     List<CategoryMentorResponse> getCategoryMentors(UUID categoryId);
+    void removeMentor(UUID categoryId, UUID mentorId);
 }
+
