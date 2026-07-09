@@ -58,4 +58,8 @@ public class RoundJudgeController {
         return ResponseEntity.ok(roundJudgeService.getAllJudges());
     }
 
+    @GetMapping("/public/test-judges")
+    public ResponseEntity<List<JudgeResponse>> testJudges() {
+        return ResponseEntity.ok(roundJudgeService.getAllJudges());
+    }
 }

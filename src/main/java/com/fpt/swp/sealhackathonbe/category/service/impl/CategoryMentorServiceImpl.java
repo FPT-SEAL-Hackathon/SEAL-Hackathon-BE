@@ -70,17 +70,26 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .toList();
     }
 
-    public List<MentorResponse> getAllMentors() {
-        return userRepository.findAll()
+    public List<UserResponse> getAllMentors() {
+        return userRepository.findExpertsMentorsJudges()
                 .stream()
-                .filter(user -> {
-                    String type = user.getUserType().getTypeName();
-                    return type.equalsIgnoreCase("Internal Judge")
-                            || type.equalsIgnoreCase("Mentor")
-                            || type.equalsIgnoreCase("Expert");
-                })
-                .map(categoryMapper::toMentorResponse)
+                .map(user -> UserResponse.builder()
+                        .userId(user.getUserId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .phone(user.getPhone())
+                        .role(toApiName(getRoleName(user)))
+                        .roleName(getRoleName(user))
+                        .build())
                 .toList();
+    }
+
+    private String getRoleName(User user) {
+        return user.getUserType() != null ? user.getUserType().getTypeName() : null;
+    }
+
+    private String toApiName(String value) {
+        return value == null ? null : value.trim().replace(' ', '_').toUpperCase();
     }
 
     @Override

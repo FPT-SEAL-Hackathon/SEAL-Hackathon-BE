@@ -25,8 +25,7 @@ public class CategoryMentorController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> assignMentors(
             @PathVariable UUID categoryId,
-            @Valid @RequestBody AssignMentorsRequest request
-            ) {
+            @Valid @RequestBody AssignMentorsRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(categoryMentorService.assignMentors(categoryId, request));
@@ -36,14 +35,13 @@ public class CategoryMentorController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<Map<String, Object>> removeMentor(
             @PathVariable UUID categoryId,
-            @PathVariable UUID mentorId
-    ) {
+            @PathVariable UUID mentorId) {
         categoryMentorService.removeMentor(categoryId, mentorId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Expert removed from category"));
     }
 
     @GetMapping("/users/mentors")
-    public ResponseEntity<List<MentorResponse>> getAllMentors() {
+    public ResponseEntity<List<UserResponse>> getAllMentors() {
         return ResponseEntity.ok(categoryMentorService.getAllMentors());
     }
 
@@ -55,10 +53,8 @@ public class CategoryMentorController {
     @GetMapping("/{categoryId}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> getCategoryMentors(
-            @PathVariable UUID categoryId
-    ) {
+            @PathVariable UUID categoryId) {
         return ResponseEntity
                 .ok(categoryMentorService.getCategoryMentors(categoryId));
     }
 }
-

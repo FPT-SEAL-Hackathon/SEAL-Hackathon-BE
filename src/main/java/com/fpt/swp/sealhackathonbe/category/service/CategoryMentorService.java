@@ -11,9 +11,12 @@ import java.util.UUID;
 @Service
 public interface CategoryMentorService {
     List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request);
-    List<MentorResponse> getAllMentors();
+
+    List<UserResponse> getAllMentors();
+
     List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId);
+
     List<CategoryMentorResponse> getCategoryMentors(UUID categoryId);
+
     void removeMentor(UUID categoryId, UUID mentorId);
 }
-

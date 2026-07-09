@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,6 +40,10 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundMapper roundMapper;
     private final CategoryMentorRepository categoryMentorRepository;
     private final JudgingRepository judgingRepository;
+    private final NotificationService notificationService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
@@ -103,6 +109,27 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .build())
                 .toList();
         roundJudges = roundJudgeRepository.saveAll(roundJudges);
+
+        for (RoundJudge rj : roundJudges) {
+            try {
+                com.fpt.swp.sealhackathonbe.event.entity.Event event = round.getCategory().getEvent();
+                String title = "New Judge Assignment";
+                String body = String.format("You have been assigned as a Judge for Round: %s in Category: %s, Event: %s.\n" +
+                                "Event Date: %s to %s\n" +
+                                "Event Link: %s/events/%s",
+                        round.getRoundName(),
+                        round.getCategory().getCategoryName(),
+                        event.getEventName(),
+                        event.getEventStartDate(),
+                        event.getEventEndDate(),
+                        frontendUrl,
+                        event.getEventId());
+                notificationService.sendNotification(rj.getJudge().getUserId(), user.getUserId(), event.getEventId(), title, body);
+            } catch (Exception e) {
+                System.err.println("Failed to send notification: " + e.getMessage());
+            }
+        }
+
         return roundJudges.stream()
                 .map(roundMapper::toRoundJudgeResponse)
                 .toList();
@@ -147,15 +174,24 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
 
     @Override
     public List<JudgeResponse> getAllJudges() {
-        return userRepository.findAll()
+        return userRepository.findExpertsMentorsJudges()
                 .stream()
-                .filter(user -> {
-                    String type = user.getUserType().getTypeName();
-                    return type.equalsIgnoreCase("Internal Judge")
-                            || type.equalsIgnoreCase("Guest Judge")
-                            || type.equalsIgnoreCase("Expert");
-                })
-                .map(roundMapper::toJudgeResponse)
+                .map(user -> JudgeResponse.builder()
+                        .judgeId(user.getUserId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .phone(user.getPhone())
+                        .role(toApiName(getRoleName(user)))
+                        .roleName(getRoleName(user))
+                        .build())
                 .toList();
+    }
+
+    private String getRoleName(User user) {
+        return user.getUserType() != null ? user.getUserType().getTypeName() : null;
+    }
+
+    private String toApiName(String value) {
+        return value == null ? null : value.trim().replace(' ', '_').toUpperCase();
     }
 }

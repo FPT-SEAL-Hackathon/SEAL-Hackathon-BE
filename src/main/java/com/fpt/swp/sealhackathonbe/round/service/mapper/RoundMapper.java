@@ -61,6 +61,16 @@ public class RoundMapper {
                 .fullName(judge.getFullName())
                 .email(judge.getEmail())
                 .phone(judge.getPhone())
+                .role(toApiName(getRoleName(judge)))
+                .roleName(getRoleName(judge))
                 .build();
+    }
+
+    private String getRoleName(User user) {
+        return user.getUserType() != null ? user.getUserType().getTypeName() : null;
+    }
+
+    private String toApiName(String value) {
+        return value == null ? null : value.trim().replace(' ', '_').toUpperCase();
     }
 }
