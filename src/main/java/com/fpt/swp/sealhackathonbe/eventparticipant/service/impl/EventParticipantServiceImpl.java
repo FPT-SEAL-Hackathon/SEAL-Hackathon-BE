@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.eventparticipant.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
+
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
@@ -18,10 +20,6 @@ import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantR
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.ParticipantStatusRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
-import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
-import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
-import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -56,9 +54,9 @@ public class EventParticipantServiceImpl implements EventParticipantService {
     private static final String STATUS_TEMPORARY = "TEMPORARY";
     private static final String STATUS_UNVERIFIED = "UNVERIFIED";
     private static final UUID FPT_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000001");
+            UserRoleConstants.ROLE_ADMIN;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000002");
+            UserRoleConstants.ROLE_USER;
 
     private final EventParticipantRepository eventParticipantRepository;
     private final ParticipantStatusRepository participantStatusRepository;
@@ -66,8 +64,6 @@ public class EventParticipantServiceImpl implements EventParticipantService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final AuditLogRepository auditLogRepository;
-    private final TeamsRepository teamsRepository;
-    private final TeamMembersRepository teamMembersRepository;
 
     @Override
     @Transactional
@@ -251,177 +247,6 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         return savedParticipants.stream()
                 .map(this::toResponse)
                 .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public void assertEligibleStudent(UUID userId) {
-        // Guard cho luồng team-first: student ACTIVE + hồ sơ đầy đủ là đủ điều kiện
-        // tạo/join team — KHÔNG cần là EventParticipant trước.
-        validateStudentCanRegister(userId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasRegistration(UUID eventId, UUID userId) {
-        return eventParticipantRepository.existsByEventIdAndUserId(eventId, userId);
-    }
-
-    @Override
-    @Transactional
-    public List<EventParticipantResponse> registerTeam(UUID teamId, UUID currentUserId) {
-        Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
-
-        // Chỉ leader được đăng ký team vào sự kiện.
-        if (!team.getLeaderUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("Only the team leader can register the team for the event.");
-        }
-
-        Event event = getRegisterableEvent(team.getEventId());
-
-        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
-
-        Integer minTeamSize = event.getMinTeamSize();
-        Integer maxTeamSize = event.getMaxTeamSize();
-        if (minTeamSize != null && members.size() < minTeamSize) {
-            throw new BusinessConflictException(
-                    "Team must have at least " + minTeamSize + " members to register.");
-        }
-        if (maxTeamSize != null && members.size() > maxTeamSize) {
-            throw new BusinessConflictException(
-                    "Team must have at most " + maxTeamSize + " members to register.");
-        }
-
-        ParticipantStatus pendingStatus = getRegistrationPendingStatus();
-        LocalDateTime now = LocalDateTime.now();
-        List<EventParticipantResponse> responses = new java.util.ArrayList<>();
-
-        for (TeamMembers member : members) {
-            // Mọi thành viên phải là student ACTIVE với hồ sơ đầy đủ.
-            User memberUser;
-            try {
-                memberUser = validateStudentCanRegister(member.getUserId());
-            } catch (ProfileIncompleteException ex) {
-                User incomplete = userRepository.findById(member.getUserId()).orElse(null);
-                String who = incomplete != null ? incomplete.getFullName() : member.getUserId().toString();
-                throw new ProfileIncompleteException(
-                        "Member \"" + who + "\" must complete their profile before the team can register.");
-            }
-
-            // Đã là participant của event (team này hoặc team khác) thì chặn.
-            if (eventParticipantRepository.existsByEventIdAndUserId(event.getEventId(), member.getUserId())) {
-                throw new BusinessConflictException(
-                        "Member \"" + memberUser.getFullName()
-                                + "\" is already registered for this event. Withdraw first if re-registering.");
-            }
-
-            EventParticipant participant = new EventParticipant();
-            participant.setEventId(event.getEventId());
-            participant.setUserId(member.getUserId());
-            participant.setParticipantStatusId(pendingStatus.getStatusId());
-            participant.setAppliedAt(now);
-
-            EventParticipant saved = saveRegistration(participant);
-            writeTeamRegistrationAuditLog("TEAM_EVENT_REGISTERED", saved, team, currentUserId);
-
-            try {
-                notificationService.sendNotification(
-                        member.getUserId(),
-                        currentUserId,
-                        event.getEventId(),
-                        "Team Registered For Event",
-                        "Your team " + team.getTeamName() + " has been registered for "
-                                + event.getEventName() + " and is waiting for organizer approval."
-                );
-            } catch (Exception ignored) {
-                // Đăng ký không được rollback vì lỗi notification.
-            }
-
-            responses.add(toRegistrationResponse(saved, event, memberUser, pendingStatus));
-        }
-
-        return responses;
-    }
-
-    @Override
-    @Transactional
-    public void withdrawTeamRegistration(UUID teamId, UUID currentUserId) {
-        Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
-
-        if (!team.getLeaderUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("Only the team leader can withdraw the team registration.");
-        }
-
-        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
-        List<EventParticipant> participants = new java.util.ArrayList<>();
-        for (TeamMembers member : members) {
-            eventParticipantRepository
-                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
-                    .ifPresent(participants::add);
-        }
-
-        if (participants.isEmpty()) {
-            throw new BusinessConflictException("Team has not registered for the event yet.");
-        }
-
-        // Chỉ được rút khi TOÀN BỘ còn PENDING; đã duyệt/từ chối thì khóa.
-        for (EventParticipant participant : participants) {
-            if (!isPendingStatus(currentStatusName(participant))) {
-                throw new BusinessConflictException(
-                        "Team registration can no longer be withdrawn because the organizer already processed it.");
-            }
-        }
-
-        for (EventParticipant participant : participants) {
-            writeTeamRegistrationAuditLog("TEAM_EVENT_REGISTRATION_WITHDRAWN", participant, team, currentUserId);
-            eventParticipantRepository.delete(participant);
-        }
-    }
-
-    @Override
-    @Transactional
-    public void applyTeamDecision(UUID teamId, boolean approved, String note, UUID organizerUserId) {
-        Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
-
-        String targetStatus = approved ? STATUS_ACTIVE : STATUS_REJECTED;
-
-        // Duyệt team = duyệt toàn bộ thành viên còn PENDING trong một lượt.
-        for (TeamMembers member : teamMembersRepository.findByTeamIdAndActiveTrue(teamId)) {
-            eventParticipantRepository
-                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
-                    .filter(participant -> isPendingStatus(currentStatusName(participant)))
-                    .ifPresent(participant -> {
-                        String oldStatusName = currentStatusName(participant);
-                        applyStatus(participant, targetStatus, note, organizerUserId);
-                        EventParticipant saved = eventParticipantRepository.save(participant);
-                        writeStatusAuditLog(saved, oldStatusName, currentStatusName(saved), organizerUserId);
-                        notifyParticipantAfterStatusChange(saved, oldStatusName, currentStatusName(saved), organizerUserId);
-                    });
-        }
-    }
-
-    private void writeTeamRegistrationAuditLog(
-            String actionType,
-            EventParticipant participant,
-            Teams team,
-            UUID actorUserId
-    ) {
-        AuditLog auditLog = new AuditLog();
-        auditLog.setActionType(actionType);
-        auditLog.setEntityType("EventParticipants");
-        auditLog.setEntityId(participant.getEventParticipantId());
-        auditLog.setEntityKey(participant.getEventId() + ":" + participant.getUserId());
-        auditLog.setActorUserId(actorUserId);
-        auditLog.setNewValueJson(
-                "{\"teamId\":\"" + team.getTeamId()
-                        + "\",\"eventId\":\"" + participant.getEventId()
-                        + "\",\"userId\":\"" + participant.getUserId() + "\"}"
-        );
-        auditLog.setOccurredAt(LocalDateTime.now());
-        auditLogRepository.save(auditLog);
     }
 
     @Override

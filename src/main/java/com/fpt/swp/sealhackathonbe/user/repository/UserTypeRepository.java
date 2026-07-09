@@ -17,4 +17,9 @@ public interface UserTypeRepository extends JpaRepository<UserType, UUID> {
      * Tìm UserType theo khóa chính.
      */
     Optional<UserType> findByUserTypeId(UUID userTypeId);
+
+    /**
+     * Tìm UserType theo tên.
+     */
+    Optional<UserType> findByTypeName(String typeName);
 }

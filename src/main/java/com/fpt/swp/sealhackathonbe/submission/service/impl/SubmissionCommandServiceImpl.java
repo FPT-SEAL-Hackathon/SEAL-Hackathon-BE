@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
@@ -28,13 +30,13 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     // Phan command cua luong submission.
     // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT authentication.
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            UUID.fromString("60000000-0000-0000-0000-000000000003");
+            TeamStatusConstants.APPROVED;
 
     private static final UUID TEAM_STATUS_WITHDRAWN =
-            UUID.fromString("60000000-0000-0000-0000-000000000004");
+            TeamStatusConstants.DISQUALIFIED;
 
     private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+            TeamStatusConstants.PENDING;
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
@@ -69,7 +71,6 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
-        eventParticipantService.assertActiveParticipant(team.getEventId(), currentUserId);
         validateTeamCanSubmit(team);
         validateTeamCanSubmitToRound(team, request.getRoundId());
         validateSubmissionDeadline(request.getRoundId());

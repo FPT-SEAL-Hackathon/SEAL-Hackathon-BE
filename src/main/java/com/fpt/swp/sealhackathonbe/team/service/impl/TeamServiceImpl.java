@@ -1,12 +1,13 @@
 package com.fpt.swp.sealhackathonbe.team.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -16,6 +17,7 @@ import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
+import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -34,24 +36,24 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_FORMING =
-            UUID.fromString("60000000-0000-0000-0000-000000000001");
+            TeamStatusConstants.DRAFT;
     private static final UUID TEAM_STATUS_ACTIVE =
-            UUID.fromString("60000000-0000-0000-0000-000000000002");
+            TeamStatusConstants.PENDING;
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            UUID.fromString("60000000-0000-0000-0000-000000000003");
+            TeamStatusConstants.APPROVED;
     private static final UUID TEAM_STATUS_WITHDRAWN =
-            UUID.fromString("60000000-0000-0000-0000-000000000004");
+            TeamStatusConstants.DISQUALIFIED;
     // Dư thừa hiện tại: chưa có nghiệp vụ nào trong class này chuyển team sang ACTIVE.
     // Giữ comment để khi bổ sung luồng kích hoạt team có thể dùng lại đúng status ID.
     // private static final UUID TEAM_STATUS_ACTIVE =
-    //         UUID.fromString("60000000-0000-0000-0000-000000000002");
+    //         TeamStatusConstants.PENDING;
 
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final AuditLogRepository auditLogRepository;
-    private final EventParticipantService eventParticipantService;
+    private final TeamEventRegistrationService teamEventRegistrationService;
 
     @Override
     @Transactional
@@ -61,7 +63,7 @@ public class TeamServiceImpl implements TeamService {
         Event event = getActiveEvent(request.getEventId());
         // Team-first: tạo team không cần là EventParticipant — chỉ cần student
         // ACTIVE với hồ sơ đầy đủ; đăng ký event là bước sau do leader thực hiện.
-        eventParticipantService.assertEligibleStudent(currentUserId);
+        teamEventRegistrationService.assertEligibleStudent(currentUserId);
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
@@ -183,12 +185,13 @@ public class TeamServiceImpl implements TeamService {
     @Override
     @Transactional
     public void removeMember(UUID teamId, UUID userId, UUID currentUserId) {
-        // Luồng rời/kick member: tìm đúng membership active trong team -> kiểm tra quyền leader hoặc tự rời
-        // -> kiểm tra MinTeamSize của event -> đánh dấu inactive, không xóa cứng.
+        // Thành viên được tự rời; leader được kick thành viên hoặc tự rời.
+        // Leader rời sẽ chuyển quyền cho thành viên active tham gia sớm nhất, hoặc rút team nếu không còn ai.
+        Teams team = teamsRepository.findByIdForUpdate(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
+
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Active team member not found"));
-
-        Teams team = member.getTeam();
 
         boolean isLeader = team.getLeaderUserId().equals(currentUserId);
         boolean isSelfLeaving = userId.equals(currentUserId);
@@ -197,23 +200,55 @@ public class TeamServiceImpl implements TeamService {
             throw new AccessDeniedException("You do not have permission to remove this member");
         }
 
-        if (team.getLeaderUserId().equals(userId)) {
-            throw new BusinessConflictException("Team leader cannot be removed");
-        }
+        assertRosterEditable(team);
 
-        // Khóa đội hình sau khi team đã đăng ký event; leader phải rút đăng ký
-        // (khi còn PENDING) mới được chỉnh sửa thành viên.
-        if (eventParticipantService.hasRegistration(team.getEventId(), team.getLeaderUserId())) {
-            throw new BusinessConflictException(
-                    "Team roster is locked after event registration. Withdraw the registration first.");
-        }
-
-        validateTeamWillNotBeBelowMinimum(team);
-
+        LocalDateTime now = LocalDateTime.now();
         member.setActive(false);
-        member.setLeftAt(LocalDateTime.now());
-
+        member.setLeftAt(now);
         teamMembersRepository.save(member);
+        teamEventRegistrationService.removePendingRegistration(team.getEventId(), userId);
+
+        if (team.getLeaderUserId().equals(userId)) {
+            List<TeamMembers> remainingMembers =
+                    teamMembersRepository.findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(teamId);
+
+            if (remainingMembers.isEmpty()) {
+                team.setTeamStatusId(TEAM_STATUS_WITHDRAWN);
+            } else {
+                team.setLeaderUserId(remainingMembers.get(0).getUserId());
+            }
+
+            team.setUpdatedAt(now);
+            teamsRepository.save(team);
+        }
+    }
+
+    @Override
+    @Transactional
+    public TeamResponse transferLeadership(UUID teamId, UUID newLeaderUserId, UUID currentUserId) {
+        Teams team = teamsRepository.findByIdForUpdate(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
+
+        if (!team.getLeaderUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("Only the current team leader can transfer leadership");
+        }
+
+        assertRosterEditable(team);
+
+        if (currentUserId.equals(newLeaderUserId)) {
+            throw new BusinessConflictException("New leader must be a different team member");
+        }
+        teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, newLeaderUserId)
+                .orElseThrow(() -> new BusinessConflictException(
+                        "New leader must be an active member of this team"
+                ));
+
+        team.setLeaderUserId(newLeaderUserId);
+        team.setUpdatedAt(LocalDateTime.now());
+        Teams savedTeam = teamsRepository.save(team);
+
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
+        return TeamMapper.toTeamResponse(savedTeam, members);
     }
 
     private TeamEligibilityReviewResponse toEligibilityReviewResponse(Teams team, Event event) {
@@ -398,16 +433,9 @@ public class TeamServiceImpl implements TeamService {
         }
     }
 
-    private void validateTeamWillNotBeBelowMinimum(Teams team) {
-        // MinTeamSize nằm ở Event, nên cần đi từ team -> event để kiểm tra trước khi xóa/rời member.
-        Event event = requireActiveEvent(team.getEvent());
-        validateTeamSizeConfig(event);
-
-        Integer minTeamSize = event.getMinTeamSize();
-        long activeMemberCount = teamMembersRepository.countByTeamIdAndActiveTrue(team.getTeamId());
-
-        if (minTeamSize != null && activeMemberCount - 1 < minTeamSize) {
-            throw new BusinessConflictException("Cannot remove member because team would be below minimum size");
+    private void assertRosterEditable(Teams team) {
+        if (TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Team roster is locked after organizer approval");
         }
     }
 

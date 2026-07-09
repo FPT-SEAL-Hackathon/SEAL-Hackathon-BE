@@ -38,6 +38,7 @@ public class Category {
     private Boolean isActive;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<CategoryMentor> categoryMentors = new ArrayList<>();
 
 }
