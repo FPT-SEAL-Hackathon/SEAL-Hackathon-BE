@@ -8,6 +8,8 @@ DECLARE @UT_EXTERNAL_STUDENT  UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000
 DECLARE @UT_ORGANIZER         UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000003';
 DECLARE @UT_INTERNAL_JUDGE    UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000004';
 DECLARE @UT_GUEST_JUDGE       UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000005';
+DECLARE @UT_EXPERT            UNIQUEIDENTIFIER = '33333333-3333-3333-3333-333333333333';
+DECLARE @UT_MENTOR            UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000007';
 
 -- AccountStatus
 DECLARE @AS_PENDING_APPROVAL  UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000001';
@@ -73,7 +75,9 @@ INSERT INTO UserType (UserTypeID, TypeName) VALUES
                                                 (@UT_EXTERNAL_STUDENT, N'External Student'),
                                                 (@UT_ORGANIZER, N'Organizer'),
                                                 (@UT_INTERNAL_JUDGE, N'Internal Judge'),
-                                                (@UT_GUEST_JUDGE, N'Guest Judge');
+                                                (@UT_GUEST_JUDGE, N'Guest Judge'),
+                                                (@UT_EXPERT, N'Expert'),
+                                                (@UT_MENTOR, N'Mentor');
 
 CREATE TABLE AccountStatus (
                                StatusID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,

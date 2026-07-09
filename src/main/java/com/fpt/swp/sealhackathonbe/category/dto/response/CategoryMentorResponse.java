@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.category.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

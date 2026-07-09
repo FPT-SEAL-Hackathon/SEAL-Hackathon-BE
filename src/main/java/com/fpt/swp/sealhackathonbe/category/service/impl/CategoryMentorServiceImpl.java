@@ -11,7 +11,9 @@ import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final CategoryMentorRepository categoryMentorRepository;
     private final CategoryMapper categoryMapper;
     private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
 
     @Override
     public List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request) {
@@ -40,6 +43,17 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
         }
         List<UUID> existingMentorIds = categoryMentorRepository.findMentorIdsByCategoryId(categoryId);
 
+        UserType expertType = userTypeRepository.findByTypeName("Expert")
+                .orElseThrow(() -> new RuntimeException("Expert role not found"));
+
+        for (User mentor : mentors) {
+            String typeName = mentor.getUserType().getTypeName();
+            if (typeName.toLowerCase().contains("judge")) {
+                mentor.setUserType(expertType);
+                userRepository.save(mentor);
+            }
+        }
+
         List<CategoryMentor> categoryMentors = mentors
                 .stream()
                 .filter(mentor -> !existingMentorIds.contains(mentor.getUserId()))
@@ -47,8 +61,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                         .category(category)
                         .mentor(mentor)
                         .assignedAt(LocalDateTime.now())
-                        .build()
-                )
+                        .build())
                 .toList();
 
         if (!categoryMentors.isEmpty()) {
@@ -63,13 +76,15 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<UserResponse> getAllMentors() {
         return userRepository.findAll()
                 .stream()
-                .filter(user -> user.getUserType().getTypeName().equalsIgnoreCase("Internal Judge"))
+                .filter(user -> {
+                    String type = user.getUserType().getTypeName();
+                    return type.equalsIgnoreCase("Mentor") || type.equalsIgnoreCase("Expert");
+                })
                 .map(user -> UserResponse.builder()
                         .userId(user.getUserId())
                         .fullName(user.getFullName())
                         .email(user.getEmail())
-                        .build()
-                )
+                        .build())
                 .toList();
     }
 
@@ -77,7 +92,8 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     public List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new EntityNotFoundException("Category not found");
-        };
+        }
+        ;
         return categoryMentorRepository.findByCategoryCategoryId(categoryId)
                 .stream()
                 .map(categoryMapper::toCategoryMentorResponse)
