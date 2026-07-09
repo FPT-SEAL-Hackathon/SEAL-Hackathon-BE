@@ -17,5 +17,5 @@ public interface RoundJudgeService {
     List<JudgeResponse> getJudgesByRound(UUID roundId);
     List<RoundResponse> getRoundsByJudge(UUID judgeId);
     void removeJudge(UUID roundJudgeId);
-    List<UserResponse> getAllJudges();
+    List<JudgeResponse> getAllJudges();
 }

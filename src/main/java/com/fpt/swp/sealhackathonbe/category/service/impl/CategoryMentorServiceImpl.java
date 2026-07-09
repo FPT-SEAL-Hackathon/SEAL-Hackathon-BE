@@ -73,18 +73,16 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .toList();
     }
 
-    public List<UserResponse> getAllMentors() {
+    public List<MentorResponse> getAllMentors() {
         return userRepository.findAll()
                 .stream()
                 .filter(user -> {
                     String type = user.getUserType().getTypeName();
-                    return type.equalsIgnoreCase("Mentor") || type.equalsIgnoreCase("Expert");
+                    return type.equalsIgnoreCase("Internal Judge")
+                            || type.equalsIgnoreCase("Mentor")
+                            || type.equalsIgnoreCase("Expert");
                 })
-                .map(user -> UserResponse.builder()
-                        .userId(user.getUserId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .build())
+                .map(categoryMapper::toMentorResponse)
                 .toList();
     }
 
