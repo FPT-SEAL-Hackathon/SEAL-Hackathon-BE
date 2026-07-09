@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.category.controller;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.request.AssignMentorsRequest;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
-import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

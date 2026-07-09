@@ -3,8 +3,6 @@ package com.fpt.swp.sealhackathonbe.category.service;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.request.AssignMentorsRequest;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
-import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
-import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

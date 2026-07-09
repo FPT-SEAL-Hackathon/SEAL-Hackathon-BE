@@ -4,7 +4,6 @@ import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface RankingService {

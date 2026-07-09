@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.category.service.impl;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.request.AssignMentorsRequest;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
-import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import com.fpt.swp.sealhackathonbe.category.mapper.CategoryMapper;
@@ -21,8 +20,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
-import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor

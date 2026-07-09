@@ -1,6 +1,5 @@
 package com.fpt.swp.sealhackathonbe.event.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.core.exception.GlobalExceptionHandler;
 import com.fpt.swp.sealhackathonbe.event.dto.response.EventResponse;
 import com.fpt.swp.sealhackathonbe.event.service.EventService;

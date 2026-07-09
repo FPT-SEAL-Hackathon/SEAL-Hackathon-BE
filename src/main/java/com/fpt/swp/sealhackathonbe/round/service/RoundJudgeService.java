@@ -5,7 +5,6 @@ import com.fpt.swp.sealhackathonbe.round.dto.request.AssignJudgesRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
