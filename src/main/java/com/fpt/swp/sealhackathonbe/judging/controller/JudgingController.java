@@ -59,6 +59,16 @@ public class JudgingController {
         judgingService.updateJudging(updateScoreSubmissionDTOs);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/judging/batch-scores")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    @Operation(summary = "Get batch judging scores", description = "Retrieves scores for multiple submissions")
+    public ResponseEntity<List<JudgingDTO>> getBatchScoresBySubmissions(
+            @Valid @RequestBody com.fpt.swp.sealhackathonbe.judging.dto.BatchScoreRequestDTO request) {
+        List<JudgingDTO> scores = judgingService.getBatchScoresBySubmissionIds(request);
+        return ResponseEntity.ok(scores);
+    }
+
     @GetMapping("/judging/submission/{submissionId}")
     // RBAC:
     // ORGANIZER và judge được xem điểm của submission phục vụ quản lý/chấm.

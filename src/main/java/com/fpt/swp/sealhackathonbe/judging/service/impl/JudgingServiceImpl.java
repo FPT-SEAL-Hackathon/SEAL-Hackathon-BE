@@ -271,6 +271,18 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<JudgingDTO> getBatchScoresBySubmissionIds(com.fpt.swp.sealhackathonbe.judging.dto.BatchScoreRequestDTO request) {
+        if (request == null || request.getSubmissionIds() == null || request.getSubmissionIds().isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        List<Judging> judgings = judgingRepository.findBySubmission_SubmissionIdIn(request.getSubmissionIds());
+        return judgings.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
         return judgingRepository.findByRoundJudge_Judge_UserId(roundJudgeId)
                 .stream()
