@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.controller;
 
 import com.fpt.swp.sealhackathonbe.eventparticipant.dto.EventParticipantResponse;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -13,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TransferTeamLeadershipRequest;
+import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
@@ -47,7 +47,7 @@ public class TeamController {
     private final TeamService teamService;
     private final TeamJoinRequestService teamJoinRequestService;
     private final TeamDisqualificationService teamDisqualificationService;
-    private final EventParticipantService eventParticipantService;
+    private final TeamEventRegistrationService teamEventRegistrationService;
     private final UserRepository userRepository;
 
     // Quyen hien tai: moi tai khoan co JWT hop le deu co the tao team.
@@ -114,7 +114,7 @@ public class TeamController {
         if (Boolean.TRUE.equals(request.getApproved())) {
             TeamResponse team = teamService.activateTeam(teamId, request.getNote(), currentUserId(authentication));
             // Duyệt team = duyệt luôn toàn bộ EventParticipant PENDING của thành viên.
-            eventParticipantService.applyTeamDecision(teamId, true, request.getNote(), currentUserId(authentication));
+            teamEventRegistrationService.applyTeamDecision(teamId, true, request.getNote(), currentUserId(authentication));
             response.setTeam(team);
             response.setMessage("Team approved for competition");
         } else {
@@ -131,7 +131,7 @@ public class TeamController {
                     currentUserId(authentication)
             );
             // Từ chối team = từ chối toàn bộ participant PENDING của thành viên.
-            eventParticipantService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
+            teamEventRegistrationService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
             response.setDisqualification(disqualification);
             response.setMessage("Team disqualified from competition");
         }
@@ -150,7 +150,7 @@ public class TeamController {
             Authentication authentication
     ) {
         List<EventParticipantResponse> response =
-                eventParticipantService.registerTeam(teamId, currentUserId(authentication));
+                teamEventRegistrationService.registerTeam(teamId, currentUserId(authentication));
         return ResponseEntity.ok(response);
     }
 
@@ -164,7 +164,7 @@ public class TeamController {
             @PathVariable UUID teamId,
             Authentication authentication
     ) {
-        eventParticipantService.withdrawTeamRegistration(teamId, currentUserId(authentication));
+        teamEventRegistrationService.withdrawTeamRegistration(teamId, currentUserId(authentication));
         return ResponseEntity.ok(java.util.Map.of(
                 "success", true,
                 "message", "Team registration withdrawn"

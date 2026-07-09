@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamJoinRequests;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
@@ -45,7 +44,7 @@ class TeamJoinRequestServiceImplTest {
     private TeamJoinRequestsRepository teamJoinRequestsRepository;
 
     @Mock
-    private EventParticipantService eventParticipantService;
+    private TeamEventRegistrationService teamEventRegistrationService;
 
     @Mock
     private UserRepository userRepository;
