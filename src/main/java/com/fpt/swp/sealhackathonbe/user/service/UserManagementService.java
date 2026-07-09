@@ -43,6 +43,7 @@ public class UserManagementService {
     private static final String ROLE_INTERNAL_JUDGE = "Internal Judge";
     private static final String ROLE_GUEST_JUDGE = "Guest Judge";
     private static final String ROLE_EXPERT = "Expert";
+    private static final String ROLE_MENTOR = "Mentor";
     private static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
@@ -63,27 +64,26 @@ public class UserManagementService {
             String status,
             LocalDate joinedFrom,
             LocalDate joinedTo,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         if (joinedFrom != null && joinedTo != null && joinedFrom.isAfter(joinedTo)) {
             throw new BadRequestException("joinedFrom must be before or equal to joinedTo");
         }
 
         String roleName = role == null || role.isBlank() ? null : resolveUserType(role).getTypeName();
-        String statusName = status == null || status.isBlank() ? null : resolveAccountStatus(status, true).getStatusName();
+        String statusName = status == null || status.isBlank() ? null
+                : resolveAccountStatus(status, true).getStatusName();
         LocalDateTime from = joinedFrom == null ? null : joinedFrom.atStartOfDay();
         LocalDateTime to = joinedTo == null ? null : joinedTo.plusDays(1).atStartOfDay().minusNanos(1);
 
         return userRepository.searchForManagement(
-                        trimToNull(search),
-                        roleName,
-                        teamId,
-                        trimToNull(teamName),
-                        statusName,
-                        from,
-                        to,
-                        pageable
-                )
+                trimToNull(search),
+                roleName,
+                teamId,
+                trimToNull(teamName),
+                statusName,
+                from,
+                to,
+                pageable)
                 .map(this::toResponse);
     }
 
@@ -120,8 +120,7 @@ public class UserManagementService {
                 userType,
                 request.getFptStudentCode(),
                 request.getExternalStudentCode(),
-                request.getUniversityName()
-        );
+                request.getUniversityName());
         user.setIsDeleted(false);
 
         User savedUser = userRepository.save(user);
@@ -167,8 +166,7 @@ public class UserManagementService {
                     newType,
                     requestedFptStudentCode,
                     requestedExternalStudentCode,
-                    requestedUniversityName
-            );
+                    requestedUniversityName);
         } else if (request.getFptStudentCode() != null
                 || request.getExternalStudentCode() != null
                 || request.getUniversityName() != null) {
@@ -177,8 +175,7 @@ public class UserManagementService {
                     user.getUserType(),
                     requestedFptStudentCode,
                     requestedExternalStudentCode,
-                    requestedUniversityName
-            );
+                    requestedUniversityName);
         }
         String requestedStatus = firstNonBlank(request.getAccountStatus(), request.getStatus());
         if (requestedStatus != null) {
@@ -218,9 +215,9 @@ public class UserManagementService {
                 user,
                 newType,
                 request.getFptStudentCode() != null ? request.getFptStudentCode() : user.getFptStudentCode(),
-                request.getExternalStudentCode() != null ? request.getExternalStudentCode() : user.getExternalStudentCode(),
-                request.getUniversityName() != null ? request.getUniversityName() : user.getUniversityName()
-        );
+                request.getExternalStudentCode() != null ? request.getExternalStudentCode()
+                        : user.getExternalStudentCode(),
+                request.getUniversityName() != null ? request.getUniversityName() : user.getUniversityName());
 
         User savedUser = userRepository.save(user);
         writeAudit("USER_ROLE_CHANGED", savedUser.getUserId(), actorUserId, oldValue, snapshot(savedUser));
@@ -268,8 +265,10 @@ public class UserManagementService {
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException("Invalid account status."));
 
-        if (rejectApprovalStatus && normalizeLookup(STATUS_PENDING_APPROVAL).equals(normalizeLookup(status.getStatusName()))) {
-            throw new BadRequestException("User account approval is obsolete; use email verification or another account status");
+        if (rejectApprovalStatus
+                && normalizeLookup(STATUS_PENDING_APPROVAL).equals(normalizeLookup(status.getStatusName()))) {
+            throw new BadRequestException(
+                    "User account approval is obsolete; use email verification or another account status");
         }
 
         return status;
@@ -285,8 +284,8 @@ public class UserManagementService {
     }
 
     private UserManagementResponse toResponse(User user) {
-        Optional<TeamMembers> currentMembership =
-                teamMembersRepository.findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(user.getUserId());
+        Optional<TeamMembers> currentMembership = teamMembersRepository
+                .findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(user.getUserId());
         String roleName = user.getUserType() != null ? user.getUserType().getTypeName() : null;
         String statusName = user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null;
 
@@ -351,7 +350,8 @@ public class UserManagementService {
     private String snapshot(User user) {
         return "{\"email\":\"" + user.getEmail()
                 + "\",\"role\":\"" + (user.getUserType() != null ? user.getUserType().getTypeName() : null)
-                + "\",\"status\":\"" + (user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null)
+                + "\",\"status\":\""
+                + (user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null)
                 + "\",\"isDeleted\":" + user.getIsDeleted() + "}";
     }
 
@@ -379,8 +379,7 @@ public class UserManagementService {
             UserType userType,
             String fptStudentCode,
             String externalStudentCode,
-            String universityName
-    ) {
+            String universityName) {
         String typeName = userType != null ? userType.getTypeName() : null;
         if (ROLE_FPT_STUDENT.equalsIgnoreCase(typeName)) {
             String requiredFptStudentCode = trimToNull(fptStudentCode);
@@ -397,7 +396,8 @@ public class UserManagementService {
             String requiredExternalStudentCode = trimToNull(externalStudentCode);
             String requiredUniversityName = trimToNull(universityName);
             if (requiredExternalStudentCode == null || requiredUniversityName == null) {
-                throw new BadRequestException("External student code and university name are required for External Student users.");
+                throw new BadRequestException(
+                        "External student code and university name are required for External Student users.");
             }
             user.setFptStudentCode(null);
             user.setExternalStudentCode(requiredExternalStudentCode);
@@ -408,7 +408,8 @@ public class UserManagementService {
         if (ROLE_ORGANIZER.equalsIgnoreCase(typeName)
                 || ROLE_INTERNAL_JUDGE.equalsIgnoreCase(typeName)
                 || ROLE_GUEST_JUDGE.equalsIgnoreCase(typeName)
-                || ROLE_EXPERT.equalsIgnoreCase(typeName)) {
+                || ROLE_EXPERT.equalsIgnoreCase(typeName)
+                || ROLE_MENTOR.equalsIgnoreCase(typeName)) {
             user.setFptStudentCode(null);
             user.setExternalStudentCode(null);
             user.setUniversityName(null);

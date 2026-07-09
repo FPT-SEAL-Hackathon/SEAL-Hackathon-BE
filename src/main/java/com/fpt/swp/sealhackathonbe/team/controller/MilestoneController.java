@@ -23,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/teams/{teamId}/milestones")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_INTERNAL_JUDGE', 'ROLE_ORGANIZER')")
+@PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_ORGANIZER')")
 public class MilestoneController {
 
     private final MilestoneService milestoneService;
@@ -37,7 +37,7 @@ public class MilestoneController {
 
     @Operation(summary = "Create a new milestone for a team")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_INTERNAL_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
     public ResponseEntity<MilestoneResponse> create(
             @PathVariable UUID teamId,
             @Valid @RequestBody CreateMilestoneRequest request
@@ -48,7 +48,7 @@ public class MilestoneController {
 
     @Operation(summary = "Toggle milestone done/undone")
     @PatchMapping("/{milestoneId}/toggle")
-    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_INTERNAL_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
     public ResponseEntity<MilestoneResponse> toggle(
             @PathVariable UUID teamId,
             @PathVariable UUID milestoneId
@@ -59,7 +59,7 @@ public class MilestoneController {
 
     @Operation(summary = "Delete a milestone")
     @DeleteMapping("/{milestoneId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_INTERNAL_JUDGE')")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable UUID teamId,
             @PathVariable UUID milestoneId

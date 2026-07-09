@@ -12,7 +12,9 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +33,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
     private final RoundMapper roundMapper;
     private final CategoryMentorRepository categoryMentorRepository;
 
@@ -38,12 +41,12 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
         Round round = roundRepository
                 .findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
-        List<User> judges = userRepository.findAllById(request.getUserIds());
+        List<User> judges = userRepository.findAllById(request.getJudgeIds());
         if (judges.isEmpty()) {
             throw new IllegalArgumentException("Judges not found");
         }
 
-        //Get current user
+        // Get current user
         Authentication authentication = SecurityContextHolder
                 .getContext()
                 .getAuthentication();
@@ -53,13 +56,27 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new EntityNotFoundException("Current user not found");
         }
 
-        // BR-19: A Mentor can be a Judge in another Category, but must not judge the same Category where they are assigned as Mentor.
-        List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(round.getCategory().getCategoryId());
+        // BR-19: A Mentor can be a Judge in another Category, but must not judge the
+        // same Category where they are assigned as Mentor.
+        List<CategoryMentor> categoryMentors = categoryMentorRepository
+                .findByCategory_CategoryId(round.getCategory().getCategoryId());
         for (User judge : judges) {
             boolean isMentorInCategory = categoryMentors.stream()
                     .anyMatch(cm -> cm.getMentor().getUserId().equals(judge.getUserId()));
             if (isMentorInCategory) {
-                throw new IllegalArgumentException("Judge " + judge.getFullName() + " is already a mentor in this category");
+                throw new IllegalArgumentException(
+                        "Judge " + judge.getFullName() + " is already a mentor in this category");
+            }
+        }
+
+        UserType expertType = userTypeRepository.findByTypeName("Expert")
+                .orElseThrow(() -> new RuntimeException("Expert role not found"));
+
+        for (User judge : judges) {
+            String typeName = judge.getUserType().getTypeName();
+            if (typeName.toLowerCase().contains("mentor")) {
+                judge.setUserType(expertType);
+                userRepository.save(judge);
             }
         }
 
@@ -71,8 +88,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .judge(judge)
                         .assignedAt(LocalDateTime.now())
                         .assignedBy(user)
-                        .build()
-                )
+                        .build())
                 .toList();
         roundJudges = roundJudgeRepository.saveAll(roundJudges);
         return roundJudges.stream()
@@ -107,24 +123,21 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     public void removeJudge(UUID roundJudgeId) {
         RoundJudge roundJudge = roundJudgeRepository.findById(roundJudgeId)
                 .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
-        //Add constraints before delete later
+        // Add constraints before delete later
         roundJudgeRepository.delete(roundJudge);
     }
 
     @Override
-    public List<UserResponse> getAllJudges() {
+    public List<JudgeResponse> getAllJudges() {
         return userRepository.findAll()
                 .stream()
                 .filter(user -> {
                     String type = user.getUserType().getTypeName();
                     return type.equalsIgnoreCase("Internal Judge")
-                            || type.equalsIgnoreCase("Guest Judge");
+                            || type.equalsIgnoreCase("Guest Judge")
+                            || type.equalsIgnoreCase("Expert");
                 })
-                .map(user -> UserResponse.builder()
-                        .userId(user.getUserId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .build())
+                .map(roundMapper::toJudgeResponse)
                 .toList();
     }
 }

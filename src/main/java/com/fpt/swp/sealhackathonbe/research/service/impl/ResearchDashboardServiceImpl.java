@@ -55,26 +55,26 @@ public class ResearchDashboardServiceImpl {
                 ORDER BY r.RoundName, t.TeamName, rc.CriterionName
                 """;
 
-        return query(sql, eventId, roundId, categoryId).getResultList().stream()
-                .map(row -> {
-                    Object[] values = (Object[]) row;
-                    return new VarianceReportResponse(
-                            uuid(values[0]),
-                            string(values[1]),
-                            uuid(values[2]),
-                            string(values[3]),
-                            uuid(values[4]),
-                            uuid(values[5]),
-                            string(values[6]),
-                            uuid(values[7]),
-                            string(values[8]),
-                            longValue(values[9]),
-                            decimal(values[10]),
-                            decimal(values[11]),
-                            decimal(values[12]),
-                            decimal(values[13])
-                    );
-                })
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query(sql, eventId, roundId, categoryId).getResultList();
+
+        return rows.stream()
+                .map(values -> new VarianceReportResponse(
+                        uuid(values[0]),
+                        string(values[1]),
+                        uuid(values[2]),
+                        string(values[3]),
+                        uuid(values[4]),
+                        uuid(values[5]),
+                        string(values[6]),
+                        uuid(values[7]),
+                        string(values[8]),
+                        longValue(values[9]),
+                        decimal(values[10]),
+                        decimal(values[11]),
+                        decimal(values[12]),
+                        decimal(values[13])
+                ))
                 .toList();
     }
 
@@ -91,6 +91,7 @@ public class ResearchDashboardServiceImpl {
                 """, roundId, categoryId);
         String sql = "SELECT src.BucketStart, COUNT(*) AS ScoreCount FROM (" + innerSql + ") src GROUP BY src.BucketStart ORDER BY src.BucketStart";
 
+        @SuppressWarnings("unchecked")
         List<Object[]> rows = query(sql, eventId, roundId, categoryId)
                 .setParameter("bucketSize", normalizedBucketSize)
                 .getResultList();
@@ -159,23 +160,23 @@ public class ResearchDashboardServiceImpl {
                 ORDER BY AvgAbsDeviation ASC, JudgeName ASC
                 """;
 
-        return query(sql, eventId, roundId, categoryId).getResultList().stream()
-                .map(row -> {
-                    Object[] values = (Object[]) row;
-                    return new ReliabilityMetricResponse(
-                            uuid(values[0]),
-                            string(values[1]),
-                            longValue(values[2]),
-                            longValue(values[3]),
-                            longValue(values[4]),
-                            decimal(values[5]),
-                            decimal(values[6]),
-                            decimal(values[7]),
-                            decimal(values[8]),
-                            decimal(values[9]),
-                            decimal(values[10])
-                    );
-                })
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query(sql, eventId, roundId, categoryId).getResultList();
+
+        return rows.stream()
+                .map(values -> new ReliabilityMetricResponse(
+                        uuid(values[0]),
+                        string(values[1]),
+                        longValue(values[2]),
+                        longValue(values[3]),
+                        longValue(values[4]),
+                        decimal(values[5]),
+                        decimal(values[6]),
+                        decimal(values[7]),
+                        decimal(values[8]),
+                        decimal(values[9]),
+                        decimal(values[10])
+                ))
                 .toList();
     }
 

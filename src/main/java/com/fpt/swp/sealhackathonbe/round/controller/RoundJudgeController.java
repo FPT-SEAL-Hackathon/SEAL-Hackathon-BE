@@ -54,7 +54,7 @@ public class RoundJudgeController {
     }
 
     @GetMapping("/users/judges")
-    public ResponseEntity<List<UserResponse>> getAllMentors() {
+    public ResponseEntity<List<JudgeResponse>> getAllJudges() {
         return ResponseEntity.ok(roundJudgeService.getAllJudges());
     }
 
