@@ -13,8 +13,8 @@ import java.util.UUID;
 @Service
 public interface RoundJudgeService {
     List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request);
-    List<JudgeResponse> getJudgesByRound(UUID roundId);
+    List<RoundJudgeResponse> getJudgesByRound(UUID roundId);
     List<RoundResponse> getRoundsByJudge(UUID judgeId);
-    void removeJudge(UUID roundJudgeId);
+    void removeJudge(UUID roundJudgeId, boolean force);
     List<UserResponse> getAllJudges();
 }

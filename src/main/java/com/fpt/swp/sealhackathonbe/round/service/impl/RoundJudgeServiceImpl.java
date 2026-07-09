@@ -17,6 +17,7 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
+import com.fpt.swp.sealhackathonbe.judging.repository.JudgingRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -36,6 +37,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final UserTypeRepository userTypeRepository;
     private final RoundMapper roundMapper;
     private final CategoryMentorRepository categoryMentorRepository;
+    private final JudgingRepository judgingRepository;
 
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
@@ -69,10 +71,20 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             }
         }
 
+        // Filter out judges already assigned to this round (prevent unique constraint violation)
+        List<UUID> existingJudgeIds = roundJudgeRepository
+                .findJudgesByRoundRoundId(roundId)
+                .stream()
+                .map(User::getUserId)
+                .toList();
+        List<User> newJudges = judges.stream()
+                .filter(j -> !existingJudgeIds.contains(j.getUserId()))
+                .toList();
+
         UserType expertType = userTypeRepository.findByTypeName("Expert")
                 .orElseThrow(() -> new RuntimeException("Expert role not found"));
 
-        for (User judge : judges) {
+        for (User judge : newJudges) {
             String typeName = judge.getUserType().getTypeName();
             if (typeName.toLowerCase().contains("mentor")) {
                 judge.setUserType(expertType);
@@ -80,7 +92,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             }
         }
 
-        List<RoundJudge> roundJudges = judges
+        List<RoundJudge> roundJudges = newJudges
                 .stream()
                 .map(judge -> RoundJudge.builder()
                         .roundJudgeId(UUID.randomUUID())
@@ -97,14 +109,14 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
-    public List<JudgeResponse> getJudgesByRound(UUID roundId) {
+    public List<RoundJudgeResponse> getJudgesByRound(UUID roundId) {
         if (!roundRepository.existsById(roundId)) {
             throw new EntityNotFoundException("Round not found");
         }
 
-        return roundJudgeRepository.findJudgesByRoundRoundId(roundId)
+        return roundJudgeRepository.findByRoundRoundId(roundId)
                 .stream()
-                .map(roundMapper::toJudgeResponse)
+                .map(roundMapper::toRoundJudgeResponse)
                 .toList();
     }
 
@@ -120,10 +132,16 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
-    public void removeJudge(UUID roundJudgeId) {
+    @org.springframework.transaction.annotation.Transactional
+    public void removeJudge(UUID roundJudgeId, boolean force) {
         RoundJudge roundJudge = roundJudgeRepository.findById(roundJudgeId)
                 .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
-        // Add constraints before delete later
+        
+        if (!force && judgingRepository.existsByRoundJudge_RoundJudgeId(roundJudgeId)) {
+            throw new IllegalArgumentException("JUDGE_HAS_SCORES");
+        }
+        
+        judgingRepository.deleteByRoundJudge_RoundJudgeId(roundJudgeId);
         roundJudgeRepository.delete(roundJudge);
     }
 
