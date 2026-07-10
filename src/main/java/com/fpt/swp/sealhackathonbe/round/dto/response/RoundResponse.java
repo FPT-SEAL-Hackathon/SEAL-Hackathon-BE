@@ -17,6 +17,7 @@ public class RoundResponse {
     private String description;
     private Integer roundOrder;
     private UUID roundStatusId;
+    private String roundStatusName;
     private LocalDateTime submissionDeadline;
     private LocalDateTime judgingDeadline;
     private LocalDateTime startDate;
