@@ -190,7 +190,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
 
         // Conditional deletion is handled below
         if (force) {
-            judgingRepository.disableByRoundJudge_RoundJudgeId(roundJudgeId);
+            judgingRepository.deactivateByRoundJudgeId(roundJudgeId);
         } else {
             // Keep judging records if not forced
         }
