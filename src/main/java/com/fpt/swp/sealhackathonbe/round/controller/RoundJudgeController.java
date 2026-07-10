@@ -33,7 +33,7 @@ public class RoundJudgeController {
     }
 
     @GetMapping("/round/judges/{roundId}")
-    public List<JudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
+    public List<RoundJudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
         return roundJudgeService.getJudgesByRound(roundId);
     }
 
@@ -49,8 +49,8 @@ public class RoundJudgeController {
     // RBAC:
     // Chỉ ORGANIZER được gỡ judge khỏi round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public void removeJudge(@PathVariable UUID id) {
-        roundJudgeService.removeJudge(id);
+    public void removeJudge(@PathVariable UUID id, @RequestParam(required = false, defaultValue = "false") boolean force) {
+        roundJudgeService.removeJudge(id, force);
     }
 
     @GetMapping("/users/judges")
@@ -58,4 +58,8 @@ public class RoundJudgeController {
         return ResponseEntity.ok(roundJudgeService.getAllJudges());
     }
 
+    @GetMapping("/public/test-judges")
+    public ResponseEntity<List<JudgeResponse>> testJudges() {
+        return ResponseEntity.ok(roundJudgeService.getAllJudges());
+    }
 }

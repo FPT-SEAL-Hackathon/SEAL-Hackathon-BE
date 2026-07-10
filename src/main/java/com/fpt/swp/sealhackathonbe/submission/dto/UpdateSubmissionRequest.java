@@ -19,5 +19,4 @@ public class UpdateSubmissionRequest {
     @Size(max = 500, message = "Slide URL must not exceed 500 characters")
     private String slideUrl;
 
-    private String notes;
 }

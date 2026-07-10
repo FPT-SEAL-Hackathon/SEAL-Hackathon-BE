@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.category.service.impl;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.request.AssignMentorsRequest;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
-import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import com.fpt.swp.sealhackathonbe.category.mapper.CategoryMapper;
@@ -21,8 +20,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
-import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor
@@ -73,17 +70,26 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .toList();
     }
 
-    public List<MentorResponse> getAllMentors() {
-        return userRepository.findAll()
+    public List<UserResponse> getAllMentors() {
+        return userRepository.findExpertsMentorsJudges()
                 .stream()
-                .filter(user -> {
-                    String type = user.getUserType().getTypeName();
-                    return type.equalsIgnoreCase("Internal Judge")
-                            || type.equalsIgnoreCase("Mentor")
-                            || type.equalsIgnoreCase("Expert");
-                })
-                .map(categoryMapper::toMentorResponse)
+                .map(user -> UserResponse.builder()
+                        .userId(user.getUserId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .phone(user.getPhone())
+                        .role(toApiName(getRoleName(user)))
+                        .roleName(getRoleName(user))
+                        .build())
                 .toList();
+    }
+
+    private String getRoleName(User user) {
+        return user.getUserType() != null ? user.getUserType().getTypeName() : null;
+    }
+
+    private String toApiName(String value) {
+        return value == null ? null : value.trim().replace(' ', '_').toUpperCase();
     }
 
     @Override
@@ -104,5 +110,13 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
         return categoryMentors.stream()
                 .map(categoryMapper::toCategoryMentorResponse)
                 .toList();
+    }
+
+    @Override
+    public void removeMentor(UUID categoryId, UUID mentorId) {
+        CategoryMentor cm = categoryMentorRepository
+                .findByCategory_CategoryIdAndMentor_UserId(categoryId, mentorId)
+                .orElseThrow(() -> new EntityNotFoundException("Mentor is not assigned to this category"));
+        categoryMentorRepository.delete(cm);
     }
 }

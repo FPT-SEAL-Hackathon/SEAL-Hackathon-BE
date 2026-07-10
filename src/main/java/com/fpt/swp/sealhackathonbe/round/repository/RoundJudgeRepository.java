@@ -15,6 +15,7 @@ import java.util.UUID;
 @Repository
 public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
     boolean existsByRoundRoundId(UUID roundId);
+    List<RoundJudge> findByRoundRoundId(UUID roundId);
 
     @Query("SELECT rj.judge FROM RoundJudge rj WHERE rj.round.roundId = :roundId")
     List<User> findJudgesByRoundRoundId(@Param("roundId") UUID roundId);

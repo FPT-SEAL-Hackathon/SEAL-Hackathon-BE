@@ -1,7 +1,5 @@
 package com.fpt.swp.sealhackathonbe.event.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

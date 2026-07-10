@@ -18,4 +18,7 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
             UUID submissionId, UUID roundJudgeId, UUID roundCriteriaId);
 
     List<Judging> findBySubmission_SubmissionIdIn(List<UUID> submissionIds);
+
+    void deleteByRoundJudge_RoundJudgeId(UUID roundJudgeId);
+    boolean existsByRoundJudge_RoundJudgeId(UUID roundJudgeId);
 }

@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.criteria.dto.response;
 
 import lombok.*;
-import org.springframework.cglib.core.Local;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
