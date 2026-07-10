@@ -27,8 +27,7 @@ public class RoundJudgeController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
-            @Valid @RequestBody AssignJudgesRequest request
-            ) {
+            @Valid @RequestBody AssignJudgesRequest request) {
         return roundJudgeService.assignJudges(roundId, request);
     }
 
@@ -49,8 +48,9 @@ public class RoundJudgeController {
     // RBAC:
     // Chỉ ORGANIZER được gỡ judge khỏi round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public void removeJudge(@PathVariable UUID id, @RequestParam(required = false, defaultValue = "false") boolean force) {
-        roundJudgeService.removeJudge(id, force);
+    public void disableJudge(@PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "false") boolean force) {
+        roundJudgeService.disableJudge(id, force);
     }
 
     @GetMapping("/users/judges")

@@ -77,7 +77,8 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             }
         }
 
-        // Filter out judges already assigned to this round (prevent unique constraint violation)
+        // Filter out judges already assigned to this round (prevent unique constraint
+        // violation)
         List<UUID> existingJudgeIds = roundJudgeRepository
                 .findJudgesByRoundRoundId(roundId)
                 .stream()
@@ -108,13 +109,31 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .assignedBy(user)
                         .build())
                 .toList();
-        roundJudges = roundJudgeRepository.saveAll(roundJudges);
+        List<RoundJudge> allExisting = roundJudgeRepository.findByRoundRoundId(roundId);
+        List<RoundJudge> finalRoundJudges = new java.util.ArrayList<>();
+        for (RoundJudge newRj : roundJudges) {
+            java.util.Optional<RoundJudge> existing = allExisting.stream()
+                    .filter(r -> r.getJudge().getUserId().equals(newRj.getJudge().getUserId()))
+                    .findFirst();
+            if (existing.isPresent()) {
+                RoundJudge rjToUpdate = existing.get();
+                rjToUpdate.setIsActive(true);
+                rjToUpdate.setAssignedAt(LocalDateTime.now());
+                rjToUpdate.setAssignedBy(user);
+                finalRoundJudges.add(roundJudgeRepository.save(rjToUpdate));
+            } else {
+                newRj.setIsActive(true);
+                finalRoundJudges.add(roundJudgeRepository.save(newRj));
+            }
+        }
+        roundJudges = finalRoundJudges;
 
         for (RoundJudge rj : roundJudges) {
             try {
                 com.fpt.swp.sealhackathonbe.event.entity.Event event = round.getCategory().getEvent();
                 String title = "New Judge Assignment";
-                String body = String.format("You have been assigned as a Judge for Round: %s in Category: %s, Event: %s.\n" +
+                String body = String.format(
+                        "You have been assigned as a Judge for Round: %s in Category: %s, Event: %s.\n" +
                                 "Event Date: %s to %s\n" +
                                 "Event Link: %s/events/%s",
                         round.getRoundName(),
@@ -124,7 +143,8 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         event.getEventEndDate(),
                         frontendUrl,
                         event.getEventId());
-                notificationService.sendNotification(rj.getJudge().getUserId(), user.getUserId(), event.getEventId(), title, body);
+                notificationService.sendNotification(rj.getJudge().getUserId(), user.getUserId(), event.getEventId(),
+                        title, body);
             } catch (Exception e) {
                 System.err.println("Failed to send notification: " + e.getMessage());
             }
@@ -141,7 +161,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new EntityNotFoundException("Round not found");
         }
 
-        return roundJudgeRepository.findByRoundRoundId(roundId)
+        return roundJudgeRepository.findActiveByRoundRoundId(roundId)
                 .stream()
                 .map(roundMapper::toRoundJudgeResponse)
                 .toList();
@@ -160,16 +180,22 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
 
     @Override
     @org.springframework.transaction.annotation.Transactional
-    public void removeJudge(UUID roundJudgeId, boolean force) {
+    public void disableJudge(UUID roundJudgeId, boolean force) {
         RoundJudge roundJudge = roundJudgeRepository.findById(roundJudgeId)
                 .orElseThrow(() -> new EntityNotFoundException("Round judge not found"));
-        
+
         if (!force && judgingRepository.existsByRoundJudge_RoundJudgeId(roundJudgeId)) {
             throw new IllegalArgumentException("JUDGE_HAS_SCORES");
         }
-        
-        judgingRepository.deleteByRoundJudge_RoundJudgeId(roundJudgeId);
-        roundJudgeRepository.delete(roundJudge);
+
+        // Conditional deletion is handled below
+        if (force) {
+            judgingRepository.disableByRoundJudge_RoundJudgeId(roundJudgeId);
+        } else {
+            // Keep judging records if not forced
+        }
+        roundJudge.setIsActive(false);
+        roundJudgeRepository.save(roundJudge);
     }
 
     @Override

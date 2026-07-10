@@ -19,6 +19,8 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
     List<Judging> findBySubmission_SubmissionIdIn(List<UUID> submissionIds);
 
-    void deleteByRoundJudge_RoundJudgeId(UUID roundJudgeId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Judging j SET j.isActive = false WHERE j.roundJudge.roundJudgeId = :roundJudgeId")
+    void disableByRoundJudge_RoundJudgeId(@org.springframework.data.repository.query.Param("roundJudgeId") UUID roundJudgeId);
     boolean existsByRoundJudge_RoundJudgeId(UUID roundJudgeId);
 }
