@@ -44,7 +44,7 @@ public class RoundJudgeController {
         return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
     }
 
-    @DeleteMapping("/round/judge/{id}")
+    @PatchMapping("/round/judge/{id}")
     // RBAC:
     // Chỉ ORGANIZER được gỡ judge khỏi round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
