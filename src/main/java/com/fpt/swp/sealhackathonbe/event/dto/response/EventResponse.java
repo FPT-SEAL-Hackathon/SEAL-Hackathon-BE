@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.entity.EventStatus;
 import lombok.*;
 
@@ -21,6 +20,8 @@ public class EventResponse {
     private String bannerImageUrl;
 
     private EventStatus eventStatus;
+    private UUID eventStatusId;
+    private String eventStatusName;
 
     private LocalDateTime registrationStart;
     private LocalDateTime registrationEnd;
@@ -30,10 +31,19 @@ public class EventResponse {
 
     private Integer maxTeamSize;
     private Integer minTeamSize;
+    
+    @Setter
+    private Integer teamCount;
+    @Setter
+    private Integer roundCount;
 
     private UUID createdById;
 
+    private String participantStatus;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 }

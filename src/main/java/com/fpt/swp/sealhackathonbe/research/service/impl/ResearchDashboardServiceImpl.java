@@ -47,7 +47,7 @@ public class ResearchDashboardServiceImpl {
                          JOIN Rounds r ON r.RoundID = s.RoundID
                          JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                          JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
-                WHERE t.EventID = :eventId
+                WHERE (:eventId IS NULL OR t.EventID = :eventId)
                   AND sc.IsCalibration = 0
                 """, roundId, categoryId) + """
                 GROUP BY s.RoundID, r.RoundName, t.CategoryID, c.CategoryName, sc.SubmissionID,
@@ -55,26 +55,26 @@ public class ResearchDashboardServiceImpl {
                 ORDER BY r.RoundName, t.TeamName, rc.CriterionName
                 """;
 
-        return query(sql, eventId, roundId, categoryId).getResultList().stream()
-                .map(row -> {
-                    Object[] values = (Object[]) row;
-                    return new VarianceReportResponse(
-                            uuid(values[0]),
-                            string(values[1]),
-                            uuid(values[2]),
-                            string(values[3]),
-                            uuid(values[4]),
-                            uuid(values[5]),
-                            string(values[6]),
-                            uuid(values[7]),
-                            string(values[8]),
-                            longValue(values[9]),
-                            decimal(values[10]),
-                            decimal(values[11]),
-                            decimal(values[12]),
-                            decimal(values[13])
-                    );
-                })
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query(sql, eventId, roundId, categoryId).getResultList();
+
+        return rows.stream()
+                .map(values -> new VarianceReportResponse(
+                        uuid(values[0]),
+                        string(values[1]),
+                        uuid(values[2]),
+                        string(values[3]),
+                        uuid(values[4]),
+                        uuid(values[5]),
+                        string(values[6]),
+                        uuid(values[7]),
+                        string(values[8]),
+                        longValue(values[9]),
+                        decimal(values[10]),
+                        decimal(values[11]),
+                        decimal(values[12]),
+                        decimal(values[13])
+                ))
                 .toList();
     }
 
@@ -86,11 +86,12 @@ public class ResearchDashboardServiceImpl {
                 FROM Judging sc
                          JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
                          JOIN Teams t ON t.TeamID = s.TeamID
-                WHERE t.EventID = :eventId
+                WHERE (:eventId IS NULL OR t.EventID = :eventId)
                   AND sc.IsCalibration = 0
                 """, roundId, categoryId);
         String sql = "SELECT src.BucketStart, COUNT(*) AS ScoreCount FROM (" + innerSql + ") src GROUP BY src.BucketStart ORDER BY src.BucketStart";
 
+        @SuppressWarnings("unchecked")
         List<Object[]> rows = query(sql, eventId, roundId, categoryId)
                 .setParameter("bucketSize", normalizedBucketSize)
                 .getResultList();
@@ -139,7 +140,7 @@ public class ResearchDashboardServiceImpl {
                              JOIN Teams t ON t.TeamID = s.TeamID
                              JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                              JOIN Users u ON u.UserID = rj.UserID
-                    WHERE t.EventID = :eventId
+                    WHERE (:eventId IS NULL OR t.EventID = :eventId)
                 """, roundId, categoryId) + """
                 )
                 SELECT
@@ -149,6 +150,8 @@ public class ResearchDashboardServiceImpl {
                     SUM(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN 1 ELSE 0 END) AS ComparableScoreCount,
                     SUM(CASE WHEN IsCalibration = 1 THEN 1 ELSE 0 END) AS CalibrationScoreCount,
                     AVG(ScoreValue) AS AverageScore,
+                    MIN(ScoreValue) AS MinScore,
+                    MAX(ScoreValue) AS MaxScore,
                     AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN ScoreValue - PeerMean END) AS BiasFromPeerMean,
                     AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN ABS(ScoreValue - PeerMean) END) AS AvgAbsDeviation,
                     SQRT(AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN POWER(ScoreValue - PeerMean, 2) END)) AS RootMeanSquareDeviation
@@ -157,27 +160,31 @@ public class ResearchDashboardServiceImpl {
                 ORDER BY AvgAbsDeviation ASC, JudgeName ASC
                 """;
 
-        return query(sql, eventId, roundId, categoryId).getResultList().stream()
-                .map(row -> {
-                    Object[] values = (Object[]) row;
-                    return new ReliabilityMetricResponse(
-                            uuid(values[0]),
-                            string(values[1]),
-                            longValue(values[2]),
-                            longValue(values[3]),
-                            longValue(values[4]),
-                            decimal(values[5]),
-                            decimal(values[6]),
-                            decimal(values[7]),
-                            decimal(values[8])
-                    );
-                })
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query(sql, eventId, roundId, categoryId).getResultList();
+
+        return rows.stream()
+                .map(values -> new ReliabilityMetricResponse(
+                        uuid(values[0]),
+                        string(values[1]),
+                        longValue(values[2]),
+                        longValue(values[3]),
+                        longValue(values[4]),
+                        decimal(values[5]),
+                        decimal(values[6]),
+                        decimal(values[7]),
+                        decimal(values[8]),
+                        decimal(values[9]),
+                        decimal(values[10])
+                ))
                 .toList();
     }
 
     private Query query(String sql, UUID eventId, UUID roundId, UUID categoryId) {
-        Query query = entityManager.createNativeQuery(sql)
-                .setParameter("eventId", eventId);
+        Query query = entityManager.createNativeQuery(sql);
+        
+        // Always bind eventId to handle :eventId IS NULL OR ...
+        query.setParameter("eventId", eventId);
         if (roundId != null) {
             query.setParameter("roundId", roundId);
         }

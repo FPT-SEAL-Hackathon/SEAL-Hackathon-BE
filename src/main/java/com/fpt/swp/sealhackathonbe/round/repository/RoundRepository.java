@@ -1,8 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.repository;
 
 
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,5 +23,10 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
 
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
+
+    boolean existsByCategoryCategoryIdAndRoundNameIgnoreCase(UUID categoryId, String roundName);
+
+    @Query("SELECT COUNT(r) FROM Round r WHERE r.category.event.eventId = :eventId")
+    long countByEventId(@Param("eventId") UUID eventId);
 
 }

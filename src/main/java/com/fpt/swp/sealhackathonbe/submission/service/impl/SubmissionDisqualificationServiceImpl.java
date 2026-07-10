@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
@@ -21,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubmissionDisqualificationServiceImpl implements SubmissionDisqualificationService {
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
-            UUID.fromString("50000000-0000-0000-0000-000000000004");
+            SubmissionStatusConstants.DISQUALIFIED;
 
     private final SubmissionsRepository submissionsRepository;
     private final DisqualificationsRepository disqualificationsRepository;

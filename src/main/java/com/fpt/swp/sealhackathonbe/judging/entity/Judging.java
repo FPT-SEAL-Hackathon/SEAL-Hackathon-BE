@@ -57,4 +57,7 @@ public class Judging {
     @UpdateTimestamp
     @Column(name = "UpdatedAt")
     private LocalDateTime updatedAt;
+
+    @Column(name = "IsActive")
+    private Boolean isActive = true;
 }

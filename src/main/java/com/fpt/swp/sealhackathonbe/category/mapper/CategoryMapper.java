@@ -2,8 +2,10 @@ package com.fpt.swp.sealhackathonbe.category.mapper;
 
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryResponse;
+import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -20,12 +22,26 @@ public class CategoryMapper {
                 .build();
     }
 
-    public CategoryMentorResponse categoryMentorResponse(CategoryMentor categoryMentor) {
+    public CategoryMentorResponse toCategoryMentorResponse(CategoryMentor categoryMentor) {
         return CategoryMentorResponse.builder()
-                .categoryMentorId(categoryMentor.getCategoryMentorId())
+                .categoryExpertId(categoryMentor.getCategoryMentorId())
                 .categoryId(categoryMentor.getCategory().getCategoryId())
-                .mentorId(categoryMentor.getMentor().getUserId())
+                .expertId(categoryMentor.getMentor().getUserId())
+                .fullName(categoryMentor.getMentor().getFullName())
+                .email(categoryMentor.getMentor().getEmail())
+                .phone(categoryMentor.getMentor().getPhone())
+                .expertName(categoryMentor.getMentor().getFullName())
+                .expertEmail(categoryMentor.getMentor().getEmail())
                 .assignedAt(categoryMentor.getAssignedAt())
+                .build();
+    }
+
+    public MentorResponse toMentorResponse(User mentor) {
+        return MentorResponse.builder()
+                .id(mentor.getUserId())
+                .fullName(mentor.getFullName())
+                .email(mentor.getEmail())
+                .phone(mentor.getPhone())
                 .build();
     }
 }

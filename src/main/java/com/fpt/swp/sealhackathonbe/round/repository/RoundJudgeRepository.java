@@ -14,13 +14,20 @@ import java.util.UUID;
 
 @Repository
 public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
-    boolean existsByRoundRoundId(UUID roundId);
+    @Query("SELECT COUNT(rj) > 0 FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")
+    boolean existsByRoundRoundId(@Param("roundId") UUID roundId);
 
-    @Query("SELECT rj.judge FROM RoundJudge rj WHERE rj.round.roundId = :roundId")
+    List<RoundJudge> findByRoundRoundId(UUID roundId);
+
+    @Query("SELECT rj FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")
+    List<RoundJudge> findActiveByRoundRoundId(@Param("roundId") UUID roundId);
+
+    @Query("SELECT rj.judge FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")
     List<User> findJudgesByRoundRoundId(@Param("roundId") UUID roundId);
 
-    @Query("SELECT rj.round FROM RoundJudge rj WHERE rj.judge.userId = :judgeId")
+    @Query("SELECT rj.round FROM RoundJudge rj WHERE rj.judge.userId = :judgeId AND rj.isActive = true")
     List<Round> findRoundsByJudgeJudgeId(@Param("judgeId") UUID judgeId);
   
-    Optional<RoundJudge> findByJudge_UserIdAndRound_RoundId(UUID userId, UUID roundId);
+    @Query("SELECT rj FROM RoundJudge rj WHERE rj.judge.userId = :userId AND rj.round.roundId = :roundId AND rj.isActive = true")
+    Optional<RoundJudge> findByJudge_UserIdAndRound_RoundId(@Param("userId") UUID userId, @Param("roundId") UUID roundId);
 }

@@ -20,20 +20,20 @@ public class Event {
     @Column(name = "EventID")
     private UUID eventId;
 
-    @Column(name = "EventName")
+    @Column(name = "EventName", nullable = false)
     private String eventName;
 
     @Column(name = "Description")
     private String description;
 
-    @Column(name = "Location")
+    @Column(name = "Location", nullable = false)
     private String location;
 
     @Column(name = "BannerImageURL")
     private String bannerImageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "EventStatusID")
+    @JoinColumn(name = "EventStatusID", nullable = false)
     private EventStatus eventStatus;
 
     @Column(name = "RegistrationStart")
@@ -48,23 +48,23 @@ public class Event {
     @Column(name = "EventEndDate")
     private LocalDate eventEndDate;
 
-    @Column(name = "MaxTeamSize")
+    @Column(name = "MaxTeamSize", nullable = false)
     private Integer maxTeamSize;
 
-    @Column(name = "MinTeamSize")
+    @Column(name = "MinTeamSize", nullable = false)
     private Integer minTeamSize;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CreatedByID")
+    @JoinColumn(name = "CreatedByID", nullable = false)
     private User createdBy;
 
-    @Column(name = "CreatedAt")
+    @Column(name = "CreatedAt", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "UpdatedAt")
+    @Column(name = "UpdatedAt", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(name = "IsDeleted")
+    @Column(name = "IsDeleted", nullable = false)
     private Boolean isDeleted;
 
 }

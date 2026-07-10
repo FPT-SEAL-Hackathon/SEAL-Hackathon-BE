@@ -17,6 +17,7 @@ import java.util.UUID;
 public class CategoryMentor {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "CategoryMentorID")
     private UUID categoryMentorId;
 
