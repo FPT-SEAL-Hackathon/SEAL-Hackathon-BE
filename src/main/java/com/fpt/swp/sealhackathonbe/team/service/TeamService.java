@@ -29,4 +29,6 @@ public interface TeamService {
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
     void removeMember(UUID teamId, UUID userId, UUID currentUserId);
+
+    TeamResponse transferLeadership(UUID teamId, UUID newLeaderUserId, UUID currentUserId);
 }

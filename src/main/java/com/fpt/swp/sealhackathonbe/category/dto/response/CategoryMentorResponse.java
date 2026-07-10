@@ -1,11 +1,5 @@
 package com.fpt.swp.sealhackathonbe.category.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fpt.swp.sealhackathonbe.category.entity.Category;
-import com.fpt.swp.sealhackathonbe.user.entity.User;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,10 +11,16 @@ import java.util.UUID;
 @Setter
 @Builder
 public class CategoryMentorResponse {
-    private UUID categoryMentorId;
-    private UUID categoryId;
-    private UUID mentorId;
+    private UUID categoryExpertId;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private UUID categoryId;
+
+    private UUID expertId;
+    private String fullName;
+    private String email;
+    private String phone;
+    private String expertName;
+    private String expertEmail;
+
     private LocalDateTime assignedAt;
 }

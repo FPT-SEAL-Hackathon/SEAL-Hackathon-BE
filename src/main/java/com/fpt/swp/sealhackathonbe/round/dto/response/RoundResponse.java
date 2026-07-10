@@ -3,9 +3,7 @@ package com.fpt.swp.sealhackathonbe.round.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.cglib.core.Local;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,6 +17,7 @@ public class RoundResponse {
     private String description;
     private Integer roundOrder;
     private UUID roundStatusId;
+    private String roundStatusName;
     private LocalDateTime submissionDeadline;
     private LocalDateTime judgingDeadline;
     private LocalDateTime startDate;

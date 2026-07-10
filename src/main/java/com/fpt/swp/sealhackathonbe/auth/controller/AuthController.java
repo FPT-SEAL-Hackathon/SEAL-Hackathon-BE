@@ -3,13 +3,18 @@ package com.fpt.swp.sealhackathonbe.auth.controller;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.LogoutRequest;
+import com.fpt.swp.sealhackathonbe.auth.dto.OAuth2ExchangeRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RefreshTokenRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.ResendVerificationEmailRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.TokenResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
+import com.fpt.swp.sealhackathonbe.auth.oauth.OAuthCodeStore;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.service.UserService;
+import org.springframework.security.authentication.BadCredentialsException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * làm mới token, đăng xuất và xác minh email.
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping({"/auth", "/api/v1/auth"})
 @SecurityRequirement(name = "bearerAuth")
 public class AuthController {
 
@@ -37,6 +42,12 @@ public class AuthController {
     @Autowired
     private JwtServiceImpl jwtServiceImpl;
 
+    @Autowired
+    private OAuthCodeStore oauthCodeStore;
+
+    @Autowired
+    private UserRepository userRepository;
+
     /**
      * Đăng ký tài khoản mới và khởi tạo luồng xác minh email.
      */
@@ -44,7 +55,6 @@ public class AuthController {
     public ResponseEntity<UserResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        System.out.println("REGISTER CALLED");
         UserResponse response = userService.register(request);
         return ResponseEntity.ok(response);
     }
@@ -81,8 +91,6 @@ public class AuthController {
             @RequestBody LogoutRequest request,
             @RequestHeader("Authorization") String authHeader) {
 
-        String accessToken = authHeader.substring(7);
-
         userService.logout(request.getRefreshToken());
 
         return ResponseEntity.ok("Logout successful");
@@ -99,6 +107,28 @@ public class AuthController {
         return ResponseEntity.ok(
                 jwtServiceImpl. refresh(request)
         );
+    }
+
+    /**
+     * OAuth:
+     * Đổi code một lần (phát sau khi Google xác thực xong) lấy phiên đăng nhập.
+     * Trả về đúng hình dạng LoginResponse như đăng nhập local.
+     */
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<LoginResponse> exchangeOAuthCode(
+            @Valid @RequestBody OAuth2ExchangeRequest request) {
+
+        var userId = oauthCodeStore.consume(request.getCode());
+        if (userId == null) {
+            throw new BadCredentialsException("Invalid or expired OAuth exchange code");
+        }
+
+        User user = userRepository
+                .findByUserIdAndIsDeletedFalse(userId)
+                .orElseThrow(() ->
+                        new BadCredentialsException("Invalid or expired OAuth exchange code"));
+
+        return ResponseEntity.ok(userService.issueSession(user));
     }
 
     /**

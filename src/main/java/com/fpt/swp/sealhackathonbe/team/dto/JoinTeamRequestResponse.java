@@ -11,6 +11,8 @@ public class JoinTeamRequestResponse {
     private UUID requestId;
     private UUID teamId;
     private UUID userId;
+    private String fullName;
+    private String universityName;
     private String requestStatus;
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;

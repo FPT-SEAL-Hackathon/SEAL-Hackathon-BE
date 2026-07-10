@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,7 +39,7 @@ public class EventParticipantController {
             "approvedAt", "approvedAt",
             "createdAt", "createdAt",
             "updatedAt", "updatedAt",
-            "status", "status"
+            "status", "participantStatus.statusName"
     );
 
     private final EventParticipantService eventParticipantService;
@@ -48,7 +49,7 @@ public class EventParticipantController {
     @PostMapping({"/events/{eventId}/participants/register", "/events/{eventId}/register"})
     public ResponseEntity<EventParticipantResponse> register(@PathVariable UUID eventId) {
         EventParticipantResponse response = eventParticipantService.register(eventId, currentUserId());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "View own event registration status")
@@ -59,7 +60,7 @@ public class EventParticipantController {
     }
 
     @Operation(summary = "View own event participation statuses")
-    @GetMapping("/users/me/event-participations")
+    @GetMapping({"/users/me/event-participations", "/event-participants/me"})
     public ResponseEntity<List<EventParticipantResponse>> getOwnParticipations() {
         List<EventParticipantResponse> response = eventParticipantService.getOwnParticipations(currentUserId());
         return ResponseEntity.ok(response);
@@ -84,6 +85,31 @@ public class EventParticipantController {
                 status,
                 keyword,
                 university,
+                currentUserId(),
+                toPageable(page, size, sort)
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "List participants for one event")
+    @GetMapping("/events/{eventId}/participants")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<Page<EventParticipantResponse>> getEventParticipants(
+            @PathVariable UUID eventId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String university,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "appliedAt,desc") String sort
+    ) {
+        Page<EventParticipantResponse> response = eventParticipantService.search(
+                eventId,
+                null,
+                status,
+                keyword,
+                university,
+                currentUserId(),
                 toPageable(page, size, sort)
         );
         return ResponseEntity.ok(response);

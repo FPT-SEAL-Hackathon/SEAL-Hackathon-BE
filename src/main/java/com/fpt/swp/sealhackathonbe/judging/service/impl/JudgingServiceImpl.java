@@ -8,6 +8,8 @@ import com.fpt.swp.sealhackathonbe.judging.entity.*;
 import com.fpt.swp.sealhackathonbe.judging.repository.*;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
+import com.fpt.swp.sealhackathonbe.round.dto.response.RoundJudgeResponse;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion;
 import com.fpt.swp.sealhackathonbe.round.entity.RoundJudge;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundCriterionRepository;
@@ -15,13 +17,20 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
+import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
+import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +41,8 @@ public class JudgingServiceImpl implements JudgingService {
     private final EvaluationAuditLogRepository evaluationAuditLogRepository;
     private final RoundCriterionRepository roundCriterionRepository;
     private final AuthenticationServiceImpl authenticationServiceImpl;
-    private final com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService roundJudgeService;
-    private final com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository roundJudgeRepository;
+    private final RoundJudgeService roundJudgeService;
+    private final RoundJudgeRepository roundJudgeRepository;
 
 
     @Override
@@ -53,21 +62,29 @@ public class JudgingServiceImpl implements JudgingService {
         // 2. Fetch & validate that the actor (audit user) exists
         User actor = authenticationServiceImpl.getCurrentUser();
         if (actor == null) {
-            throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
+            throw new AccessDeniedException("Actor not found from token");
         }
 
         // 3. Verify that the actor is a judge in this round using RoundJudgeService
-        List<JudgeResponse> judgesInRound = roundJudgeService.getJudgesByRound(submission.getRoundId());
+        List<RoundJudgeResponse> judgesInRound = roundJudgeService.getJudgesByRound(submission.getRoundId());
         boolean isJudge = judgesInRound.stream().anyMatch(j -> j.getJudgeId().equals(actor.getUserId()));
         if (!isJudge) {
-            throw new org.springframework.security.access.AccessDeniedException("You are not assigned as a judge for this round.");
+            throw new AccessDeniedException("You are not assigned as a judge for this round.");
         }
 
         // Fetch the RoundJudge entity
         RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
                 .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
 
-        // 4. Extract Team and Event from the submission hierarchy
+        // 4. Check Judging Deadline
+        Round round = judge.getRound();
+        if (round != null && round.getJudgingDeadline() != null) {
+            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                throw new IllegalStateException("The judging deadline for this round has passed.");
+            }
+        }
+
+        // 5. Extract Team and Event from the submission hierarchy
         Teams team = submission.getTeam();
         Event event = (team != null) ? team.getEvent() : null;
         if (event == null) {
@@ -131,11 +148,17 @@ public class JudgingServiceImpl implements JudgingService {
 
         judgingRepository.saveAll(newJudgings);
         evaluationAuditLogRepository.saveAll(auditLogs);
+        
+        // Update submission status to In Progress if it's not Disqualified
+        if (!submission.getSubmissionStatusId().equals(SubmissionStatusConstants.DISQUALIFIED)) {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+            submissionRepository.save(submission);
+        }
     }
 
     @Override
     @Transactional
-    public void updateJudging(List<com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO> dtos) {
+    public void updateJudging(List<UpdateScoreSubmissionDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             throw new IllegalArgumentException("Score update list cannot be empty");
         }
@@ -149,7 +172,7 @@ public class JudgingServiceImpl implements JudgingService {
         List<Judging> updatedJudgings = new ArrayList<>();
         List<EvaluationAuditLog> auditLogs = new ArrayList<>();
 
-        for (com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO dto : dtos) {
+        for (UpdateScoreSubmissionDTO dto : dtos) {
             // 2. Fetch & validate that the judging exists
             Judging existingJudging = judgingRepository.findById(dto.getJudgingId())
                     .orElseThrow(() -> new EntityNotFoundException("Judging not found with ID: " + dto.getJudgingId()));
@@ -161,7 +184,15 @@ public class JudgingServiceImpl implements JudgingService {
 
             RoundCriterion criterion = existingJudging.getRoundCriterion();
 
-            // 4. Validate that the score value does not exceed the maximum allowed value
+            // 4. Check Judging Deadline
+            Round round = existingJudging.getRoundJudge().getRound();
+            if (round != null && round.getJudgingDeadline() != null) {
+                if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                    throw new IllegalStateException("The judging deadline for this round has passed.");
+                }
+            }
+
+            // 5. Validate that the score value does not exceed the maximum allowed value
             if (dto.getScoreValue() != null && dto.getScoreValue().compareTo(criterion.getMaxScore()) > 0) {
                 throw new IllegalArgumentException(String.format(
                         "Score value %s exceeds the maximum allowed value %s for criterion '%s'.",
@@ -224,8 +255,29 @@ public class JudgingServiceImpl implements JudgingService {
         if (actor == null) {
             throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
         }
-        return judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId())
-                .stream()
+        
+        boolean isOrganizer = actor.getUserType() != null && "Organizer".equalsIgnoreCase(actor.getUserType().getTypeName());
+        
+        List<Judging> judgings;
+        if (isOrganizer) {
+            judgings = judgingRepository.findBySubmission_SubmissionIdIn(java.util.Collections.singletonList(submissionId));
+        } else {
+            judgings = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId());
+        }
+        
+        return judgings.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JudgingDTO> getBatchScoresBySubmissionIds(com.fpt.swp.sealhackathonbe.judging.dto.BatchScoreRequestDTO request) {
+        if (request == null || request.getSubmissionIds() == null || request.getSubmissionIds().isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        List<Judging> judgings = judgingRepository.findBySubmission_SubmissionIdIn(request.getSubmissionIds());
+        return judgings.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -269,10 +321,10 @@ public class JudgingServiceImpl implements JudgingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
+    public List<EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId) {
         return evaluationAuditLogRepository.findByEvent_EventIdOrderByCreatedAtDesc(eventId)
                 .stream()
-                .map(log -> com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO.builder()
+                .map(log -> EvaluationAuditLogDTO.builder()
                         .id(log.getId())
                         .eventId(log.getEvent() != null ? log.getEvent().getEventId() : null)
                         .actionType(log.getActionType())

@@ -19,7 +19,8 @@ public class RoundMapper {
                 .roundName(round.getRoundName())
                 .description(round.getDescription())
                 .roundOrder(round.getRoundOrder())
-                .roundStatusId(round.getRoundStatus().getStatusId())
+                .roundStatusId(round.getRoundStatus() != null ? round.getRoundStatus().getStatusId() : null)
+                .roundStatusName(round.getRoundStatus() != null ? round.getRoundStatus().getStatusName() : null)
                 .submissionDeadline(round.getSubmissionDeadline())
                 .judgingDeadline(round.getJudgingDeadline())
                 .startDate(round.getStartDate())
@@ -47,6 +48,9 @@ public class RoundMapper {
                 .roundJudgeId(roundJudge.getRoundJudgeId())
                 .roundId(roundJudge.getRound().getRoundId())
                 .judgeId(roundJudge.getJudge().getUserId())
+                .fullName(roundJudge.getJudge().getFullName())
+                .email(roundJudge.getJudge().getEmail())
+                .phone(roundJudge.getJudge().getPhone())
                 .assignedAt(roundJudge.getAssignedAt())
                 .assignedById(roundJudge.getAssignedBy().getUserId())
                 .build();
@@ -58,6 +62,16 @@ public class RoundMapper {
                 .fullName(judge.getFullName())
                 .email(judge.getEmail())
                 .phone(judge.getPhone())
+                .role(toApiName(getRoleName(judge)))
+                .roleName(getRoleName(judge))
                 .build();
+    }
+
+    private String getRoleName(User user) {
+        return user.getUserType() != null ? user.getUserType().getTypeName() : null;
+    }
+
+    private String toApiName(String value) {
+        return value == null ? null : value.trim().replace(' ', '_').toUpperCase();
     }
 }

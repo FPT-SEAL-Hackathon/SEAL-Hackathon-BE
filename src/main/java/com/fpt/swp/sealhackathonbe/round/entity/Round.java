@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.entity;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -22,21 +22,21 @@ BEGIN TRY
     DECLARE @PasswordHash nvarchar(512) =
         N'$2a$10$r2IN3b9UZqJTpgDEhaorz.NrIFFe31HahrsCDfnmDUwO58BrE1lPm';
 
-    DECLARE @OrganizerId uniqueidentifier = 'A1000000-0000-0000-0000-000000000001';
-    DECLARE @JudgeOneId uniqueidentifier = 'A1000000-0000-0000-0000-000000000002';
-    DECLARE @JudgeTwoId uniqueidentifier = 'A1000000-0000-0000-0000-000000000003';
-    DECLARE @MentorId uniqueidentifier = 'A1000000-0000-0000-0000-000000000004';
-    DECLARE @AlphaLeaderId uniqueidentifier = 'A1000000-0000-0000-0000-000000000010';
-    DECLARE @AlphaMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000011';
-    DECLARE @BetaLeaderId uniqueidentifier = 'A1000000-0000-0000-0000-000000000012';
-    DECLARE @BetaMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000013';
-    DECLARE @GreenLeaderId uniqueidentifier = 'A1000000-0000-0000-0000-000000000014';
-    DECLARE @GreenMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000015';
-    DECLARE @ApplicantId uniqueidentifier = 'A1000000-0000-0000-0000-000000000016';
-    DECLARE @GuestJudgeId uniqueidentifier = 'A1000000-0000-0000-0000-000000000017';
-    DECLARE @JoinMemberId uniqueidentifier = 'A1000000-0000-0000-0000-000000000018';
-    DECLARE @JoinLeaderId uniqueidentifier = 'A1000000-0000-0000-0000-000000000019';
-    DECLARE @JoinGuestId uniqueidentifier = 'A1000000-0000-0000-0000-000000000020';
+    DECLARE @OrganizerId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.organizer@seal.test'), 'A1000000-0000-0000-0000-000000000001');
+    DECLARE @JudgeOneId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.judge1@seal.test'), 'A1000000-0000-0000-0000-000000000002');
+    DECLARE @JudgeTwoId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.judge2@seal.test'), 'A1000000-0000-0000-0000-000000000003');
+    DECLARE @MentorId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.mentor@seal.test'), 'A1000000-0000-0000-0000-000000000004');
+    DECLARE @AlphaLeaderId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.alpha.leader@seal.test'), 'A1000000-0000-0000-0000-000000000010');
+    DECLARE @AlphaMemberId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.alpha.member@seal.test'), 'A1000000-0000-0000-0000-000000000011');
+    DECLARE @BetaLeaderId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.beta.leader@seal.test'), 'A1000000-0000-0000-0000-000000000012');
+    DECLARE @BetaMemberId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.beta.member@seal.test'), 'A1000000-0000-0000-0000-000000000013');
+    DECLARE @GreenLeaderId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.green.leader@seal.test'), 'A1000000-0000-0000-0000-000000000014');
+    DECLARE @GreenMemberId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.green.member@seal.test'), 'A1000000-0000-0000-0000-000000000015');
+    DECLARE @ApplicantId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.applicant@seal.test'), 'A1000000-0000-0000-0000-000000000016');
+    DECLARE @GuestJudgeId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.guestjudge@seal.test'), 'A1000000-0000-0000-0000-000000000017');
+    DECLARE @JoinMemberId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.join.member@seal.test'), 'A1000000-0000-0000-0000-000000000018');
+    DECLARE @JoinLeaderId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.join.leader@seal.test'), 'A1000000-0000-0000-0000-000000000019');
+    DECLARE @JoinGuestId uniqueidentifier = COALESCE((SELECT UserID FROM Users WHERE Email = N'api.join.guest@seal.test'), 'A1000000-0000-0000-0000-000000000020');
 
     DECLARE @LiveEventId uniqueidentifier = 'B1000000-0000-0000-0000-000000000001';
     DECLARE @PastEventId uniqueidentifier = 'B1000000-0000-0000-0000-000000000002';
@@ -82,6 +82,10 @@ BEGIN TRY
         INSERT INTO UserType (UserTypeID, TypeName) VALUES ('10000000-0000-0000-0000-000000000004', N'Internal Judge');
     IF NOT EXISTS (SELECT 1 FROM UserType WHERE UserTypeID = '10000000-0000-0000-0000-000000000005')
         INSERT INTO UserType (UserTypeID, TypeName) VALUES ('10000000-0000-0000-0000-000000000005', N'Guest Judge');
+    IF NOT EXISTS (SELECT 1 FROM UserType WHERE UserTypeID = '33333333-3333-3333-3333-333333333333')
+        INSERT INTO UserType (UserTypeID, TypeName) VALUES ('33333333-3333-3333-3333-333333333333', N'Expert');
+    IF NOT EXISTS (SELECT 1 FROM UserType WHERE UserTypeID = '10000000-0000-0000-0000-000000000007')
+        INSERT INTO UserType (UserTypeID, TypeName) VALUES ('10000000-0000-0000-0000-000000000007', N'Mentor');
 
     IF NOT EXISTS (SELECT 1 FROM AccountStatus WHERE StatusID = '20000000-0000-0000-0000-000000000001')
         INSERT INTO AccountStatus (StatusID, StatusName) VALUES ('20000000-0000-0000-0000-000000000001', N'Pending Approval');
@@ -102,6 +106,13 @@ BEGIN TRY
         INSERT INTO EventStatus (StatusID, StatusName) VALUES ('30000000-0000-0000-0000-000000000003', N'Ongoing');
     IF NOT EXISTS (SELECT 1 FROM EventStatus WHERE StatusID = '30000000-0000-0000-0000-000000000004')
         INSERT INTO EventStatus (StatusID, StatusName) VALUES ('30000000-0000-0000-0000-000000000004', N'Completed');
+
+    IF NOT EXISTS (SELECT 1 FROM ParticipantStatus WHERE StatusID = '80000000-0000-0000-0000-000000000001')
+        INSERT INTO ParticipantStatus (StatusID, StatusName) VALUES ('80000000-0000-0000-0000-000000000001', N'PENDING');
+    IF NOT EXISTS (SELECT 1 FROM ParticipantStatus WHERE StatusID = '80000000-0000-0000-0000-000000000002')
+        INSERT INTO ParticipantStatus (StatusID, StatusName) VALUES ('80000000-0000-0000-0000-000000000002', N'ACTIVE');
+    IF NOT EXISTS (SELECT 1 FROM ParticipantStatus WHERE StatusID = '80000000-0000-0000-0000-000000000003')
+        INSERT INTO ParticipantStatus (StatusID, StatusName) VALUES ('80000000-0000-0000-0000-000000000003', N'REJECTED');
 
     IF NOT EXISTS (SELECT 1 FROM RoundStatus WHERE StatusID = '40000000-0000-0000-0000-000000000001')
         INSERT INTO RoundStatus (StatusID, StatusName) VALUES ('40000000-0000-0000-0000-000000000001', N'Upcoming');
@@ -171,7 +182,7 @@ BEGIN TRY
              CreatedAt, UpdatedAt, ApprovedAt, ApprovedByUserID, IsDeleted)
         VALUES
             (@MentorId, N'api.mentor@seal.test', @PasswordHash, N'API Test Mentor', N'0900000004',
-             '10000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000002',
+             '10000000-0000-0000-0000-000000000007', '20000000-0000-0000-0000-000000000002',
              '2026-05-02T08:20:00', '2026-05-02T08:20:00', '2026-05-02T09:20:00', @OrganizerId, 0);
 
     IF NOT EXISTS (SELECT 1 FROM Users WHERE UserID = @GuestJudgeId OR Email = N'api.guestjudge@seal.test')
@@ -564,18 +575,18 @@ BEGIN TRY
 
     -- Precomputed leaderboard rows allow GET APIs to work before recomputation is tested.
     IF NOT EXISTS (SELECT 1 FROM RoundRankings WHERE RankingID = 'F3000000-0000-0000-0000-000000000001')
-        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000001', @AiQualifierId, @AiCategoryId, @AlphaTeamId, @AlphaQualifierSubmissionId, 51.50, 8.5833, 1, 1, '2026-06-12T12:00:00');
+        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000001', @AiQualifierId, @AiCategoryId, @AlphaTeamId, @AlphaQualifierSubmissionId, 51.50, 8.5833, 1, 1, '2026-06-12T12:00:00', 1);
     IF NOT EXISTS (SELECT 1 FROM RoundRankings WHERE RankingID = 'F3000000-0000-0000-0000-000000000002')
-        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000002', @AiQualifierId, @AiCategoryId, @BetaTeamId, @BetaQualifierSubmissionId, 44.50, 7.4167, 2, 0, '2026-06-12T12:00:00');
+        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000002', @AiQualifierId, @AiCategoryId, @BetaTeamId, @BetaQualifierSubmissionId, 44.50, 7.4167, 2, 0, '2026-06-12T12:00:00', 1);
     IF NOT EXISTS (SELECT 1 FROM RoundRankings WHERE RankingID = 'F3000000-0000-0000-0000-000000000003')
-        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000003', @PastFinalId, @OpenCategoryId, @PastWinnerTeamId, @PastWinnerSubmissionId, 28.10, 9.3667, 1, 1, '2025-10-12T12:00:00');
+        INSERT INTO RoundRankings VALUES ('F3000000-0000-0000-0000-000000000003', @PastFinalId, @OpenCategoryId, @PastWinnerTeamId, @PastWinnerSubmissionId, 28.10, 9.3667, 1, 1, '2025-10-12T12:00:00', 1);
 
     IF NOT EXISTS (SELECT 1 FROM EventRankings WHERE EventRankingID = 'F3100000-0000-0000-0000-000000000001')
-        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000001', @LiveEventId, @AiCategoryId, @AlphaTeamId, 8.5833, 1, '2026-06-12T12:05:00');
+        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000001', @LiveEventId, @AiCategoryId, @AlphaTeamId, 8.5833, 1, '2026-06-12T12:05:00', 1);
     IF NOT EXISTS (SELECT 1 FROM EventRankings WHERE EventRankingID = 'F3100000-0000-0000-0000-000000000002')
-        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000002', @LiveEventId, @AiCategoryId, @BetaTeamId, 7.4167, 2, '2026-06-12T12:05:00');
+        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000002', @LiveEventId, @AiCategoryId, @BetaTeamId, 7.4167, 2, '2026-06-12T12:05:00', 1);
     IF NOT EXISTS (SELECT 1 FROM EventRankings WHERE EventRankingID = 'F3100000-0000-0000-0000-000000000003')
-        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000003', @PastEventId, @OpenCategoryId, @PastWinnerTeamId, 9.3667, 1, '2025-10-12T12:05:00');
+        INSERT INTO EventRankings VALUES ('F3100000-0000-0000-0000-000000000003', @PastEventId, @OpenCategoryId, @PastWinnerTeamId, 9.3667, 1, '2025-10-12T12:05:00', 1);
 
     -- Published award supports the public hall-of-fame endpoint.
     IF NOT EXISTS (SELECT 1 FROM Awards WHERE AwardID = 'F4000000-0000-0000-0000-000000000001')

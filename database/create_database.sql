@@ -8,6 +8,8 @@ DECLARE @UT_EXTERNAL_STUDENT  UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000
 DECLARE @UT_ORGANIZER         UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000003';
 DECLARE @UT_INTERNAL_JUDGE    UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000004';
 DECLARE @UT_GUEST_JUDGE       UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000005';
+DECLARE @UT_EXPERT            UNIQUEIDENTIFIER = '33333333-3333-3333-3333-333333333333';
+DECLARE @UT_MENTOR            UNIQUEIDENTIFIER = '10000000-0000-0000-0000-000000000007';
 
 -- AccountStatus
 DECLARE @AS_PENDING_APPROVAL  UNIQUEIDENTIFIER = '20000000-0000-0000-0000-000000000001';
@@ -53,7 +55,7 @@ DECLARE @AT_PRESENTATION      UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000
 DECLARE @AT_SPECIAL           UNIQUEIDENTIFIER = '70000000-0000-0000-0000-000000000007';
 
 --ParticipantStatus
-DECLARE @PS_PENDING_APPROVAL UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
+DECLARE @PS_PENDING          UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000001';
 DECLARE @PS_ACTIVE           UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000002';
 DECLARE @PS_REJECTED         UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000003';
 DECLARE @PS_SUSPENDED        UNIQUEIDENTIFIER = '80000000-0000-0000-0000-000000000004';
@@ -73,7 +75,9 @@ INSERT INTO UserType (UserTypeID, TypeName) VALUES
                                                 (@UT_EXTERNAL_STUDENT, N'External Student'),
                                                 (@UT_ORGANIZER, N'Organizer'),
                                                 (@UT_INTERNAL_JUDGE, N'Internal Judge'),
-                                                (@UT_GUEST_JUDGE, N'Guest Judge');
+                                                (@UT_GUEST_JUDGE, N'Guest Judge'),
+                                                (@UT_EXPERT, N'Expert'),
+                                                (@UT_MENTOR, N'Mentor');
 
 CREATE TABLE AccountStatus (
                                StatusID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
@@ -284,6 +288,9 @@ CREATE TABLE Events (
                         UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
                         IsDeleted BIT NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX UQ_Events_EventName_Active
+    ON Events(EventName)
+    WHERE IsDeleted = 0;
 GO
 
 CREATE TABLE EventCriteria (
@@ -324,6 +331,7 @@ CREATE TABLE CategoryMentors (
                                  CONSTRAINT UQ_CategoryMentors UNIQUE (CategoryID, MentorUserID)
 );
 GO
+
 -- ============================================================
 -- SECTION 5.5: EVENT PARTICIPANTS
 -- ============================================================
@@ -340,7 +348,7 @@ CREATE TABLE dbo.ParticipantStatus (
                                        CONSTRAINT UQ_ParticipantStatus_Name UNIQUE (StatusName),
                                        CONSTRAINT CK_ParticipantStatus_Name CHECK (
                                            StatusName IN (
-                                               N'PENDING_APPROVAL',
+                                               N'PENDING',
                                                N'ACTIVE',
                                                N'REJECTED',
                                                N'SUSPENDED',
@@ -352,7 +360,7 @@ CREATE TABLE dbo.ParticipantStatus (
 
 INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
 VALUES
-    (@PS_PENDING_APPROVAL, N'PENDING_APPROVAL'),
+    (@PS_PENDING,          N'PENDING'),
     (@PS_ACTIVE,           N'ACTIVE'),
     (@PS_REJECTED,         N'REJECTED'),
     (@PS_SUSPENDED,        N'SUSPENDED'),
@@ -496,6 +504,44 @@ CREATE TABLE TeamMembers (
 );
 GO
 
+CREATE TABLE ConsultationRequests (
+                                      RequestID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      EventID UNIQUEIDENTIFIER NOT NULL REFERENCES Events(EventID),
+                                      CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+                                      TeamID UNIQUEIDENTIFIER NOT NULL REFERENCES Teams(TeamID),
+                                      MentorUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      CreatedByUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Title NVARCHAR(150) NOT NULL,
+                                      Description NVARCHAR(MAX) NOT NULL,
+                                      Priority NVARCHAR(20) NOT NULL,
+                                      Status NVARCHAR(20) NOT NULL DEFAULT N'PENDING',
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      ClosedAt DATETIME2 NULL,
+                                      CONSTRAINT CK_ConsultationRequests_Priority CHECK (Priority IN (N'LOW', N'MEDIUM', N'HIGH', N'URGENT')),
+                                      CONSTRAINT CK_ConsultationRequests_Status CHECK (Status IN (N'PENDING', N'ACCEPTED', N'IN_PROGRESS', N'RESOLVED', N'REJECTED', N'CANCELLED'))
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Mentor ON ConsultationRequests(MentorUserID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_Team ON ConsultationRequests(TeamID, CreatedAt DESC);
+CREATE NONCLUSTERED INDEX IX_ConsultationRequests_CategoryStatus ON ConsultationRequests(CategoryID, Status);
+GO
+
+CREATE TABLE ConsultationMessages (
+                                      MessageID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+                                      RequestID UNIQUEIDENTIFIER NOT NULL REFERENCES ConsultationRequests(RequestID),
+                                      SenderID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
+                                      Content NVARCHAR(MAX) NULL,
+                                      AttachmentUrl NVARCHAR(500) NULL,
+                                      CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                      SeenAt DATETIME2 NULL
+);
+GO
+
+CREATE NONCLUSTERED INDEX IX_ConsultationMessages_RequestCreatedAt ON ConsultationMessages(RequestID, CreatedAt ASC);
+GO
+
 CREATE TABLE TeamJoinRequests (
                                   RequestID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
                                   TeamID UNIQUEIDENTIFIER NOT NULL REFERENCES Teams(TeamID),
@@ -505,10 +551,32 @@ CREATE TABLE TeamJoinRequests (
                                   RespondedAt DATETIME2 NULL,
                                   RespondedByID UNIQUEIDENTIFIER NULL REFERENCES Users(UserID),
                                   ResponseNote NVARCHAR(500) NULL,
-                                  CONSTRAINT UQ_TeamJoinRequests_Pending UNIQUE (TeamID, UserID, RequestStatus),
                                   CONSTRAINT CK_TeamJoinRequests_Status CHECK (
                                       RequestStatus IN (N'PENDING', N'APPROVED', N'REJECTED', N'CANCELLED')
                                       )
+);
+GO
+
+CREATE UNIQUE INDEX UQ_TeamJoinRequests_Pending
+    ON TeamJoinRequests(TeamID, UserID)
+    WHERE RequestStatus = N'PENDING';
+GO
+
+-- ============================================================
+-- SECTION 7.5: TEAM MILESTONES
+-- ============================================================
+
+CREATE TABLE TeamMilestones (
+    MilestoneID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    TeamID UNIQUEIDENTIFIER NOT NULL,
+    MentorUserID UNIQUEIDENTIFIER NOT NULL,
+    Label NVARCHAR(255) NOT NULL,
+    IsDone BIT NOT NULL DEFAULT 0,
+    SortOrder INT NOT NULL DEFAULT 0,
+    CreatedAt DATETIME2 NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME2 NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_TeamMilestones_Team FOREIGN KEY (TeamID) REFERENCES Teams(TeamID),
+    CONSTRAINT FK_TeamMilestones_Mentor FOREIGN KEY (MentorUserID) REFERENCES Users(UserID)
 );
 GO
 
@@ -1478,5 +1546,14 @@ THROW 52002, N'Lỗi DB: Một người không thể làm giám khảo cho vòng
 END
 END;
 GO
+CREATE TABLE SystemSettings (
+    SettingKey NVARCHAR(100) NOT NULL PRIMARY KEY,
+    SettingValue NVARCHAR(1000) NOT NULL,
+    SettingType NVARCHAR(20) NULL,
+    Description NVARCHAR(500) NULL,
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
 PRINT N'SEAL_HackathonDB UUID version created successfully.';
 GO

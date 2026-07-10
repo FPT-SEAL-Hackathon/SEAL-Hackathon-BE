@@ -14,11 +14,19 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    // Tim membership active cua user, dung cho chuc nang xem team hien tai va roi team.
    Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
 
+   Optional<TeamMembers> findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(UUID userId);
+
    // Xac nhan user dang la member active cua dung team truoc khi tra thong tin chi tiet.
    Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
 
+   // Tim ca membership da inactive de co the tai kich hoat khi user duoc approve lai.
+   Optional<TeamMembers> findByTeamIdAndUserId(UUID teamId, UUID userId);
+
    // Lay cac member con hoat dong de tao TeamResponse.
    List<TeamMembers> findByTeamIdAndActiveTrue(UUID teamId);
+
+   // Thu tu xac dinh de chon leader ke nhiem khi leader hien tai roi team.
+   List<TeamMembers> findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(UUID teamId);
 
    // Kiem tra nhanh user co membership active hay khong.
    boolean existsByUserIdAndActiveTrue(UUID userId);
@@ -33,6 +41,6 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
            @Param("categoryId") UUID categoryId
    );
 
-   // Dem member active de kiem tra MinTeamSize va MaxTeamSize.
+   // Dem member active de kiem tra MaxTeamSize va danh gia eligibility.
    long countByTeamIdAndActiveTrue(UUID teamId);
 }

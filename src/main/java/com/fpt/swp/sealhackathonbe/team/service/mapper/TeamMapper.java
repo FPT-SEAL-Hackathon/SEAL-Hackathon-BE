@@ -75,6 +75,9 @@ public class TeamMapper {
         response.setRequestId(request.getRequestId());
         response.setTeamId(request.getTeamId());
         response.setUserId(request.getUserId());
+        User user = request.getUser();
+        response.setFullName(user != null ? user.getFullName() : null);
+        response.setUniversityName(user != null ? user.getUniversityName() : null);
         response.setRequestStatus(request.getRequestStatus());
         response.setRequestedAt(request.getRequestedAt());
         response.setRespondedAt(request.getRespondedAt());

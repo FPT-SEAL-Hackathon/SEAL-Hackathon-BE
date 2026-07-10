@@ -15,7 +15,7 @@ import java.util.UUID;
 @Builder
 public class UserResponse {
 
-    private UUID id;
+    private UUID userId;
 
     private String email;
 
@@ -23,11 +23,14 @@ public class UserResponse {
 
     private String phone;
 
-    private String userType;
+    private String role;
+    private String roleName;
 
     private String accountStatus;
+    private String accountStatusName;
 
-    private String studentCode;
+    private String fptStudentCode;
+    private String externalStudentCode;
 
     private String universityName;
 

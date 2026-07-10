@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
+import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
+
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginRequest;
 import com.fpt.swp.sealhackathonbe.auth.dto.LoginResponse;
 import com.fpt.swp.sealhackathonbe.auth.dto.RegisterRequest;
@@ -10,6 +12,8 @@ import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
@@ -33,6 +37,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -42,9 +47,9 @@ import java.util.UUID;
 @Service
 public class UserService {
     private static final UUID FPT_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000001");
+            UserRoleConstants.ROLE_ADMIN;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UUID.fromString("10000000-0000-0000-0000-000000000002");
+            UserRoleConstants.ROLE_USER;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int VERIFICATION_TOKEN_BYTES = 32;
 
@@ -109,58 +114,69 @@ public class UserService {
                 );
             }
 
-            // JWT:
-            // Cấp access token ngắn hạn sau khi xác thực thành công.
-            String accessToken = jwtServiceImpl.generateAccessToken(user);
-
-            // Token làm mới:
-            // Lưu refresh token để quản lý phiên và hỗ trợ logout.
-            String refreshToken = jwtServiceImpl.generateRefreshToken(user);
-
-            String studentCode =
-                    user.getFptStudentCode() != null
-                            ? user.getFptStudentCode()
-                            : user.getExternalStudentCode();
-
-            UserResponse userResponse =
-                    UserResponse.builder()
-                            .id(user.getUserId())
-                            .email(user.getEmail())
-                            .fullName(user.getFullName())
-                            .userType(user.getUserType().getTypeName())
-                            .studentCode(studentCode)
-                            .universityName(user.getUniversityName())
-                            .phone(user.getPhone())
-                            .accountStatus(
-                                    user.getAccountStatus().getStatusName()
-                            )
-                            .createdAt(user.getCreatedAt())
-                            .build();
-
-            RefreshToken tokenEntity = RefreshToken.builder()
-                    .user(user)
-                    .tokenHash(refreshToken)
-                    .issuedAt(LocalDateTime.now())
-                    .expiresAt(LocalDateTime.now().plusDays(7))
-                    .revokedAt(null)
-                    .deviceInfo("WEB")
-                    .build();
-
-            refreshTokenRepository.save(tokenEntity);
-            return LoginResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshToken)
-                    .user(userResponse)
-                    .build();
+            return issueSession(user);
         }
 
         throw new RuntimeException("Invalid email or password");
     }
 
     /**
+     * Cấp phiên đăng nhập (access + refresh token + hồ sơ) cho một user.
+     * Dùng chung cho login local, đổi code OAuth và sau khi liên kết tài khoản
+     * để mọi luồng trả về đúng một hình dạng LoginResponse.
+     */
+    public LoginResponse issueSession(User user) {
+
+        String accessToken = jwtServiceImpl.generateAccessToken(user);
+        String refreshToken = jwtServiceImpl.generateRefreshToken(user);
+
+        RefreshToken tokenEntity = RefreshToken.builder()
+                .user(user)
+                .tokenHash(refreshToken)
+                .issuedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revokedAt(null)
+                .deviceInfo("WEB")
+                .build();
+
+        refreshTokenRepository.save(tokenEntity);
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(toUserResponse(user))
+                .build();
+    }
+
+    /**
+     * Ánh xạ hồ sơ an toàn trả về cho client (không có password hash).
+     */
+    public UserResponse toUserResponse(User user) {
+        String roleName = user.getUserType() != null ? user.getUserType().getTypeName() : null;
+        String accountStatusName = user.getAccountStatus() != null
+                ? user.getAccountStatus().getStatusName()
+                : null;
+
+        return UserResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(toApiName(roleName))
+                .roleName(roleName)
+                .fptStudentCode(user.getFptStudentCode())
+                .externalStudentCode(user.getExternalStudentCode())
+                .universityName(user.getUniversityName())
+                .phone(user.getPhone())
+                .accountStatus(toApiName(accountStatusName))
+                .accountStatusName(accountStatusName)
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    /**
      * Tạo token xác minh email một lần cho tài khoản mới đăng ký.
      */
-    private void createAndSendVerificationToken(User user) {
+    public void createAndSendVerificationToken(User user) {
 
         String verificationToken = generateVerificationToken();
         String verificationTokenHash = tokenHashUtil.hash(verificationToken);
@@ -245,18 +261,18 @@ public class UserService {
     /**
      * Đăng xuất:
      * Thu hồi refresh token để phiên hiện tại không thể refresh tiếp.
+     * Idempotent: nếu token không tồn tại hoặc đã bị thu hồi thì coi như đã logout.
      */
     @Transactional
     public void logout(String refreshToken) {
 
-        RefreshToken token = refreshTokenRepository
+        refreshTokenRepository
                 .findByTokenHash(refreshToken)
-                .orElseThrow(() ->
-                        new RuntimeException("Token not found"));
-
-        token.setRevokedAt(LocalDateTime.now());
-
-        refreshTokenRepository.save(token);
+                .filter(token -> token.getRevokedAt() == null)
+                .ifPresent(token -> {
+                    token.setRevokedAt(LocalDateTime.now());
+                    refreshTokenRepository.save(token);
+                });
     }
 
     /**
@@ -274,19 +290,19 @@ public class UserService {
         }
 
         if (userRepo.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new BusinessConflictException("Email already exists");
         }
 
         UserType userType = userTypeRepo
                 .findById(request.getUserTypeId())
                 .orElseThrow(() ->
-                        new RuntimeException("User type not found"));
+                        new BadRequestException("User type not found"));
 
         // RBAC:
         // Chặn tự đăng ký role đặc quyền như ORGANIZER/JUDGE từ API public.
         if (!FPT_STUDENT_ID.equals(userType.getUserTypeId())
                 && !EXTERNAL_STUDENT_ID.equals(userType.getUserTypeId())) {
-            throw new RuntimeException("This user type cannot be self-registered");
+            throw new BadRequestException("This user type cannot be self-registered");
         }
 
         AccountStatus accountStatus = accountStatusRepo
@@ -317,30 +333,36 @@ public class UserService {
 
         User savedUser = userRepo.save(user);
 
-        String studentCode =
-                savedUser.getFptStudentCode() != null
-                        ? savedUser.getFptStudentCode()
-                        : savedUser.getExternalStudentCode();
+        String roleName = savedUser.getUserType().getTypeName();
+        String accountStatusName = savedUser.getAccountStatus().getStatusName();
 
         createAndSendVerificationToken(savedUser);
 
         return UserResponse.builder()
-                .id(savedUser.getUserId())
+                .userId(savedUser.getUserId())
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
-                .userType(
-                        savedUser.getUserType().getTypeName()
-                )
-                .studentCode(studentCode)
+                .role(toApiName(roleName))
+                .roleName(roleName)
+                .fptStudentCode(savedUser.getFptStudentCode())
+                .externalStudentCode(savedUser.getExternalStudentCode())
                 .universityName(
                         savedUser.getUniversityName()
                 )
                 .phone(savedUser.getPhone())
-                .accountStatus(
-                        savedUser.getAccountStatus()
-                                .getStatusName()
-                )
+                .accountStatus(toApiName(accountStatusName))
+                .accountStatusName(accountStatusName)
                 .createdAt(savedUser.getCreatedAt())
                 .build();
+    }
+
+    private String toApiName(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.trim()
+                .replace("-", "_")
+                .replace(" ", "_")
+                .toUpperCase(Locale.ROOT);
     }
 }
