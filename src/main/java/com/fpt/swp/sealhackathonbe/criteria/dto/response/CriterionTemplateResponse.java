@@ -20,5 +20,4 @@ public class CriterionTemplateResponse {
     private Boolean isActive;
     private UUID createdById;
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }
