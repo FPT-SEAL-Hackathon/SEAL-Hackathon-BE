@@ -20,7 +20,6 @@ public class Mapper {
                 .isActive(template.getIsActive())
                 .createdById(template.getCreatedBy().getUserId())
                 .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
