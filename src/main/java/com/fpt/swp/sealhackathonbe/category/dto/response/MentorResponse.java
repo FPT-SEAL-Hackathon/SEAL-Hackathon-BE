@@ -10,7 +10,7 @@ import java.util.UUID;
 @Setter
 @Builder
 public class MentorResponse {
-    private UUID mentorId;
+    private UUID id;
     private String fullName;
     private String email;
     private String phone;

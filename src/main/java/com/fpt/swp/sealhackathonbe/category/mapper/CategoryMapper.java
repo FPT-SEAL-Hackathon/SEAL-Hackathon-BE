@@ -5,7 +5,6 @@ import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
-import com.fpt.swp.sealhackathonbe.round.dto.response.JudgeResponse;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +38,7 @@ public class CategoryMapper {
 
     public MentorResponse toMentorResponse(User mentor) {
         return MentorResponse.builder()
-                .mentorId(mentor.getUserId())
+                .id(mentor.getUserId())
                 .fullName(mentor.getFullName())
                 .email(mentor.getEmail())
                 .phone(mentor.getPhone())

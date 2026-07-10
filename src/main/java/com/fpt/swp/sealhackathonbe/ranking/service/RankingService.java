@@ -4,7 +4,6 @@ import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface RankingService {
@@ -26,6 +25,7 @@ public interface RankingService {
     void publishEventRankings(UUID eventId, UUID categoryId);
 
     List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId);
+    List<EventRankingDTO> getPublishedCategoryLeaderboard(UUID eventId, UUID categoryId);
 
     List<RoundRankingDTO> getRoundRankings(UUID roundId, UUID categoryId);
     List<EventRankingDTO> getAdminEventRankings(UUID eventId);

@@ -72,9 +72,6 @@ public class RankingServiceImpl implements RankingService {
                 .map(DisqualifiedSubmissionResponse::getSubmissionId)
                 .toList();
 
-        List<UUID> teamIds = submissionQueryService.getSubmissionsByRound(roundId).stream()
-                .map(SubmissionResponse::getTeamId)
-                .toList();
 
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
                 .stream()
@@ -333,6 +330,23 @@ public class RankingServiceImpl implements RankingService {
                 .isPublished(r.getIsPublished())
                 .build()
         ).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventRankingDTO> getPublishedCategoryLeaderboard(UUID eventId, UUID categoryId) {
+        List<EventRankingDTO> rankings = getCategoryLeaderboard(eventId, categoryId);
+        if (rankings.isEmpty()) {
+            return rankings;
+        }
+        boolean isPublished = rankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsPublished()));
+        if (!isPublished) {
+            throw new IllegalStateException("Leaderboard has not been published yet.");
+        }
+        return rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .collect(Collectors.toList());
     }
 
     @Override

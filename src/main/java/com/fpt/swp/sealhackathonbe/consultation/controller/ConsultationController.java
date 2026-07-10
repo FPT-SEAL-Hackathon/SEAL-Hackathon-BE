@@ -65,7 +65,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/categories/{categoryId}/experts")
-    @PreAuthorize("hasAnyRole('ORGANIZER', 'INTERNAL_JUDGE', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT')")
+    @PreAuthorize("hasAnyRole('ORGANIZER', 'MENTOR', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT')")
     @Operation(summary = "Get experts of category")
     public ResponseEntity<List<MentorProfileResponse>> getExpertsOfCategory(@PathVariable UUID categoryId) {
         return ResponseEntity.ok(consultationService.getMentorsOfCategory(categoryId));
@@ -76,14 +76,14 @@ public class ConsultationController {
     // ==========================================
 
     @GetMapping("/expert/categories")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Get assigned categories for expert")
     public ResponseEntity<List<AssignedCategoryResponse>> getAssignedCategoriesForExpert(Authentication auth) {
         return ResponseEntity.ok(consultationService.getAssignedCategoriesForMentor(getCurrentUser(auth)));
     }
 
     @GetMapping("/expert/categories/{categoryId}/teams")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Get all teams in a category assigned to the expert")
     public ResponseEntity<List<TeamSummaryForMentorResponse>> getTeamsForExpertCategory(
             Authentication auth, @PathVariable UUID categoryId) {
@@ -91,7 +91,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/expert/consultation-requests")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Get expert's consultation requests")
     public ResponseEntity<Page<ConsultationRequestResponse>> getExpertRequests(
             Authentication auth,
@@ -106,28 +106,28 @@ public class ConsultationController {
     }
 
     @PutMapping("/expert/consultation-requests/{requestId}/accept")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Accept request")
     public ResponseEntity<ConsultationRequestResponse> acceptRequest(Authentication auth, @PathVariable UUID requestId) {
         return ResponseEntity.ok(consultationService.acceptRequest(getCurrentUser(auth), requestId));
     }
 
     @PutMapping("/expert/consultation-requests/{requestId}/reject")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Reject request")
     public ResponseEntity<ConsultationRequestResponse> rejectRequest(Authentication auth, @PathVariable UUID requestId, @Valid @RequestBody RejectRequest request) {
         return ResponseEntity.ok(consultationService.rejectRequest(getCurrentUser(auth), requestId, request.getReason()));
     }
 
     @PutMapping("/expert/consultation-requests/{requestId}/in-progress")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Mark request as in-progress")
     public ResponseEntity<ConsultationRequestResponse> markInProgress(Authentication auth, @PathVariable UUID requestId) {
         return ResponseEntity.ok(consultationService.markInProgress(getCurrentUser(auth), requestId));
     }
 
     @PutMapping("/expert/consultation-requests/{requestId}/resolve")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
     @Operation(summary = "Resolve request")
     public ResponseEntity<ConsultationRequestResponse> resolveRequest(Authentication auth, @PathVariable UUID requestId) {
         return ResponseEntity.ok(consultationService.resolveRequest(getCurrentUser(auth), requestId));
@@ -175,21 +175,21 @@ public class ConsultationController {
     // ==========================================
 
     @GetMapping("/consultation-requests/{requestId}")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT', 'ORGANIZER')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT', 'ORGANIZER')")
     @Operation(summary = "Get request detail")
     public ResponseEntity<ConsultationRequestResponse> getConsultationRequestDetail(Authentication auth, @PathVariable UUID requestId) {
         return ResponseEntity.ok(consultationService.getConsultationRequestDetail(getCurrentUser(auth), requestId));
     }
 
     @GetMapping("/consultation-requests/{requestId}/messages")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT', 'ORGANIZER')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT', 'ORGANIZER')")
     @Operation(summary = "Get request messages")
     public ResponseEntity<List<ConsultationMessageResponse>> getConsultationMessages(Authentication auth, @PathVariable UUID requestId) {
         return ResponseEntity.ok(consultationService.getConsultationMessages(getCurrentUser(auth), requestId));
     }
 
     @PostMapping("/consultation-requests/{requestId}/messages")
-    @PreAuthorize("hasAnyRole('INTERNAL_JUDGE', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT')")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT', 'FPT_STUDENT', 'EXTERNAL_STUDENT')")
     @Operation(summary = "Send message in request")
     public ResponseEntity<ConsultationMessageResponse> sendMessage(Authentication auth, @PathVariable UUID requestId, @Valid @RequestBody MessageRequest messageDto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(consultationService.sendMessage(getCurrentUser(auth), requestId, messageDto));

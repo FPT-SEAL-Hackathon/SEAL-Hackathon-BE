@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.research.controller;
 
+import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
 import com.fpt.swp.sealhackathonbe.research.service.ResearchDataService;
+import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
 import com.fpt.swp.sealhackathonbe.studentdownload.dto.DownloadFileResponse;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,18 @@ import java.util.UUID;
 @Tag(name = "Research Dashboard Controller", description = "APIs for research analytics and score quality metrics")
 public class ResearchDashboardController {
     private final ResearchDataService researchDataService;
+    private final ResearchDashboardServiceImpl researchDashboardService;
+
+    @GetMapping({"/calibration-metrics", "/reliability-metrics"})
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Get calibration metrics", description = "Returns reliability/calibration metrics for judges as JSON")
+    public ResponseEntity<java.util.List<ReliabilityMetricResponse>> getCalibrationMetrics(
+            @RequestParam(required = false) UUID eventId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID roundId
+    ) {
+        return ResponseEntity.ok(researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId));
+    }
 
     @GetMapping(value = "/events/{eventId}/export", produces = "text/csv")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")

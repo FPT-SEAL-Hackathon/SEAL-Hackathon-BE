@@ -27,13 +27,12 @@ public class RoundJudgeController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
-            @Valid @RequestBody AssignJudgesRequest request
-            ) {
+            @Valid @RequestBody AssignJudgesRequest request) {
         return roundJudgeService.assignJudges(roundId, request);
     }
 
     @GetMapping("/round/judges/{roundId}")
-    public List<JudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
+    public List<RoundJudgeResponse> getJudgesByRound(@PathVariable UUID roundId) {
         return roundJudgeService.getJudgesByRound(roundId);
     }
 
@@ -45,17 +44,22 @@ public class RoundJudgeController {
         return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
     }
 
-    @DeleteMapping("/round/judge/{id}")
+    @PatchMapping("/round/judge/{id}")
     // RBAC:
     // Chỉ ORGANIZER được gỡ judge khỏi round.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public void removeJudge(@PathVariable UUID id) {
-        roundJudgeService.removeJudge(id);
+    public void disableJudge(@PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "false") boolean force) {
+        roundJudgeService.disableJudge(id, force);
     }
 
     @GetMapping("/users/judges")
-    public ResponseEntity<List<UserResponse>> getAllMentors() {
+    public ResponseEntity<List<JudgeResponse>> getAllJudges() {
         return ResponseEntity.ok(roundJudgeService.getAllJudges());
     }
 
+    @GetMapping("/public/test-judges")
+    public ResponseEntity<List<JudgeResponse>> testJudges() {
+        return ResponseEntity.ok(roundJudgeService.getAllJudges());
+    }
 }

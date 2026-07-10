@@ -73,10 +73,12 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
 
-        if (categoryRepository.existsByEventEventIdAndCategoryNameAndIsActiveTrue(category.getEvent().getEventId(), request.getCategoryName())) {
+        if (categoryRepository.existsByEventEventIdAndCategoryNameAndIsActiveTrueAndCategoryIdNot(
+                category.getEvent().getEventId(), request.getCategoryName(), categoryId)) {
             throw new IllegalStateException("Category name already exists in this event");
         }
-        if (categoryRepository.existsByEventEventIdAndSortOrder(category.getEvent().getEventId(), request.getSortOrder())) {
+        if (request.getSortOrder() != null && categoryRepository.existsByEventEventIdAndSortOrderAndCategoryIdNot(
+                category.getEvent().getEventId(), request.getSortOrder(), categoryId)) {
             throw new IllegalStateException("Sort order already exists");
         }
 

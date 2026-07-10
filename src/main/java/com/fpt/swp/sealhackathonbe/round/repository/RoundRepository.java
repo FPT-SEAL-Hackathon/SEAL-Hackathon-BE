@@ -1,8 +1,6 @@
 package com.fpt.swp.sealhackathonbe.round.repository;
 
 
-import com.fpt.swp.sealhackathonbe.event.entity.Event;
-import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

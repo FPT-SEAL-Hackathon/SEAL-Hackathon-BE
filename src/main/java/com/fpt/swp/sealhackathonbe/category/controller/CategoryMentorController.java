@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.category.controller;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.category.dto.request.AssignMentorsRequest;
 import com.fpt.swp.sealhackathonbe.category.dto.response.CategoryMentorResponse;
-import com.fpt.swp.sealhackathonbe.category.dto.response.MentorResponse;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -25,11 +25,19 @@ public class CategoryMentorController {
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> assignMentors(
             @PathVariable UUID categoryId,
-            @Valid @RequestBody AssignMentorsRequest request
-            ) {
+            @Valid @RequestBody AssignMentorsRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(categoryMentorService.assignMentors(categoryId, request));
+    }
+
+    @DeleteMapping("/category/expert/{categoryId}/{mentorId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<Map<String, Object>> removeMentor(
+            @PathVariable UUID categoryId,
+            @PathVariable UUID mentorId) {
+        categoryMentorService.removeMentor(categoryId, mentorId);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Expert removed from category"));
     }
 
     @GetMapping("/users/mentors")
@@ -41,11 +49,11 @@ public class CategoryMentorController {
     public ResponseEntity<List<CategoryMentorResponse>> getMentorsByCategory(@PathVariable UUID categoryId) {
         return ResponseEntity.ok(categoryMentorService.getMentorsByCategory(categoryId));
     }
+
     @GetMapping("/{categoryId}")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<CategoryMentorResponse>> getCategoryMentors(
-            @PathVariable UUID categoryId
-    ) {
+            @PathVariable UUID categoryId) {
         return ResponseEntity
                 .ok(categoryMentorService.getCategoryMentors(categoryId));
     }

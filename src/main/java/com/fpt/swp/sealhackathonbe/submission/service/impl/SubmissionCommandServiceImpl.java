@@ -1,11 +1,11 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
-
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
@@ -28,22 +28,17 @@ import java.util.UUID;
 @Service
 public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     // Phan command cua luong submission.
-    // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT authentication.
-    private static final UUID TEAM_STATUS_DISQUALIFIED =
-            TeamStatusConstants.APPROVED;
-
-    private static final UUID TEAM_STATUS_WITHDRAWN =
-            TeamStatusConstants.DISQUALIFIED;
-
-    private static final UUID TEAM_STATUS_ACTIVE =
-            TeamStatusConstants.PENDING;
+    // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT
+    // authentication.
+    private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.PENDING;
+    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.APPROVED;
+    private static final UUID TEAM_STATUS_WITHDRAWN    = TeamStatusConstants.DISQUALIFIED;
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRepository roundRepository;
     private final EntityManager entityManager;
-    private final EventParticipantService eventParticipantService;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
@@ -51,14 +46,12 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             TeamMembersRepository teamMembersRepository,
             RoundRepository roundRepository,
             EntityManager entityManager,
-            EventParticipantService eventParticipantService
-    ) {
+            EventParticipantService eventParticipantService) {
         this.submissionsRepository = submissionsRepository;
         this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.roundRepository = roundRepository;
         this.entityManager = entityManager;
-        this.eventParticipantService = eventParticipantService;
     }
 
     @Override
@@ -117,7 +110,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateTeamCanSubmitToRound(Teams team, UUID roundId) {
-        // A team can only submit to rounds in the same category/event it registered for.
+        // A team can only submit to rounds in the same category/event it registered
+        // for.
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new RuntimeException("Round not found"));
 
@@ -140,14 +134,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateSubmissionDeadline(UUID roundId) {
-        // Doc deadline truc tiep tu Rounds vi entity submission hien khong mapping quan he Round.
+        // Doc deadline truc tiep tu Rounds vi entity submission hien khong mapping quan
+        // he Round.
         Object result;
 
         try {
             result = entityManager
                     .createNativeQuery(
-                            "SELECT SubmissionDeadline FROM Rounds WHERE RoundID = CAST(:roundId AS uniqueidentifier)"
-                    )
+                            "SELECT SubmissionDeadline FROM Rounds WHERE RoundID = CAST(:roundId AS uniqueidentifier)")
                     .setParameter("roundId", roundId.toString())
                     .getSingleResult();
         } catch (NoResultException exception) {
@@ -218,6 +212,13 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         Submissions submission = submissionsRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
         submission.setIsScoreApproved(approve);
+        
+        if (approve) {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.SCORED);
+        } else {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        }
+        
         submissionsRepository.save(submission);
         return SubmissionMapper.toSubmissionResponse(submission);
     }

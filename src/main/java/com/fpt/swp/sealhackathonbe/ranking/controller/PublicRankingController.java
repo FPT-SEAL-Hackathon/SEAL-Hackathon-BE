@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,13 +23,7 @@ public class PublicRankingController {
             @PathVariable("eventId") UUID eventId,
             @PathVariable("categoryId") UUID categoryId) {
 
-        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId,categoryId);
-
-        // Sort by rank position and filter only published
-        rankings = rankings.stream()
-                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
-                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
-                .collect(java.util.stream.Collectors.toList());
+        List<EventRankingDTO> rankings = rankingService.getPublishedCategoryLeaderboard(eventId,categoryId);
         return ResponseEntity.ok(rankings);
     }
 }
