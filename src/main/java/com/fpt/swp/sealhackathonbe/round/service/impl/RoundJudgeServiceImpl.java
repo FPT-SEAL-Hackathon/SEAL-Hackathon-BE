@@ -108,7 +108,24 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                         .assignedBy(user)
                         .build())
                 .toList();
-        roundJudges = roundJudgeRepository.saveAll(roundJudges);
+        List<RoundJudge> allExisting = roundJudgeRepository.findByRoundRoundId(roundId);
+        List<RoundJudge> finalRoundJudges = new java.util.ArrayList<>();
+        for (RoundJudge newRj : roundJudges) {
+            java.util.Optional<RoundJudge> existing = allExisting.stream()
+                    .filter(r -> r.getJudge().getUserId().equals(newRj.getJudge().getUserId()))
+                    .findFirst();
+            if (existing.isPresent()) {
+                RoundJudge rjToUpdate = existing.get();
+                rjToUpdate.setIsActive(true);
+                rjToUpdate.setAssignedAt(LocalDateTime.now());
+                rjToUpdate.setAssignedBy(user);
+                finalRoundJudges.add(roundJudgeRepository.save(rjToUpdate));
+            } else {
+                newRj.setIsActive(true);
+                finalRoundJudges.add(roundJudgeRepository.save(newRj));
+            }
+        }
+        roundJudges = finalRoundJudges;
 
         for (RoundJudge rj : roundJudges) {
             try {
@@ -141,7 +158,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new EntityNotFoundException("Round not found");
         }
 
-        return roundJudgeRepository.findByRoundRoundId(roundId)
+        return roundJudgeRepository.findActiveByRoundRoundId(roundId)
                 .stream()
                 .map(roundMapper::toRoundJudgeResponse)
                 .toList();
@@ -168,8 +185,14 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
             throw new IllegalArgumentException("JUDGE_HAS_SCORES");
         }
         
-        judgingRepository.deleteByRoundJudge_RoundJudgeId(roundJudgeId);
-        roundJudgeRepository.delete(roundJudge);
+        // Conditional deletion is handled below
+        if (force) {
+            judgingRepository.disableByRoundJudge_RoundJudgeId(roundJudgeId);
+        } else {
+            // Keep judging records if not forced
+        }
+        roundJudge.setIsActive(false);
+        roundJudgeRepository.save(roundJudge);
     }
 
     @Override
