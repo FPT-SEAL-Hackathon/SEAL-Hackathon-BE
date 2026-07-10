@@ -8,5 +8,6 @@ public final class TeamStatusConstants {
     public static final UUID APPROVED = UUID.fromString("60000000-0000-0000-0000-000000000003");
     public static final UUID DISQUALIFIED = UUID.fromString("60000000-0000-0000-0000-000000000004");
 
-    private TeamStatusConstants() {}
+    private TeamStatusConstants() {
+    }
 }

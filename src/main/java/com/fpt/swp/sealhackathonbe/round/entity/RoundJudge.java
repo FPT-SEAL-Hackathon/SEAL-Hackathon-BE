@@ -33,4 +33,8 @@ public class RoundJudge {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "AssignedByID")
     private User assignedBy;
+
+    @Column(name = "IsActive", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
 }

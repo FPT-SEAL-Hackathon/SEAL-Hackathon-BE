@@ -61,6 +61,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     Optional<User> findByUserIdAndIsDeletedFalse(UUID userId);
 
+    @EntityGraph(attributePaths = {"userType", "accountStatus"})
+    @Query("""
+            SELECT u FROM User u 
+            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND (
+                  LOWER(u.userType.typeName) LIKE '%judge%' OR 
+                  LOWER(u.userType.typeName) LIKE '%mentor%' OR 
+                  LOWER(u.userType.typeName) LIKE '%expert%'
+              )
+            """)
+    List<User> findExpertsMentorsJudges();
+
     @Query("""
             SELECT COUNT(u)
             FROM User u

@@ -21,4 +21,8 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
     boolean existsByEventEventIdAndCategoryNameAndIsActiveTrue(UUID eventId, String categoryName);
     boolean existsByCategoryIdAndEventEventIdAndIsActiveTrue(UUID categoryId, UUID eventId);
 
+    // Exclude-self variants used during updates
+    boolean existsByEventEventIdAndCategoryNameAndIsActiveTrueAndCategoryIdNot(UUID eventId, String categoryName, UUID categoryId);
+    boolean existsByEventEventIdAndSortOrderAndCategoryIdNot(UUID eventId, Integer sortOrder, UUID categoryId);
+
 }

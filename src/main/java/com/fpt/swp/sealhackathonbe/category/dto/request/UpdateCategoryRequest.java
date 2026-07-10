@@ -1,11 +1,9 @@
 package com.fpt.swp.sealhackathonbe.category.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.UUID;
 
 @Getter
 @Setter

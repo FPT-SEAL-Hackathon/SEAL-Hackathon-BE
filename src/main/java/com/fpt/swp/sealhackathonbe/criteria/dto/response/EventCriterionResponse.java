@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.criteria.dto.response;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Setter

@@ -13,5 +13,4 @@ public class CreateTemplateRequest {
     private String description;
     private BigDecimal defaultWeight;
     private BigDecimal maxScore;
-    private UUID createsByUserId;
 }
