@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.controller;
 
 import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
+import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
@@ -49,6 +50,21 @@ public class SubmissionController {
         // Du lieu: request + user dang dang nhap -> command service -> stored procedure -> response.
         SubmissionResponse response =
                 submissionCommandService.submitWork(request, currentUserId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Create calibration sample submission",
+            description = "Organizer creates or updates a sample submission for a calibration round."
+    )
+    @PostMapping("/admin/calibration-sample-submissions")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<SubmissionResponse> submitSampleWork(
+            @Valid @RequestBody CreateSampleSubmissionRequest request
+    ) {
+        SubmissionResponse response =
+                submissionCommandService.submitSampleWork(request, currentUserId());
 
         return ResponseEntity.ok(response);
     }

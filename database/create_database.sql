@@ -586,7 +586,7 @@ GO
 
 CREATE TABLE Submissions (
                              SubmissionID UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
-                             TeamID UNIQUEIDENTIFIER NOT NULL REFERENCES Teams(TeamID),
+                             TeamID UNIQUEIDENTIFIER NULL REFERENCES Teams(TeamID),
                              RoundID UNIQUEIDENTIFIER NOT NULL REFERENCES Rounds(RoundID),
                              SubmissionStatusID UNIQUEIDENTIFIER NOT NULL DEFAULT '50000000-0000-0000-0000-000000000001' REFERENCES SubmissionStatus(StatusID),
                              RepositoryURL NVARCHAR(500) NULL,
@@ -601,8 +601,13 @@ CREATE TABLE Submissions (
                              LastUpdatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
                              SubmittedByUserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
                              Notes NVARCHAR(MAX) NULL,
-                             CONSTRAINT UQ_Submissions_Team_Round UNIQUE (TeamID, RoundID)
+                             IsSampleSubmission BIT NOT NULL DEFAULT 0
 );
+GO
+
+CREATE UNIQUE INDEX UQ_Submissions_Team_Round
+    ON Submissions(TeamID, RoundID)
+    WHERE IsSampleSubmission = 0 AND TeamID IS NOT NULL;
 GO
 
 -- ============================================================
