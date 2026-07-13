@@ -31,4 +31,5 @@ public class SubmissionResponse {
     private UUID submittedByUserId;
     private String notes;
     private Boolean isScoreApproved;
+    private Boolean isSampleSubmission;
 }
