@@ -17,6 +17,7 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     private String frontendUrl;
 
     @Override
+    @Transactional
     public List<CategoryMentorResponse> assignMentors(UUID categoryId, AssignMentorsRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
