@@ -334,6 +334,23 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<EventRankingDTO> getPublishedCategoryLeaderboard(UUID eventId, UUID categoryId) {
+        List<EventRankingDTO> rankings = getCategoryLeaderboard(eventId, categoryId);
+        if (rankings.isEmpty()) {
+            return rankings;
+        }
+        boolean isPublished = rankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsPublished()));
+        if (!isPublished) {
+            throw new IllegalStateException("Leaderboard has not been published yet.");
+        }
+        return rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RoundRankingDTO> getRoundRankings(UUID roundId, UUID categoryId) {
         List<RoundRanking> rankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         return rankings.stream().map(r -> RoundRankingDTO.builder()

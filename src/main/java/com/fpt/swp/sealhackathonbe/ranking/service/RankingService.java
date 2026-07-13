@@ -25,6 +25,7 @@ public interface RankingService {
     void publishEventRankings(UUID eventId, UUID categoryId);
 
     List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId);
+    List<EventRankingDTO> getPublishedCategoryLeaderboard(UUID eventId, UUID categoryId);
 
     List<RoundRankingDTO> getRoundRankings(UUID roundId, UUID categoryId);
     List<EventRankingDTO> getAdminEventRankings(UUID eventId);

@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
@@ -211,6 +212,13 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         Submissions submission = submissionsRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
         submission.setIsScoreApproved(approve);
+        
+        if (approve) {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.SCORED);
+        } else {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        }
+        
         submissionsRepository.save(submission);
         return SubmissionMapper.toSubmissionResponse(submission);
     }
