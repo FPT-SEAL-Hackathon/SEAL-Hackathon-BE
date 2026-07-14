@@ -142,7 +142,9 @@ public class RankingServiceImpl implements RankingService {
         rankings.sort((r1, r2) -> r2.getTotalScore().compareTo(r1.getTotalScore()));
 
         int currentRank = 1;
-        int advancementN = roundService.getAdvancementTopN(roundId);
+        Integer topN = roundService.getAdvancementTopN(roundId);
+        int advancementN = topN != null ? topN : 0;
+        
         for (int i = 0; i < rankings.size(); i++) {
             if (i > 0 && rankings.get(i).getTotalScore().compareTo(rankings.get(i - 1).getTotalScore()) < 0) {
                 currentRank = i + 1;
@@ -346,6 +348,23 @@ public class RankingServiceImpl implements RankingService {
         return rankings.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
                 .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoundRankingDTO> getPublishedRoundLeaderboard(UUID roundId, UUID categoryId) {
+        List<RoundRankingDTO> rankings = getRoundRankings(roundId, categoryId);
+        if (rankings.isEmpty()) {
+            return rankings;
+        }
+        boolean isPublished = rankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsPublished()));
+        if (!isPublished) {
+            throw new IllegalStateException("Round Leaderboard has not been published yet.");
+        }
+        return rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted(Comparator.comparing(RoundRankingDTO::getRankPosition, Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 
