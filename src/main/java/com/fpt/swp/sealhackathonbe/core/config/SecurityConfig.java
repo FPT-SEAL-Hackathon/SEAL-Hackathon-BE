@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.auth.oauth.OAuth2AuthenticationSuccessHandler
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtFilterServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -44,16 +45,14 @@ public class SecurityConfig {
     @Autowired
     private OAuth2AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
 
+    @Value("${app.swagger.enabled:false}")
+    private boolean swaggerEnabled;
+
     /**
      * RBAC:
      * Các endpoint công khai không cần JWT để bootstrap xác thực.
      */
-    private static final String[] SWAGGER_WHITELIST = {
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/swagger-resources/**",
-            "/webjars/**",
+    private static final String[] PUBLIC_WHITELIST = {
             "/error",
             "/",
             "/auth/login",
@@ -90,25 +89,25 @@ public class SecurityConfig {
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**")
-                        .permitAll()
+                .authorizeHttpRequests(auth -> {
+                        auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                            .requestMatchers(PUBLIC_WHITELIST).permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/*").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/total-prize", "/api/v1/awards/events/*/total-prize").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/*", "/api/v1/categories/categories/*").permitAll();
 
-                        .requestMatchers(SWAGGER_WHITELIST)
-                        .permitAll()
+                        if (swaggerEnabled) {
+                            auth.requestMatchers(
+                                    "/v3/api-docs/**",
+                                    "/swagger-ui/**",
+                                    "/swagger-ui.html",
+                                    "/swagger-resources/**",
+                                    "/webjars/**"
+                            ).permitAll();
+                        }
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/*")
-                        .permitAll()
-
-                        .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/total-prize", "/api/v1/awards/events/*/total-prize")
-                        .permitAll()
-
-                        .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/*", "/api/v1/categories/categories/*")
-                        .permitAll()
-
-                        .anyRequest()
-                        .authenticated()
-                )
+                        auth.anyRequest().authenticated();
+                })
 
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
