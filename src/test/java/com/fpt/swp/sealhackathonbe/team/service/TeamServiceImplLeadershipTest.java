@@ -4,6 +4,7 @@ import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.impl.TeamServiceImpl;
@@ -28,16 +29,18 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TeamServiceImplLeadershipTest {
+    private static final UUID FORMING_STATUS =
+            UUID.fromString("60000000-0000-0000-0000-000000000001");
     private static final UUID ACTIVE_STATUS =
             UUID.fromString("60000000-0000-0000-0000-000000000002");
-    private static final UUID WITHDRAWN_STATUS =
-            UUID.fromString("60000000-0000-0000-0000-000000000004");
-
     @Mock
     private TeamsRepository teamsRepository;
 
     @Mock
     private TeamMembersRepository teamMembersRepository;
+
+    @Mock
+    private TeamJoinRequestsRepository teamJoinRequestsRepository;
 
     @Mock
     private TeamEventRegistrationService teamEventRegistrationService;
@@ -69,7 +72,7 @@ class TeamServiceImplLeadershipTest {
     }
 
     @Test
-    void lastLeaderLeavingWithdrawsTeam() {
+    void lastLeaderLeavingDeletesEmptyFormingTeam() {
         UUID teamId = UUID.randomUUID();
         UUID leaderId = UUID.randomUUID();
         Teams team = team(teamId, leaderId);
@@ -83,8 +86,10 @@ class TeamServiceImplLeadershipTest {
 
         teamService.removeMember(teamId, leaderId, leaderId);
 
-        assertEquals(WITHDRAWN_STATUS, team.getTeamStatusId());
-        verify(teamsRepository).save(team);
+        verify(teamJoinRequestsRepository).deleteByTeamId(teamId);
+        verify(teamMembersRepository).deleteByTeamId(teamId);
+        verify(teamsRepository).delete(team);
+        verify(teamsRepository, never()).save(team);
     }
 
     @Test
@@ -179,6 +184,7 @@ class TeamServiceImplLeadershipTest {
         Teams team = new Teams();
         team.setTeamId(teamId);
         team.setLeaderUserId(leaderId);
+        team.setTeamStatusId(FORMING_STATUS);
         return team;
     }
 

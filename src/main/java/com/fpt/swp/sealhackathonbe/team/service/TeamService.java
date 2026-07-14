@@ -24,6 +24,8 @@ public interface TeamService {
 
     TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId);
 
+    TeamResponse rejectTeam(UUID teamId, String note, UUID adminUserId);
+
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
 
