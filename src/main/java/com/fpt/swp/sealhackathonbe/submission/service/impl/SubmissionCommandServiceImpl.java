@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
@@ -77,6 +78,30 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         return SubmissionMapper.toSubmissionResponse(submission);
     }
 
+    @Override
+    @Transactional
+    public SubmissionResponse submitSampleWork(CreateSampleSubmissionRequest request, UUID currentUserId) {
+        Round round = findRound(request.getRoundId());
+        validateCalibrationRound(round);
+        validateRoundAcceptsSampleSubmission(round);
+
+        Submissions sampleSubmission = new Submissions();
+        sampleSubmission.setRoundId(request.getRoundId());
+        sampleSubmission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+        sampleSubmission.setRepositoryUrl(request.getRepositoryUrl());
+        sampleSubmission.setDemoUrl(request.getDemoUrl());
+        sampleSubmission.setReportUrl(request.getReportUrl());
+        sampleSubmission.setSlideUrl(request.getSlideUrl());
+        sampleSubmission.setNotes(request.getNotes());
+        sampleSubmission.setSubmittedAt(LocalDateTime.now());
+        sampleSubmission.setLastUpdatedAt(LocalDateTime.now());
+        sampleSubmission.setSubmittedByUserId(currentUserId);
+        sampleSubmission.setIsScoreApproved(false);
+        sampleSubmission.setIsSampleSubmission(true);
+
+        return SubmissionMapper.toSubmissionResponse(submissionsRepository.save(sampleSubmission));
+    }
+
     private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
         // Chi leader active cua team moi duoc nop hoac cap nhat bai cua team do.
         Teams team = teamsRepository.findById(teamId)
@@ -109,11 +134,10 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         }
     }
 
-    private void validateTeamCanSubmitToRound(Teams team, UUID roundId) {
+    private Round validateTeamCanSubmitToRound(Teams team, UUID roundId) {
         // A team can only submit to rounds in the same category/event it registered
         // for.
-        Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+        Round round = findRound(roundId);
 
         if (round.getCategory() == null || round.getCategory().getCategoryId() == null) {
             throw new RuntimeException("Round category not found");
@@ -130,6 +154,29 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
 
         if (!team.getEventId().equals(round.getCategory().getEvent().getEventId())) {
             throw new RuntimeException("Team cannot submit to a round outside its event");
+        }
+
+        return round;
+    }
+
+    private Round findRound(UUID roundId) {
+        return roundRepository.findById(roundId)
+                .orElseThrow(() -> new RuntimeException("Round not found"));
+    }
+
+    private void validateCalibrationRound(Round round) {
+        if (!Boolean.TRUE.equals(round.getIsCalibrationRound())) {
+            throw new RuntimeException("Sample submissions are only allowed for calibration rounds");
+        }
+    }
+
+    private void validateRoundAcceptsSampleSubmission(Round round) {
+        String statusName = round.getRoundStatus() != null
+                ? round.getRoundStatus().getStatusName()
+                : null;
+
+        if ("Judging".equalsIgnoreCase(statusName) || "Completed".equalsIgnoreCase(statusName)) {
+            throw new RuntimeException("Cannot create sample submissions after calibration round enters judging or completed status");
         }
     }
 
