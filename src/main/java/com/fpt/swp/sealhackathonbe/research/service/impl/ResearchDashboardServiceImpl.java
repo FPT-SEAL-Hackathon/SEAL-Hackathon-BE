@@ -11,8 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import com.fpt.swp.sealhackathonbe.core.utils.StatisticsUtils;
+import com.fpt.swp.sealhackathonbe.research.dto.ConsensusMatrixResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class ResearchDashboardServiceImpl {
                 SELECT
                     s.RoundID,
                     r.RoundName,
-                    t.CategoryID,
+                    c.CategoryID,
                     c.CategoryName,
                     sc.SubmissionID,
                     t.TeamID,
@@ -42,15 +44,15 @@ public class ResearchDashboardServiceImpl {
                     VAR(sc.ScoreValue) AS VarianceScore
                 FROM Judging sc
                          JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
-                         JOIN Teams t ON t.TeamID = s.TeamID
-                         JOIN Categories c ON c.CategoryID = t.CategoryID
+                         LEFT JOIN Teams t ON t.TeamID = s.TeamID
                          JOIN Rounds r ON r.RoundID = s.RoundID
+                         JOIN Categories c ON c.CategoryID = r.CategoryID
                          JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                          JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
-                WHERE (:eventId IS NULL OR t.EventID = :eventId)
+                WHERE (:eventId IS NULL OR c.EventID = :eventId)
                   AND sc.IsCalibration = 0
                 """, roundId, categoryId) + """
-                GROUP BY s.RoundID, r.RoundName, t.CategoryID, c.CategoryName, sc.SubmissionID,
+                GROUP BY s.RoundID, r.RoundName, c.CategoryID, c.CategoryName, sc.SubmissionID,
                          t.TeamID, t.TeamName, rc.RoundCriterionID, rc.CriterionName
                 ORDER BY r.RoundName, t.TeamName, rc.CriterionName
                 """;
@@ -80,15 +82,21 @@ public class ResearchDashboardServiceImpl {
 
     public List<ScoreDistributionResponse> getScoreDistribution(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
         BigDecimal normalizedBucketSize = normalizeBucketSize(bucketSize);
-        String innerSql = applyFilters("""
+        String baseSql = applyFilters("""
                 SELECT
-                    FLOOR(sc.ScoreValue / :bucketSize) * :bucketSize AS BucketStart
+                    rj.UserID AS JudgeUserID,
+                    sc.SubmissionID,
+                    SUM(sc.ScoreValue) AS TotalScore
                 FROM Judging sc
                          JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
-                         JOIN Teams t ON t.TeamID = s.TeamID
-                WHERE (:eventId IS NULL OR t.EventID = :eventId)
+                         LEFT JOIN Teams t ON t.TeamID = s.TeamID
+                         JOIN Rounds r ON r.RoundID = s.RoundID
+                         JOIN Categories c ON c.CategoryID = r.CategoryID
+                         JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
+                WHERE (:eventId IS NULL OR c.EventID = :eventId)
                   AND sc.IsCalibration = 0
                 """, roundId, categoryId);
+        String innerSql = "SELECT FLOOR(st.TotalScore / :bucketSize) * :bucketSize AS BucketStart FROM (" + baseSql + " GROUP BY rj.UserID, sc.SubmissionID) st";
         String sql = "SELECT src.BucketStart, COUNT(*) AS ScoreCount FROM (" + innerSql + ") src GROUP BY src.BucketStart ORDER BY src.BucketStart";
 
         @SuppressWarnings("unchecked")
@@ -119,42 +127,56 @@ public class ResearchDashboardServiceImpl {
     }
 
     public List<ReliabilityMetricResponse> getReliabilityMetrics(UUID eventId, UUID roundId, UUID categoryId) {
-        String sql = applyFilters("""
-                WITH ScoreComparisons AS (
+        String sql = "WITH JudgeSubmissionScores AS (" + applyFilters("""
                     SELECT
                         rj.UserID AS JudgeUserID,
                         u.FullName AS JudgeName,
-                        sc.ScoreValue,
+                        sc.SubmissionID,
                         sc.IsCalibration,
-                        (
-                            SELECT AVG(peer.ScoreValue)
-                            FROM Judging peer
-                                     JOIN RoundJudges peerJudge ON peerJudge.RoundJudgeID = peer.RoundJudgeID
-                            WHERE peer.SubmissionID = sc.SubmissionID
-                              AND peer.RoundCriterionID = sc.RoundCriterionID
-                              AND peer.IsCalibration = 0
-                              AND peerJudge.UserID <> rj.UserID
-                        ) AS PeerMean
+                        SUM(sc.ScoreValue) AS TotalScore
                     FROM Judging sc
                              JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
-                             JOIN Teams t ON t.TeamID = s.TeamID
+                             LEFT JOIN Teams t ON t.TeamID = s.TeamID
+                             JOIN Rounds r ON r.RoundID = s.RoundID
+                             JOIN Categories c ON c.CategoryID = r.CategoryID
                              JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                              JOIN Users u ON u.UserID = rj.UserID
-                    WHERE (:eventId IS NULL OR t.EventID = :eventId)
+                    WHERE (:eventId IS NULL OR c.EventID = :eventId)
                 """, roundId, categoryId) + """
+                    GROUP BY rj.UserID, u.FullName, sc.SubmissionID, sc.IsCalibration
+                ),
+                ScoreComparisons AS (
+                    SELECT
+                        jss.JudgeUserID,
+                        jss.JudgeName,
+                        jss.TotalScore,
+                        jss.IsCalibration,
+                        (
+                            SELECT AVG(peer_total)
+                            FROM (
+                                SELECT rjp.UserID AS PeerUserID, SUM(scp.ScoreValue) AS peer_total
+                                FROM Judging scp
+                                JOIN RoundJudges rjp ON rjp.RoundJudgeID = scp.RoundJudgeID
+                                WHERE scp.SubmissionID = jss.SubmissionID
+                                  AND scp.IsCalibration = jss.IsCalibration
+                                  AND rjp.UserID <> jss.JudgeUserID
+                                GROUP BY rjp.UserID
+                            ) peer_aggs
+                        ) AS PeerMean
+                    FROM JudgeSubmissionScores jss
                 )
                 SELECT
                     JudgeUserID,
                     JudgeName,
                     COUNT(*) AS ScoredItemCount,
-                    SUM(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN 1 ELSE 0 END) AS ComparableScoreCount,
+                    SUM(CASE WHEN PeerMean IS NOT NULL THEN 1 ELSE 0 END) AS ComparableScoreCount,
                     SUM(CASE WHEN IsCalibration = 1 THEN 1 ELSE 0 END) AS CalibrationScoreCount,
-                    AVG(ScoreValue) AS AverageScore,
-                    MIN(ScoreValue) AS MinScore,
-                    MAX(ScoreValue) AS MaxScore,
-                    AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN ScoreValue - PeerMean END) AS BiasFromPeerMean,
-                    AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN ABS(ScoreValue - PeerMean) END) AS AvgAbsDeviation,
-                    SQRT(AVG(CASE WHEN IsCalibration = 0 AND PeerMean IS NOT NULL THEN POWER(ScoreValue - PeerMean, 2) END)) AS RootMeanSquareDeviation
+                    AVG(TotalScore) AS AverageScore,
+                    MIN(TotalScore) AS MinScore,
+                    MAX(TotalScore) AS MaxScore,
+                    AVG(CASE WHEN PeerMean IS NOT NULL THEN TotalScore - PeerMean END) AS BiasFromPeerMean,
+                    AVG(CASE WHEN PeerMean IS NOT NULL THEN ABS(TotalScore - PeerMean) END) AS AvgAbsDeviation,
+                    SQRT(AVG(CASE WHEN PeerMean IS NOT NULL THEN POWER(TotalScore - PeerMean, 2) END)) AS RootMeanSquareDeviation
                 FROM ScoreComparisons
                 GROUP BY JudgeUserID, JudgeName
                 ORDER BY AvgAbsDeviation ASC, JudgeName ASC
@@ -180,6 +202,142 @@ public class ResearchDashboardServiceImpl {
                 .toList();
     }
 
+    public List<ConsensusMatrixResponse> getConsensusMatrix(UUID roundId) {
+        String sql = """
+                SELECT
+                    rc.CriterionName,
+                    rj.UserID AS JudgeUserID,
+                    sc.ScoreValue
+                FROM Judging sc
+                JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
+                JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
+                JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
+                WHERE s.RoundID = :roundId AND sc.IsCalibration = 1
+                """;
+        
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery(sql)
+                .setParameter("roundId", roundId)
+                .getResultList();
+        
+        // Group by criteria name
+        Map<String, List<Object[]>> groupedByCriteria = rows.stream()
+                .collect(Collectors.groupingBy(row -> string(row[0])));
+                
+        List<ConsensusMatrixResponse> result = new ArrayList<>();
+        
+        for (Map.Entry<String, List<Object[]>> entry : groupedByCriteria.entrySet()) {
+            String criteriaName = entry.getKey();
+            List<Object[]> criteriaRows = entry.getValue();
+            
+            List<Double> scores = new ArrayList<>();
+            Map<String, BigDecimal> judgeScores = new HashMap<>();
+            
+            double min = Double.MAX_VALUE;
+            double max = Double.MIN_VALUE;
+            
+            for (Object[] row : criteriaRows) {
+                String judgeId = string(row[1]);
+                BigDecimal scoreValue = decimal(row[2]);
+                double score = scoreValue.doubleValue();
+                
+                scores.add(score);
+                judgeScores.put(judgeId, scoreValue);
+                
+                if (score < min) min = score;
+                if (score > max) max = score;
+            }
+            
+            if (min == Double.MAX_VALUE) min = 0;
+            if (max == Double.MIN_VALUE) max = 0;
+            
+            double median = StatisticsUtils.calculateMedian(scores);
+            double sd = StatisticsUtils.calculateSampleStandardDeviation(scores);
+            String status = StatisticsUtils.evaluateConsensusStatus(sd);
+            
+            result.add(new ConsensusMatrixResponse(
+                    criteriaName,
+                    BigDecimal.valueOf(median),
+                    BigDecimal.valueOf(min),
+                    BigDecimal.valueOf(max),
+                    BigDecimal.valueOf(sd),
+                    status,
+                    judgeScores
+            ));
+        }
+        return result;
+    }
+
+    public String exportCalibrationCsv(UUID roundId) {
+        String sql = """
+                SELECT
+                    rc.CriterionName,
+                    rj.UserID AS JudgeUserID,
+                    sc.ScoreValue
+                FROM Judging sc
+                JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
+                JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
+                JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
+                WHERE s.RoundID = :roundId AND sc.IsCalibration = 1
+                ORDER BY rc.CriterionName, rj.UserID
+                """;
+                
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery(sql)
+                .setParameter("roundId", roundId)
+                .getResultList();
+                
+        // Extract unique judges
+        Set<String> judgeIds = new LinkedHashSet<>();
+        for (Object[] row : rows) {
+            judgeIds.add(string(row[1]));
+        }
+        
+        // Map JudgeId to Anonymized Name
+        Map<String, String> judgeAnonymizedMap = new HashMap<>();
+        char judgeChar = 'A';
+        for (String judgeId : judgeIds) {
+            judgeAnonymizedMap.put(judgeId, "Judge_" + judgeChar);
+            judgeChar++;
+        }
+        
+        // Group by criteria
+        Map<String, Map<String, BigDecimal>> criteriaScores = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String criteriaName = string(row[0]);
+            String judgeId = string(row[1]);
+            BigDecimal score = decimal(row[2]);
+            
+            criteriaScores.putIfAbsent(criteriaName, new HashMap<>());
+            criteriaScores.get(criteriaName).put(judgeId, score);
+        }
+        
+        // Build CSV
+        StringBuilder csv = new StringBuilder();
+        csv.append("Submission_ID,Criteria_Name");
+        for (String judgeId : judgeIds) {
+            csv.append(",").append(judgeAnonymizedMap.get(judgeId));
+        }
+        csv.append("\\n");
+        
+        for (Map.Entry<String, Map<String, BigDecimal>> entry : criteriaScores.entrySet()) {
+            csv.append(roundId.toString()).append(",");
+            csv.append("\\\"").append(entry.getKey()).append("\\\"");
+            
+            Map<String, BigDecimal> scores = entry.getValue();
+            for (String judgeId : judgeIds) {
+                BigDecimal score = scores.get(judgeId);
+                csv.append(",");
+                if (score != null) {
+                    csv.append(score.toString());
+                }
+            }
+            csv.append("\\n");
+        }
+        
+        return csv.toString();
+    }
+
     private Query query(String sql, UUID eventId, UUID roundId, UUID categoryId) {
         Query query = entityManager.createNativeQuery(sql);
         
@@ -200,7 +358,7 @@ public class ResearchDashboardServiceImpl {
             builder.append(" AND s.RoundID = :roundId\n");
         }
         if (categoryId != null) {
-            builder.append(" AND t.CategoryID = :categoryId\n");
+            builder.append(" AND c.CategoryID = :categoryId\n");
         }
         return builder.toString();
     }

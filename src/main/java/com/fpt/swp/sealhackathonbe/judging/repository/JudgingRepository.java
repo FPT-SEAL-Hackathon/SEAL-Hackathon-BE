@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,5 +28,11 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
     @Query("UPDATE Judging j SET j.isActive = false WHERE j.roundJudge.roundJudgeId = :roundJudgeId")
     void deactivateByRoundJudgeId(@Param("roundJudgeId") UUID roundJudgeId);
 
+    @Modifying
+    @Query("UPDATE Judging j SET j.isActive = false WHERE j.submission.submissionId = :submissionId")
+    void deactivateBySubmissionId(@Param("submissionId") UUID submissionId);
+
     boolean existsByRoundJudge_RoundJudgeId(UUID roundJudgeId);
+
+    List<Judging> findBySubmission_SubmissionId(UUID submissionId);
 }

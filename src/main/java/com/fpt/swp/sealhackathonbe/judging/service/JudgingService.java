@@ -18,4 +18,5 @@ public interface JudgingService {
     void updateJudging(List<UpdateScoreSubmissionDTO> dtos);
     Map<UUID, List<Judging>> getJudgingsGroupedBySubmissionIds(List<UUID> submissionIds);
     List<EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId);
+    void rejectSubmissionScores(UUID submissionId, String reason);
 }

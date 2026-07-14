@@ -117,14 +117,20 @@ public class JudgingServiceImpl implements JudgingService {
                             dto.getSubmissionId(), judge.getRoundJudgeId(), dto.getRoundCriterionId()
                     );
 
+            Judging newJudging;
             if (existingScoreOpt.isPresent()) {
-                throw new IllegalStateException("A score for criterion '" + criterion.getCriterionName() + "' already exists. Please use the update API.");
+                if (Boolean.TRUE.equals(existingScoreOpt.get().getIsActive())) {
+                    throw new IllegalStateException("A score for criterion '" + criterion.getCriterionName() + "' already exists. Please use the update API.");
+                } else {
+                    newJudging = existingScoreOpt.get();
+                    newJudging.setIsActive(true);
+                }
+            } else {
+                newJudging = new Judging();
+                newJudging.setSubmission(submission);
+                newJudging.setRoundJudge(judge);
+                newJudging.setRoundCriterion(criterion);
             }
-
-            Judging newJudging = new Judging();
-            newJudging.setSubmission(submission);
-            newJudging.setRoundJudge(judge);
-            newJudging.setRoundCriterion(criterion);
             newJudging.setScoreValue(dto.getScoreValue());
             newJudging.setComment(dto.getComment());
             newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
@@ -266,6 +272,7 @@ public class JudgingServiceImpl implements JudgingService {
         }
         
         return judgings.stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -278,6 +285,7 @@ public class JudgingServiceImpl implements JudgingService {
         }
         List<Judging> judgings = judgingRepository.findBySubmission_SubmissionIdIn(request.getSubmissionIds());
         return judgings.stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -287,6 +295,7 @@ public class JudgingServiceImpl implements JudgingService {
     public List<JudgingDTO> getScoresByJudgeId(UUID roundJudgeId) {
         return judgingRepository.findByRoundJudge_Judge_UserId(roundJudgeId)
                 .stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -301,6 +310,7 @@ public class JudgingServiceImpl implements JudgingService {
         List<Judging> allJudgings = judgingRepository.findBySubmission_SubmissionIdIn(submissionIds);
 
         return allJudgings.stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
     }
     private JudgingDTO convertToDTO(Judging judging) {
@@ -338,5 +348,50 @@ public class JudgingServiceImpl implements JudgingService {
                         .createdAt(log.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void rejectSubmissionScores(UUID submissionId, String reason) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+
+        Teams team = submission.getTeam();
+        Event event = (team != null) ? team.getEvent() : null;
+
+        // Fetch active judging records
+        List<Judging> activeJudgings = judgingRepository.findBySubmission_SubmissionId(submissionId)
+                .stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                .collect(Collectors.toList());
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+
+        for (Judging judging : activeJudgings) {
+            judging.setIsActive(false);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setScore(judging);
+            auditLog.setReason(reason);
+            auditLogs.add(auditLog);
+        }
+
+        judgingRepository.saveAll(activeJudgings);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+
+        // Reset submission status
+        submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        submission.setIsScoreApproved(false);
+        submissionRepository.save(submission);
     }
 }
