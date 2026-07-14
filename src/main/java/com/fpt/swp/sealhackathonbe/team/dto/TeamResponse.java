@@ -15,7 +15,15 @@ public class TeamResponse {
     private UUID categoryId;
     private String teamName;
     private UUID teamStatusId;
+    private String teamStatusName;
     private UUID leaderUserId;
+    private Integer minTeamSize;
+    private Integer maxTeamSize;
+    private Long activeMemberCount;
+    private Boolean teamSizeEligible;
+    private Boolean membersInfoComplete;
+    private Boolean canRequestApproval;
+    private List<String> approvalIssues;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<TeamMemberResponse> members;

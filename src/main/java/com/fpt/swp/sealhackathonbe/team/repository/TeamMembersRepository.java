@@ -43,4 +43,6 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
 
    // Dem member active de kiem tra MaxTeamSize va danh gia eligibility.
    long countByTeamIdAndActiveTrue(UUID teamId);
+
+   long deleteByTeamId(UUID teamId);
 }

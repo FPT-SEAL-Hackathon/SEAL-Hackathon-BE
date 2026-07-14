@@ -33,12 +33,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
-    private static final UUID TEAM_STATUS_ACTIVE =
-            TeamStatusConstants.PENDING;
-    private static final UUID TEAM_STATUS_DISQUALIFIED =
-            TeamStatusConstants.APPROVED;
-    private static final UUID TEAM_STATUS_WITHDRAWN =
-            TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_FORMING =
+            TeamStatusConstants.FORMING;
 
     private static final String REQUEST_STATUS_PENDING = "PENDING";
     private static final String REQUEST_STATUS_APPROVED = "APPROVED";
@@ -60,6 +56,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         validateTeamCanReceiveJoinRequest(team);
+        teamEventRegistrationService.assertEventOpenForRegistration(team.getEventId());
         // Team-first: xin vào team chỉ cần là student đủ điều kiện, không cần
         // là EventParticipant; nhưng đội hình bị khóa sau khi team đã đăng ký event.
         teamEventRegistrationService.assertEligibleStudent(currentUserId);
@@ -128,6 +125,7 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         if (REQUEST_STATUS_APPROVED.equals(request.getAction())) {
             validateTeamCanReceiveJoinRequest(team);
+            teamEventRegistrationService.assertEventOpenForRegistration(team.getEventId());
             teamEventRegistrationService.assertEligibleStudent(joinRequest.getUserId());
             assertRosterNotLocked(team);
 
@@ -174,18 +172,15 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
         return TeamMapper.toJoinTeamRequestResponse(savedRequest);
     }
 
-    // Roster chi bi khoa sau khi organizer duyet team thanh ACTIVE.
     private void assertRosterNotLocked(Teams team) {
-        if (TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
-            throw new BusinessConflictException("Team roster is locked after organizer approval");
+        if (!TEAM_STATUS_FORMING.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Team roster can only be changed while the team is forming");
         }
     }
 
     private void validateTeamCanReceiveJoinRequest(Teams team) {
-        // Team da bi loai/rut lui khong duoc nhan don moi; team hop le van phai con cho.
-        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
-                || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
-            throw new BusinessConflictException("Cannot join this team");
+        if (!TEAM_STATUS_FORMING.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Only forming teams can receive join requests");
         }
 
         validateTeamIsNotFull(team);

@@ -20,4 +20,6 @@ public interface TeamJoinRequestsRepository extends JpaRepository<TeamJoinReques
     // Lấy danh sách request PENDING của một team cho màn hình leader.
     @EntityGraph(attributePaths = "user")
     List<TeamJoinRequests> findByTeamIdAndRequestStatus(UUID teamId, String requestStatus);
+
+    long deleteByTeamId(UUID teamId);
 }

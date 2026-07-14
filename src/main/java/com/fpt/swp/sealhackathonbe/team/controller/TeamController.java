@@ -122,18 +122,11 @@ public class TeamController {
                 throw new RuntimeException("Rejection reason is required");
             }
 
-            DisqualifyTeamRequest disqualifyRequest = new DisqualifyTeamRequest();
-            disqualifyRequest.setReason(request.getNote());
-
-            DisqualificationResponse disqualification = teamDisqualificationService.disqualifyTeam(
-                    teamId,
-                    disqualifyRequest,
-                    currentUserId(authentication)
-            );
+            TeamResponse team = teamService.rejectTeam(teamId, request.getNote(), currentUserId(authentication));
             // Từ chối team = từ chối toàn bộ participant PENDING của thành viên.
             teamEventRegistrationService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
-            response.setDisqualification(disqualification);
-            response.setMessage("Team disqualified from competition");
+            response.setTeam(team);
+            response.setMessage("Team registration request rejected");
         }
 
         return ResponseEntity.ok(response);
@@ -243,7 +236,7 @@ public class TeamController {
     }
 
     // Leader duoc kick member hoac tu roi; member duoc tu roi team.
-    // Neu leader roi, service tu chuyen quyen hoac chuyen team sang Withdrawn neu khong con ai.
+    // Neu leader roi, service tu chuyen quyen hoac xoa team FORMING neu khong con ai.
     @Operation(summary = "Remove a member or leave a team")
     @DeleteMapping("/teams/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
