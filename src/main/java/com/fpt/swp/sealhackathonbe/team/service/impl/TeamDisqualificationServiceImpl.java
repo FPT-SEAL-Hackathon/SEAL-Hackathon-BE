@@ -27,7 +27,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamDisqualificationServiceImpl implements TeamDisqualificationService {
     private static final UUID TEAM_STATUS_DISQUALIFIED =
-            TeamStatusConstants.APPROVED;
+            TeamStatusConstants.DISQUALIFIED;
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
             SubmissionStatusConstants.DISQUALIFIED;
 

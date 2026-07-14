@@ -16,13 +16,11 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -31,9 +29,10 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     // Phan command cua luong submission.
     // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT
     // authentication.
-    private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.PENDING;
-    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.APPROVED;
-    private static final UUID TEAM_STATUS_WITHDRAWN    = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.ACTIVE;
+    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_REJECTED     = TeamStatusConstants.REJECTED;
+    private static final String ROUND_STATUS_SUBMISSION_OPEN = "Submission Open";
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
@@ -60,14 +59,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     public SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId) {
         // Luong ghi:
         // 1. Kiem tra user hien tai la leader active cua team.
-        // 2. Kiem tra team chua bi disqualified/withdrawn.
+        // 2. Kiem tra team da duoc organizer approve va khong bi reject/disqualify.
         // 3. Kiem tra round chua qua deadline nop bai.
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(team);
-        validateTeamCanSubmitToRound(team, request.getRoundId());
-        validateSubmissionDeadline(request.getRoundId());
+        Round round = validateTeamCanSubmitToRound(team, request.getRoundId());
+        validateRoundAcceptsTeamSubmission(round);
 
         callUpsertSubmissionProcedure(request, currentUserId);
 
@@ -126,8 +125,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // Only teams approved by organizer for competition can submit or update work.
         if (!TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
             if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
-                    || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
-                throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
+                    || TEAM_STATUS_REJECTED.equals(team.getTeamStatusId())) {
+                throw new RuntimeException("This team cannot submit because it is rejected or disqualified");
             }
 
             throw new RuntimeException("Only active teams can submit work");
@@ -180,40 +179,23 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         }
     }
 
-    private void validateSubmissionDeadline(UUID roundId) {
-        // Doc deadline truc tiep tu Rounds vi entity submission hien khong mapping quan
-        // he Round.
-        Object result;
+    private void validateRoundAcceptsTeamSubmission(Round round) {
+        String statusName = round.getRoundStatus() != null
+                ? round.getRoundStatus().getStatusName()
+                : null;
 
-        try {
-            result = entityManager
-                    .createNativeQuery(
-                            "SELECT SubmissionDeadline FROM Rounds WHERE RoundID = CAST(:roundId AS uniqueidentifier)")
-                    .setParameter("roundId", roundId.toString())
-                    .getSingleResult();
-        } catch (NoResultException exception) {
-            throw new RuntimeException("Round not found");
+        if (!ROUND_STATUS_SUBMISSION_OPEN.equalsIgnoreCase(statusName)) {
+            throw new RuntimeException("Round is not open for submissions");
         }
 
-        if (result == null) {
-            // Deadline null duoc hieu la round khong gioi han thoi gian nop.
-            return;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = round.getStartDate();
+        if (startDate != null && now.isBefore(startDate)) {
+            throw new RuntimeException("Round has not started yet");
         }
 
-        LocalDateTime deadline;
-
-        if (result instanceof Timestamp timestamp) {
-            // JDBC driver co the tra nhieu kieu ngay gio, nen chuan hoa ve LocalDateTime.
-            deadline = timestamp.toLocalDateTime();
-        } else if (result instanceof LocalDateTime localDateTime) {
-            deadline = localDateTime;
-        } else if (result instanceof java.sql.Date date) {
-            deadline = date.toLocalDate().atStartOfDay();
-        } else {
-            throw new RuntimeException("Invalid submission deadline type");
-        }
-
-        if (LocalDateTime.now().isAfter(deadline)) {
+        LocalDateTime deadline = round.getSubmissionDeadline();
+        if (deadline != null && now.isAfter(deadline)) {
             throw new RuntimeException("Submission deadline has passed");
         }
     }

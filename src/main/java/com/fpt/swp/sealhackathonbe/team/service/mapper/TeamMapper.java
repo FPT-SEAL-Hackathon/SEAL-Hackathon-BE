@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service.mapper;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
@@ -14,8 +15,10 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TeamMapper {
@@ -27,6 +30,7 @@ public class TeamMapper {
         response.setCategoryId(team.getCategoryId());
         response.setTeamName(team.getTeamName());
         response.setTeamStatusId(team.getTeamStatusId());
+        response.setTeamStatusName(team.getTeamStatus() != null ? team.getTeamStatus().getStatusName() : null);
         response.setLeaderUserId(team.getLeaderUserId());
         response.setCreatedAt(team.getCreatedAt());
         response.setUpdatedAt(team.getUpdatedAt());
@@ -38,7 +42,81 @@ public class TeamMapper {
                 .toList();
 
         response.setMembers(memberResponses);
+        long activeMemberCount = memberResponses.size();
+        Integer minTeamSize = team.getEvent() != null ? team.getEvent().getMinTeamSize() : null;
+        Integer maxTeamSize = team.getEvent() != null ? team.getEvent().getMaxTeamSize() : null;
+        boolean minOk = minTeamSize == null || activeMemberCount >= minTeamSize;
+        boolean maxOk = maxTeamSize == null || activeMemberCount <= maxTeamSize;
+        List<String> approvalIssues = buildApprovalIssues(team, members, activeMemberCount, minTeamSize, maxTeamSize);
+        boolean membersInfoComplete = membersInfoComplete(members);
+
+        response.setMinTeamSize(minTeamSize);
+        response.setMaxTeamSize(maxTeamSize);
+        response.setActiveMemberCount(activeMemberCount);
+        response.setTeamSizeEligible(minOk && maxOk);
+        response.setMembersInfoComplete(membersInfoComplete);
+        response.setApprovalIssues(approvalIssues);
+        response.setCanRequestApproval(isForming(team.getTeamStatusId()) && minOk && maxOk && membersInfoComplete);
         return response;
+    }
+
+    private static boolean isForming(UUID teamStatusId) {
+        return TeamStatusConstants.FORMING.equals(teamStatusId);
+    }
+
+    private static List<String> buildApprovalIssues(
+            Teams team,
+            List<TeamMembers> members,
+            long activeMemberCount,
+            Integer minTeamSize,
+            Integer maxTeamSize
+    ) {
+        List<String> issues = new ArrayList<>();
+
+        if (minTeamSize != null && activeMemberCount < minTeamSize) {
+            issues.add("Team has fewer active members than the event minimum");
+        }
+        if (maxTeamSize != null && activeMemberCount > maxTeamSize) {
+            issues.add("Team has more active members than the event maximum");
+        }
+        if (!membersInfoComplete(members)) {
+            issues.add("One or more members have incomplete profile information");
+        }
+        return issues;
+    }
+
+    private static boolean membersInfoComplete(List<TeamMembers> members) {
+        return (members == null ? Collections.<TeamMembers>emptyList() : members)
+                .stream()
+                .allMatch(member -> isProfileComplete(member.getUser()));
+    }
+
+    private static boolean isProfileComplete(User user) {
+        if (user == null) {
+            return false;
+        }
+
+        String accountStatusName = user.getAccountStatus() != null
+                ? user.getAccountStatus().getStatusName()
+                : null;
+
+        return !isBlank(user.getFullName())
+                && hasValidPhoneLength(user.getPhone())
+                && !isBlank(user.getUniversityName())
+                && (!isBlank(user.getFptStudentCode()) || !isBlank(user.getExternalStudentCode()))
+                && "Active".equalsIgnoreCase(accountStatusName);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static boolean hasValidPhoneLength(String phone) {
+        if (isBlank(phone)) {
+            return false;
+        }
+        String digits = phone.replaceAll("\\D", "");
+        return digits.length() >= 9 && digits.length() <= 15;
     }
 
     public static TeamMemberResponse toTeamMemberResponse(TeamMembers member) {

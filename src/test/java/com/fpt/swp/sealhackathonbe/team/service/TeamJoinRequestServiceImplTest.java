@@ -74,6 +74,7 @@ class TeamJoinRequestServiceImplTest {
         team.setEvent(event);
         team.setTeamName("Seal Team");
         team.setLeaderUserId(leaderId);
+        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000001"));
 
         User user = new User();
         user.setUserId(userId);
@@ -109,6 +110,8 @@ class TeamJoinRequestServiceImplTest {
         when(teamJoinRequestsRepository.save(joinRequest)).thenReturn(joinRequest);
 
         service.handleJoinRequest(requestId, command, leaderId);
+
+        verify(teamEventRegistrationService).assertEventOpenForRegistration(eventId);
 
         ArgumentCaptor<TeamMembers> memberCaptor = ArgumentCaptor.forClass(TeamMembers.class);
         verify(teamMembersRepository).save(memberCaptor.capture());
