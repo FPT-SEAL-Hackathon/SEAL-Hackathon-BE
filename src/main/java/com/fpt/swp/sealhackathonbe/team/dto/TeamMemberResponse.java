@@ -12,4 +12,6 @@ public class TeamMemberResponse {
     private UUID userId;
     private LocalDateTime joinedAt;
     private Boolean active;
+    private String participantStatus;
+    private String participantStatusName;
 }

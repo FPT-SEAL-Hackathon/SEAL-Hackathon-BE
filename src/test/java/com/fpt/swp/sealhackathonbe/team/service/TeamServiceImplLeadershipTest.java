@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
+import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -8,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.impl.TeamServiceImpl;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,6 +47,9 @@ class TeamServiceImplLeadershipTest {
 
     @Mock
     private TeamEventRegistrationService teamEventRegistrationService;
+
+    @Mock
+    private EventParticipantRepository eventParticipantRepository;
 
     @InjectMocks
     private TeamServiceImpl teamService;
@@ -178,6 +184,52 @@ class TeamServiceImplLeadershipTest {
                 BusinessConflictException.class,
                 () -> teamService.transferLeadership(teamId, externalUserId, leaderId)
         );
+    }
+
+    @Test
+    void disqualifiedTeamMemberDetailExposesSuspendedParticipantStatus() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000003"));
+        TeamMembers leader = member(team, leaderId);
+        TeamMembers member = member(team, memberId);
+        User user = new User();
+        user.setUserId(memberId);
+        member.setUser(user);
+
+        when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, leaderId))
+                .thenReturn(Optional.of(leader));
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
+                .thenReturn(Optional.of(member));
+
+        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, leaderId);
+
+        assertEquals("Suspended", response.getParticipantStatus());
+        assertEquals("Suspended", response.getParticipantStatusName());
+    }
+
+    @Test
+    void disqualifiedTeamResponseMembersExposeSuspendedParticipantStatus() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000003"));
+        TeamMembers leader = member(team, leaderId);
+        TeamMembers member = member(team, memberId);
+
+        when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndActiveTrue(teamId)).thenReturn(List.of(leader, member));
+
+        TeamResponse response = teamService.getById(teamId);
+
+        assertEquals("Suspended", response.getMembers().get(0).getParticipantStatus());
+        assertEquals("Suspended", response.getMembers().get(0).getParticipantStatusName());
+        assertEquals("Suspended", response.getMembers().get(1).getParticipantStatus());
+        assertEquals("Suspended", response.getMembers().get(1).getParticipantStatusName());
     }
 
     private Teams team(UUID teamId, UUID leaderId) {
