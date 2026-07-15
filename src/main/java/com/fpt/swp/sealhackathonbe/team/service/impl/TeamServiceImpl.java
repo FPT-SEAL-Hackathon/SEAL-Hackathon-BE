@@ -17,6 +17,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
@@ -26,6 +27,7 @@ import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TeamServiceImpl implements TeamService {
+    private static final int TEAM_NAME_MAX_LENGTH = 300;
+    private static final String REJECTED_TEAM_NAME_SUFFIX_PREFIX = " [rejected:";
+
     private static final UUID TEAM_STATUS_FORMING =
             TeamStatusConstants.FORMING;
     private static final UUID TEAM_STATUS_PENDING =
@@ -57,6 +62,7 @@ public class TeamServiceImpl implements TeamService {
     private final AuditLogRepository auditLogRepository;
     private final TeamEventRegistrationService teamEventRegistrationService;
     private final EventParticipantRepository eventParticipantRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -71,19 +77,12 @@ public class TeamServiceImpl implements TeamService {
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
-        if (teamsRepository.existsByEventIdAndTeamNameWithActiveMembers(
-                request.getEventId(),
-                request.getTeamName(),
-                TEAM_STATUS_REJECTED
-        )) {
-            throw new BusinessConflictException("Team name already exists in this event");
-        }
+        LocalDateTime now = LocalDateTime.now();
+        releaseRejectedOrInactiveDuplicateTeamName(request.getEventId(), request.getTeamName(), now);
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, event.getEventId())) {
             throw new BusinessConflictException("User already belongs to an active team in this event");
         }
-
-        LocalDateTime now = LocalDateTime.now();
 
         Teams team = new Teams();
         team.setEventId(request.getEventId());
@@ -167,6 +166,70 @@ public class TeamServiceImpl implements TeamService {
         return toTeamResponse(savedTeam, members);
     }
 
+    private void releaseRejectedOrInactiveDuplicateTeamName(UUID eventId, String teamName, LocalDateTime now) {
+        List<Teams> sameNameTeams = teamsRepository.findByEventIdAndTeamNameIgnoreCaseForUpdate(eventId, teamName);
+        List<Teams> teamsToRelease = new ArrayList<>();
+        List<TeamMembers> membersToDeactivate = new ArrayList<>();
+
+        for (Teams existingTeam : sameNameTeams) {
+            if (TEAM_STATUS_REJECTED.equals(existingTeam.getTeamStatusId())) {
+                releaseTeamName(existingTeam, now);
+                teamsToRelease.add(existingTeam);
+                continue;
+            }
+
+            List<TeamMembers> activeMembers =
+                    teamMembersRepository.findByTeamIdAndActiveTrue(existingTeam.getTeamId());
+            if (!activeMembers.isEmpty() && !allActiveMembersRejectedForEvent(existingTeam, activeMembers)) {
+                throw new BusinessConflictException("Team name already exists in this event");
+            }
+
+            existingTeam.setTeamStatusId(TEAM_STATUS_REJECTED);
+            existingTeam.setUpdatedAt(now);
+            teamsToRelease.add(existingTeam);
+
+            activeMembers.forEach(member -> {
+                member.setActive(false);
+                member.setLeftAt(now);
+            });
+            membersToDeactivate.addAll(activeMembers);
+        }
+
+        if (!teamsToRelease.isEmpty()) {
+            teamsRepository.saveAll(teamsToRelease);
+            teamsRepository.flush();
+        }
+        if (!membersToDeactivate.isEmpty()) {
+            teamMembersRepository.saveAll(membersToDeactivate);
+        }
+    }
+
+    private void releaseTeamName(Teams team, LocalDateTime now) {
+        String suffix = REJECTED_TEAM_NAME_SUFFIX_PREFIX + team.getTeamId() + "]";
+        String baseName = team.getTeamName();
+        int maxBaseLength = TEAM_NAME_MAX_LENGTH - suffix.length();
+        if (baseName.length() > maxBaseLength) {
+            baseName = baseName.substring(0, maxBaseLength);
+        }
+
+        team.setTeamName(baseName + suffix);
+        team.setUpdatedAt(now);
+    }
+
+    private boolean allActiveMembersRejectedForEvent(Teams team, List<TeamMembers> activeMembers) {
+        for (TeamMembers member : activeMembers) {
+            boolean rejected = eventParticipantRepository
+                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
+                    .map(participant -> participant.getParticipantStatus() != null
+                            && "REJECTED".equalsIgnoreCase(participant.getParticipantStatus().getStatusName()))
+                    .orElse(false);
+            if (!rejected) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     @Transactional
     public TeamResponse rejectTeam(UUID teamId, String note, UUID adminUserId) {
@@ -177,12 +240,29 @@ public class TeamServiceImpl implements TeamService {
             throw new BusinessConflictException("Only pending teams can be rejected");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         team.setTeamStatusId(TEAM_STATUS_REJECTED);
-        team.setUpdatedAt(LocalDateTime.now());
+        team.setUpdatedAt(now);
         Teams savedTeam = teamsRepository.save(team);
         saveEligibilityRejectedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
+        members.forEach(member -> {
+            member.setActive(false);
+            member.setLeftAt(now);
+        });
+        teamMembersRepository.saveAll(members);
+        eventPublisher.publishEvent(new TeamRegistrationRejectedEvent(
+                members.stream()
+                        .map(TeamMembers::getUserId)
+                        .distinct()
+                        .toList(),
+                adminUserId,
+                savedTeam.getEventId(),
+                savedTeam.getTeamName(),
+                note
+        ));
+
         return toTeamResponse(savedTeam, members);
     }
 
