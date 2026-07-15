@@ -8,12 +8,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class CreateSubmissionRequest {
-    // Du lieu dau vao cho luong submitWork.
-    // Controller nhan DTO nay, command service validate, sau do stored procedure tao moi/cap nhat ban ghi.
-    @NotNull(message = "Team ID is required")
-    private UUID teamId;
-
+public class CreateSampleSubmissionRequest {
     @NotNull(message = "Round ID is required")
     private UUID roundId;
 

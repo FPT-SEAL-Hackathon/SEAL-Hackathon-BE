@@ -9,6 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface EventCriterionRepository extends JpaRepository<EventCriteria, UUID> {
-    List<EventCriteria> findByEventEventIdOrderBySortOrderAsc(UUID eventId);
+    List<EventCriteria> findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(UUID eventId);
     int countByEventEventId(UUID eventId);
 }

@@ -14,28 +14,20 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(
-        name = "Submissions",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "UQ_Submissions_Team_Round",
-                        columnNames = {"TeamID", "RoundID"}
-                )
-        }
-)
+@Table(name = "Submissions")
 public class Submissions {
     // Mapping voi bang Submissions trong database.
-    // Moi team chi co mot submission trong mot round; rule nay duoc enforce boi UQ_Submissions_Team_Round.
+    // Moi team chi co mot submission that trong mot round; sample submission co TeamID null va IsSampleSubmission = true.
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "SubmissionID")
     private UUID submissionId;
 
-    @Column(name = "TeamID", nullable = false)
+    @Column(name = "TeamID")
     private UUID teamId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TeamID", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "TeamID", insertable = false, updatable = false)
     private Teams team;
 
     @Column(name = "RoundID", nullable = false)
@@ -90,4 +82,7 @@ public class Submissions {
 
     @Column(name = "IsScoreApproved", nullable = false)
     private Boolean isScoreApproved = false;
+
+    @Column(name = "IsSampleSubmission", nullable = false)
+    private Boolean isSampleSubmission = false;
 }

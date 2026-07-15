@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.research.controller;
 
+import com.fpt.swp.sealhackathonbe.research.dto.ConsensusMatrixResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
 import com.fpt.swp.sealhackathonbe.research.service.ResearchDataService;
 import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -65,5 +68,29 @@ public class ResearchDashboardController {
                 .contentType(MediaType.parseMediaType(file.getContentType()))
                 .contentLength(file.getContent().length)
                 .body(file.getContent());
+    }
+
+    @GetMapping({"/calibration/matrix/{roundId}"})
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Get consensus matrix", description = "Returns consensus matrix data for a specific round")
+    public ResponseEntity<List<ConsensusMatrixResponse>> getConsensusMatrix(
+            @PathVariable UUID roundId
+    ) {
+        return ResponseEntity.ok(researchDashboardService.getConsensusMatrix(roundId));
+    }
+
+    @GetMapping(value = "/calibration/export/{roundId}", produces = "text/csv")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Export calibration CSV", description = "Exports wide-format CSV for calibration grading")
+    public ResponseEntity<byte[]> exportCalibrationCsv(
+            @PathVariable UUID roundId
+    ) {
+        String csv = researchDashboardService.exportCalibrationCsv(roundId);
+        byte[] content = csv.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"calibration_round_" + roundId + ".csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentLength(content.length)
+                .body(content);
     }
 }

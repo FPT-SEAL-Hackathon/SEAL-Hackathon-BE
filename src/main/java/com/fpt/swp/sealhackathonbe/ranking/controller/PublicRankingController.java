@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ranking.controller;
 
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
+import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,16 @@ public class PublicRankingController {
             @PathVariable("categoryId") UUID categoryId) {
 
         List<EventRankingDTO> rankings = rankingService.getPublishedCategoryLeaderboard(eventId,categoryId);
+        return ResponseEntity.ok(rankings);
+    }
+
+    @GetMapping("/api/v1/public/leaderboard/rounds/{roundId}/{categoryId}")
+    @Operation(summary = "Get public round leaderboard", description = "Retrieves the public leaderboard for a specific round and category")
+    public ResponseEntity<List<RoundRankingDTO>> getRoundLeaderboardByCategory(
+            @PathVariable("roundId") UUID roundId,
+            @PathVariable("categoryId") UUID categoryId) {
+
+        List<RoundRankingDTO> rankings = rankingService.getPublishedRoundLeaderboard(roundId,categoryId);
         return ResponseEntity.ok(rankings);
     }
 }

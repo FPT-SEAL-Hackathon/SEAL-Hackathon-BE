@@ -19,6 +19,8 @@ public class TeamMemberDetailResponse {
     private String universityName;
     private String userTypeName;
     private String accountStatusName;
+    private String participantStatus;
+    private String participantStatusName;
     private LocalDateTime joinedAt;
     private Boolean active;
 }

@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
@@ -15,13 +16,11 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -30,9 +29,10 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     // Phan command cua luong submission.
     // currentUserId duoc truyen tu controller sau khi lay user hien tai qua JWT
     // authentication.
-    private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.PENDING;
-    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.APPROVED;
-    private static final UUID TEAM_STATUS_WITHDRAWN    = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.ACTIVE;
+    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_REJECTED     = TeamStatusConstants.REJECTED;
+    private static final String ROUND_STATUS_SUBMISSION_OPEN = "Submission Open";
 
     private final SubmissionsRepository submissionsRepository;
     private final TeamsRepository teamsRepository;
@@ -59,14 +59,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     public SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId) {
         // Luong ghi:
         // 1. Kiem tra user hien tai la leader active cua team.
-        // 2. Kiem tra team chua bi disqualified/withdrawn.
+        // 2. Kiem tra team da duoc organizer approve va khong bi reject/disqualify.
         // 3. Kiem tra round chua qua deadline nop bai.
         // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
         // 5. Reload entity va map sang response DTO.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(team);
-        validateTeamCanSubmitToRound(team, request.getRoundId());
-        validateSubmissionDeadline(request.getRoundId());
+        Round round = validateTeamCanSubmitToRound(team, request.getRoundId());
+        validateRoundAcceptsTeamSubmission(round);
 
         callUpsertSubmissionProcedure(request, currentUserId);
 
@@ -75,6 +75,30 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
 
         return SubmissionMapper.toSubmissionResponse(submission);
+    }
+
+    @Override
+    @Transactional
+    public SubmissionResponse submitSampleWork(CreateSampleSubmissionRequest request, UUID currentUserId) {
+        Round round = findRound(request.getRoundId());
+        validateCalibrationRound(round);
+        validateRoundAcceptsSampleSubmission(round);
+
+        Submissions sampleSubmission = new Submissions();
+        sampleSubmission.setRoundId(request.getRoundId());
+        sampleSubmission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+        sampleSubmission.setRepositoryUrl(request.getRepositoryUrl());
+        sampleSubmission.setDemoUrl(request.getDemoUrl());
+        sampleSubmission.setReportUrl(request.getReportUrl());
+        sampleSubmission.setSlideUrl(request.getSlideUrl());
+        sampleSubmission.setNotes(request.getNotes());
+        sampleSubmission.setSubmittedAt(LocalDateTime.now());
+        sampleSubmission.setLastUpdatedAt(LocalDateTime.now());
+        sampleSubmission.setSubmittedByUserId(currentUserId);
+        sampleSubmission.setIsScoreApproved(false);
+        sampleSubmission.setIsSampleSubmission(true);
+
+        return SubmissionMapper.toSubmissionResponse(submissionsRepository.save(sampleSubmission));
     }
 
     private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
@@ -101,19 +125,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // Only teams approved by organizer for competition can submit or update work.
         if (!TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
             if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
-                    || TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
-                throw new RuntimeException("This team cannot submit because it is disqualified or withdrawn");
+                    || TEAM_STATUS_REJECTED.equals(team.getTeamStatusId())) {
+                throw new RuntimeException("This team cannot submit because it is rejected or disqualified");
             }
 
             throw new RuntimeException("Only active teams can submit work");
         }
     }
 
-    private void validateTeamCanSubmitToRound(Teams team, UUID roundId) {
+    private Round validateTeamCanSubmitToRound(Teams team, UUID roundId) {
         // A team can only submit to rounds in the same category/event it registered
         // for.
-        Round round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+        Round round = findRound(roundId);
 
         if (round.getCategory() == null || round.getCategory().getCategoryId() == null) {
             throw new RuntimeException("Round category not found");
@@ -131,42 +154,48 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         if (!team.getEventId().equals(round.getCategory().getEvent().getEventId())) {
             throw new RuntimeException("Team cannot submit to a round outside its event");
         }
+
+        return round;
     }
 
-    private void validateSubmissionDeadline(UUID roundId) {
-        // Doc deadline truc tiep tu Rounds vi entity submission hien khong mapping quan
-        // he Round.
-        Object result;
+    private Round findRound(UUID roundId) {
+        return roundRepository.findById(roundId)
+                .orElseThrow(() -> new RuntimeException("Round not found"));
+    }
 
-        try {
-            result = entityManager
-                    .createNativeQuery(
-                            "SELECT SubmissionDeadline FROM Rounds WHERE RoundID = CAST(:roundId AS uniqueidentifier)")
-                    .setParameter("roundId", roundId.toString())
-                    .getSingleResult();
-        } catch (NoResultException exception) {
-            throw new RuntimeException("Round not found");
+    private void validateCalibrationRound(Round round) {
+        if (!Boolean.TRUE.equals(round.getIsCalibrationRound())) {
+            throw new RuntimeException("Sample submissions are only allowed for calibration rounds");
+        }
+    }
+
+    private void validateRoundAcceptsSampleSubmission(Round round) {
+        String statusName = round.getRoundStatus() != null
+                ? round.getRoundStatus().getStatusName()
+                : null;
+
+        if ("Judging".equalsIgnoreCase(statusName) || "Completed".equalsIgnoreCase(statusName)) {
+            throw new RuntimeException("Cannot create sample submissions after calibration round enters judging or completed status");
+        }
+    }
+
+    private void validateRoundAcceptsTeamSubmission(Round round) {
+        String statusName = round.getRoundStatus() != null
+                ? round.getRoundStatus().getStatusName()
+                : null;
+
+        if (!ROUND_STATUS_SUBMISSION_OPEN.equalsIgnoreCase(statusName)) {
+            throw new RuntimeException("Round is not open for submissions");
         }
 
-        if (result == null) {
-            // Deadline null duoc hieu la round khong gioi han thoi gian nop.
-            return;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = round.getStartDate();
+        if (startDate != null && now.isBefore(startDate)) {
+            throw new RuntimeException("Round has not started yet");
         }
 
-        LocalDateTime deadline;
-
-        if (result instanceof Timestamp timestamp) {
-            // JDBC driver co the tra nhieu kieu ngay gio, nen chuan hoa ve LocalDateTime.
-            deadline = timestamp.toLocalDateTime();
-        } else if (result instanceof LocalDateTime localDateTime) {
-            deadline = localDateTime;
-        } else if (result instanceof java.sql.Date date) {
-            deadline = date.toLocalDate().atStartOfDay();
-        } else {
-            throw new RuntimeException("Invalid submission deadline type");
-        }
-
-        if (LocalDateTime.now().isAfter(deadline)) {
+        LocalDateTime deadline = round.getSubmissionDeadline();
+        if (deadline != null && now.isAfter(deadline)) {
             throw new RuntimeException("Submission deadline has passed");
         }
     }

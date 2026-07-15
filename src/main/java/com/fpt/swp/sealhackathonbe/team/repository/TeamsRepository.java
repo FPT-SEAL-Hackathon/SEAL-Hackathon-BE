@@ -15,7 +15,35 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
     // Kiểm tra trùng tên team trong cùng event trước khi tạo team mới.
     boolean existsByEventIdAndTeamName(UUID eventId, String teamName);
 
+    @Query("""
+            select case when count(team) > 0 then true else false end
+            from Teams team
+            where team.eventId = :eventId
+              and lower(team.teamName) = lower(:teamName)
+              and team.teamStatusId <> :ignoredStatusId
+              and exists (
+                  select 1
+                  from TeamMembers member
+                  where member.teamId = team.teamId
+                    and member.active = true
+              )
+            """)
+    boolean existsByEventIdAndTeamNameWithActiveMembers(
+            @Param("eventId") UUID eventId,
+            @Param("teamName") String teamName,
+            @Param("ignoredStatusId") UUID ignoredStatusId
+    );
+
     List<Teams> findByEventId(UUID eventId);
+
+    @Query("""
+            select distinct team
+            from Teams team
+            join TeamMembers member on member.teamId = team.teamId
+            where team.eventId = :eventId
+              and member.active = true
+            """)
+    List<Teams> findByEventIdWithActiveMembers(@Param("eventId") UUID eventId);
     List<Teams> findByLeaderUserId(UUID leaderUserId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
