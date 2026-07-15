@@ -172,6 +172,9 @@ public class GlobalExceptionHandler {
         if (isDuplicateUserEmailViolation(ex)) {
             return build(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", "Email already exists.", null);
         }
+        if (isDuplicateTeamNameViolation(ex)) {
+            return build(HttpStatus.CONFLICT, "REGISTRATION_CONFLICT", "Team name already exists in this event", null);
+        }
 
         return build(HttpStatus.BAD_REQUEST, "DATA_INTEGRITY_VIOLATION", "Request violates data constraints", null);
     }
@@ -262,5 +265,21 @@ public class GlobalExceptionHandler {
         String normalized = message.toLowerCase();
         return normalized.contains("users")
                 && (normalized.contains("email") || normalized.contains("uq_users_email"));
+    }
+
+    private boolean isDuplicateTeamNameViolation(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+
+        if (message == null) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase();
+        return normalized.contains("uq_teams_event_name")
+                || (normalized.contains("teams")
+                && normalized.contains("eventid")
+                && normalized.contains("teamname"));
     }
 }
