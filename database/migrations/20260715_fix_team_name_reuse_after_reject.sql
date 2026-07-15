@@ -5,11 +5,11 @@
 DECLARE @RejectedTeamStatus uniqueidentifier = '60000000-0000-0000-0000-000000000006';
 
 UPDATE tm
-SET Active = 0,
+SET IsActive = 0,
     LeftAt = COALESCE(tm.LeftAt, SYSUTCDATETIME())
 FROM dbo.TeamMembers tm
 JOIN dbo.Teams t ON t.TeamID = tm.TeamID
-WHERE tm.Active = 1
+WHERE tm.IsActive = 1
   AND t.TeamStatusID <> @RejectedTeamStatus
   AND EXISTS (
       SELECT 1
@@ -31,7 +31,7 @@ WHERE tm.Active = 1
       JOIN dbo.ParticipantStatus ps
         ON ps.StatusID = ep.ParticipantStatusID
       WHERE activeMember.TeamID = t.TeamID
-        AND activeMember.Active = 1
+        AND activeMember.IsActive = 1
         AND ps.StatusName <> N'REJECTED'
   );
 
@@ -44,7 +44,7 @@ WHERE t.TeamStatusID <> @RejectedTeamStatus
       SELECT 1
       FROM dbo.TeamMembers tm
       WHERE tm.TeamID = t.TeamID
-        AND tm.Active = 1
+        AND tm.IsActive = 1
   );
 
 IF EXISTS (
