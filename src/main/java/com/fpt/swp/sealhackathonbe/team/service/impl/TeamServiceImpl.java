@@ -8,6 +8,8 @@ import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
+import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
+import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -54,6 +56,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
     private final AuditLogRepository auditLogRepository;
     private final TeamEventRegistrationService teamEventRegistrationService;
+    private final EventParticipantRepository eventParticipantRepository;
 
     @Override
     @Transactional
@@ -70,7 +73,8 @@ public class TeamServiceImpl implements TeamService {
 
         if (teamsRepository.existsByEventIdAndTeamNameWithActiveMembers(
                 request.getEventId(),
-                request.getTeamName()
+                request.getTeamName(),
+                TEAM_STATUS_REJECTED
         )) {
             throw new BusinessConflictException("Team name already exists in this event");
         }
@@ -101,7 +105,7 @@ public class TeamServiceImpl implements TeamService {
         teamMembersRepository.save(leaderMember);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
-        return TeamMapper.toTeamResponse(savedTeam, members);
+        return toTeamResponse(savedTeam, members);
     }
 
     @Override
@@ -118,7 +122,7 @@ public class TeamServiceImpl implements TeamService {
                 .map(team -> {
                     List<TeamMembers> members =
                             teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
-                    return TeamMapper.toTeamResponse(team, members);
+                    return toTeamResponse(team, members);
                 })
                 .toList();
     }
@@ -160,7 +164,7 @@ public class TeamServiceImpl implements TeamService {
         saveEligibilityApprovedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
-        return TeamMapper.toTeamResponse(savedTeam, members);
+        return toTeamResponse(savedTeam, members);
     }
 
     @Override
@@ -179,7 +183,7 @@ public class TeamServiceImpl implements TeamService {
         saveEligibilityRejectedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
-        return TeamMapper.toTeamResponse(savedTeam, members);
+        return toTeamResponse(savedTeam, members);
     }
 
     @Override
@@ -190,7 +194,22 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
-        return TeamMapper.toTeamResponse(team, members);
+        return toTeamResponse(team, members);
+    }
+
+    private TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
+        TeamResponse response = TeamMapper.toTeamResponse(team, members);
+        if (response.getMembers() == null) {
+            return response;
+        }
+
+        response.getMembers().forEach(member -> {
+            String participantStatus = resolveParticipantStatusName(team, member.getUserId());
+            member.setParticipantStatus(participantStatus);
+            member.setParticipantStatusName(participantStatus);
+        });
+
+        return response;
     }
 
     @Override
@@ -198,6 +217,9 @@ public class TeamServiceImpl implements TeamService {
     public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId) {
         // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
         // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
+
         teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
                 .orElseThrow(() -> new AccessDeniedException("You do not belong to this team"));
 
@@ -206,7 +228,23 @@ public class TeamServiceImpl implements TeamService {
 
         User user = member.getUser();
 
-        return TeamMapper.toTeamMemberDetailResponse(member, user);
+        TeamMemberDetailResponse response = TeamMapper.toTeamMemberDetailResponse(member, user);
+        String participantStatus = resolveParticipantStatusName(team, userId);
+        response.setParticipantStatus(participantStatus);
+        response.setParticipantStatusName(participantStatus);
+        return response;
+    }
+
+    private String resolveParticipantStatusName(Teams team, UUID userId) {
+        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())) {
+            return "Suspended";
+        }
+
+        return eventParticipantRepository
+                .findByEventIdAndUserId(team.getEventId(), userId)
+                .map(EventParticipant::getParticipantStatus)
+                .map(status -> status.getStatusName())
+                .orElse(null);
     }
 
     @Override
@@ -281,7 +319,7 @@ public class TeamServiceImpl implements TeamService {
         Teams savedTeam = teamsRepository.save(team);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
-        return TeamMapper.toTeamResponse(savedTeam, members);
+        return toTeamResponse(savedTeam, members);
     }
 
     private TeamEligibilityReviewResponse toEligibilityReviewResponse(Teams team, Event event) {
