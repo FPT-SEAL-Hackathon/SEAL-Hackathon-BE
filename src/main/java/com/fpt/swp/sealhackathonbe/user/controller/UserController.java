@@ -6,6 +6,7 @@ import com.fpt.swp.sealhackathonbe.user.dto.CreateUserManagementRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserManagementRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserRoleRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserStatusRequest;
+import com.fpt.swp.sealhackathonbe.user.dto.UserFacetsResponse;
 import com.fpt.swp.sealhackathonbe.user.dto.UserManagementResponse;
 import com.fpt.swp.sealhackathonbe.user.service.UserManagementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,7 +55,7 @@ public class UserController {
     private final UserManagementService userManagementService;
     private final AuthenticationServiceImpl authenticationService;
 
-    @Operation(summary = "Search users")
+    @Operation(summary = "Search users (role/status nhận nhiều giá trị phân tách bằng dấu phẩy)")
     @GetMapping
     public ResponseEntity<Page<UserManagementResponse>> search(
             @RequestParam(defaultValue = "0") int page,
@@ -63,6 +65,7 @@ public class UserController {
             @RequestParam(required = false) UUID teamId,
             @RequestParam(required = false) String teamName,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String accountStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedTo,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -70,15 +73,61 @@ public class UserController {
     ) {
         Page<UserManagementResponse> response = userManagementService.search(
                 search,
-                role,
+                splitCsv(role),
                 teamId,
                 teamName,
-                status,
+                // Alias: một số client cũ gửi "accountStatus" thay vì "status".
+                splitCsv(firstNonBlankParam(status, accountStatus)),
                 joinedFrom,
                 joinedTo,
                 toPageable(page, size, sortBy, sortDir)
         );
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Facet counts cho panel filter: số lượng cạnh mỗi option (drill-down)
+     * + total để preview "Show N users" trước khi xác nhận.
+     */
+    @Operation(summary = "User facet counts for the filter panel")
+    @GetMapping("/facets")
+    public ResponseEntity<UserFacetsResponse> facets(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID teamId,
+            @RequestParam(required = false) String teamName,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String accountStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedTo
+    ) {
+        return ResponseEntity.ok(userManagementService.facets(
+                search,
+                splitCsv(role),
+                teamId,
+                teamName,
+                splitCsv(firstNonBlankParam(status, accountStatus)),
+                joinedFrom,
+                joinedTo
+        ));
+    }
+
+    // "FPT_STUDENT,ORGANIZER" -> [FPT_STUDENT, ORGANIZER]; giá trị đơn vẫn hợp lệ.
+    private List<String> splitCsv(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .toList();
+    }
+
+    private String firstNonBlankParam(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second;
     }
 
     @Operation(summary = "Get user by ID")

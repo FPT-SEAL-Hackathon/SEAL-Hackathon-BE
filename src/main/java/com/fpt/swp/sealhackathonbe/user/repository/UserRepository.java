@@ -81,6 +81,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     Long countActiveUsersByTypeNames(@Param("typeNames") Collection<String> typeNames);
 
+    // Filter đa giá trị: OR trong nhóm (IN), AND giữa các nhóm.
+    // JPQL không kiểm tra list rỗng trực tiếp được nên dùng cờ *Empty đi kèm;
+    // khi list rỗng caller truyền placeholder để IN (...) hợp lệ cú pháp.
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     @Query("""
             SELECT u
@@ -95,8 +98,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     OR LOWER(u.externalStudentCode) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(u.universityName) LIKE LOWER(CONCAT('%', :search, '%'))
               )
-              AND (:role IS NULL OR LOWER(u.userType.typeName) = LOWER(:role))
-              AND (:status IS NULL OR LOWER(u.accountStatus.statusName) = LOWER(:status))
+              AND (:rolesEmpty = true OR LOWER(u.userType.typeName) IN :roles)
+              AND (:statusesEmpty = true OR LOWER(u.accountStatus.statusName) IN :statuses)
               AND (:joinedFrom IS NULL OR u.createdAt >= :joinedFrom)
               AND (:joinedTo IS NULL OR u.createdAt <= :joinedTo)
               AND (
@@ -122,12 +125,112 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     Page<User> searchForManagement(
             @Param("search") String search,
-            @Param("role") String role,
+            @Param("roles") Collection<String> roles,
+            @Param("rolesEmpty") boolean rolesEmpty,
             @Param("teamId") UUID teamId,
             @Param("teamName") String teamName,
-            @Param("status") String status,
+            @Param("statuses") Collection<String> statuses,
+            @Param("statusesEmpty") boolean statusesEmpty,
             @Param("joinedFrom") LocalDateTime joinedFrom,
             @Param("joinedTo") LocalDateTime joinedTo,
             Pageable pageable
+    );
+
+    // Facet count kiểu drill-down cho nhóm ROLE: áp mọi filter TRỪ role.
+    @Query("""
+            SELECT u.userType.typeName, COUNT(u)
+            FROM User u
+            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND (
+                    :search IS NULL
+                    OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.phone) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.fptStudentCode) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.externalStudentCode) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.universityName) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+              AND (:statusesEmpty = true OR LOWER(u.accountStatus.statusName) IN :statuses)
+              AND (:joinedFrom IS NULL OR u.createdAt >= :joinedFrom)
+              AND (:joinedTo IS NULL OR u.createdAt <= :joinedTo)
+              AND (
+                    :teamId IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM TeamMembers tm
+                        WHERE tm.userId = u.userId
+                          AND tm.active = true
+                          AND tm.teamId = :teamId
+                    )
+              )
+              AND (
+                    :teamName IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM TeamMembers tm
+                        WHERE tm.userId = u.userId
+                          AND tm.active = true
+                          AND LOWER(tm.team.teamName) LIKE LOWER(CONCAT('%', :teamName, '%'))
+                    )
+              )
+            GROUP BY u.userType.typeName
+            """)
+    List<Object[]> countByRoleForManagement(
+            @Param("search") String search,
+            @Param("teamId") UUID teamId,
+            @Param("teamName") String teamName,
+            @Param("statuses") Collection<String> statuses,
+            @Param("statusesEmpty") boolean statusesEmpty,
+            @Param("joinedFrom") LocalDateTime joinedFrom,
+            @Param("joinedTo") LocalDateTime joinedTo
+    );
+
+    // Facet count kiểu drill-down cho nhóm STATUS: áp mọi filter TRỪ status.
+    @Query("""
+            SELECT u.accountStatus.statusName, COUNT(u)
+            FROM User u
+            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND (
+                    :search IS NULL
+                    OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.phone) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.fptStudentCode) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.externalStudentCode) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(u.universityName) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+              AND (:rolesEmpty = true OR LOWER(u.userType.typeName) IN :roles)
+              AND (:joinedFrom IS NULL OR u.createdAt >= :joinedFrom)
+              AND (:joinedTo IS NULL OR u.createdAt <= :joinedTo)
+              AND (
+                    :teamId IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM TeamMembers tm
+                        WHERE tm.userId = u.userId
+                          AND tm.active = true
+                          AND tm.teamId = :teamId
+                    )
+              )
+              AND (
+                    :teamName IS NULL
+                    OR EXISTS (
+                        SELECT 1
+                        FROM TeamMembers tm
+                        WHERE tm.userId = u.userId
+                          AND tm.active = true
+                          AND LOWER(tm.team.teamName) LIKE LOWER(CONCAT('%', :teamName, '%'))
+                    )
+              )
+            GROUP BY u.accountStatus.statusName
+            """)
+    List<Object[]> countByStatusForManagement(
+            @Param("search") String search,
+            @Param("roles") Collection<String> roles,
+            @Param("rolesEmpty") boolean rolesEmpty,
+            @Param("teamId") UUID teamId,
+            @Param("teamName") String teamName,
+            @Param("joinedFrom") LocalDateTime joinedFrom,
+            @Param("joinedTo") LocalDateTime joinedTo
     );
 }
