@@ -4,14 +4,21 @@ import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 
 import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
+import com.fpt.swp.sealhackathonbe.eventparticipant.entity.ParticipantStatus;
+import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
+import com.fpt.swp.sealhackathonbe.eventparticipant.repository.ParticipantStatusRepository;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
@@ -30,10 +37,14 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
             TeamStatusConstants.DISQUALIFIED;
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED =
             SubmissionStatusConstants.DISQUALIFIED;
+    private static final String PARTICIPANT_STATUS_SUSPENDED = "SUSPENDED";
 
     private final TeamsRepository teamsRepository;
     private final DisqualificationsRepository disqualificationsRepository;
     private final SubmissionsRepository submissionsRepository;
+    private final TeamMembersRepository teamMembersRepository;
+    private final EventParticipantRepository eventParticipantRepository;
+    private final ParticipantStatusRepository participantStatusRepository;
 
     @Override
     @Transactional
@@ -72,6 +83,8 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
         });
         submissionsRepository.saveAll(submissions);
 
+        suspendEventParticipants(team);
+
         Disqualifications disqualification = new Disqualifications();
         disqualification.setTeamId(teamId);
         disqualification.setSubmissionId(null);
@@ -92,6 +105,27 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
                 .stream()
                 .map(TeamMapper::toDisqualifiedTeamResponse)
                 .toList();
+    }
+
+    private void suspendEventParticipants(Teams team) {
+        ParticipantStatus suspendedStatus = participantStatusRepository
+                .findByStatusNameIgnoreCase(PARTICIPANT_STATUS_SUSPENDED)
+                .orElseThrow(() -> new BadRequestException(
+                        "Participant status lookup is not configured for SUSPENDED"));
+
+        List<EventParticipant> participants = teamMembersRepository
+                .findByTeamIdAndActiveTrue(team.getTeamId())
+                .stream()
+                .map(TeamMembers::getUserId)
+                .map(userId -> eventParticipantRepository.findByEventIdAndUserId(team.getEventId(), userId))
+                .flatMap(java.util.Optional::stream)
+                .toList();
+
+        participants.forEach(participant -> {
+            participant.setParticipantStatusId(suspendedStatus.getStatusId());
+            participant.setParticipantStatus(suspendedStatus);
+        });
+        eventParticipantRepository.saveAll(participants);
     }
 
 }

@@ -20,6 +20,7 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
             from Teams team
             where team.eventId = :eventId
               and lower(team.teamName) = lower(:teamName)
+              and team.teamStatusId <> :ignoredStatusId
               and exists (
                   select 1
                   from TeamMembers member
@@ -29,7 +30,8 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
             """)
     boolean existsByEventIdAndTeamNameWithActiveMembers(
             @Param("eventId") UUID eventId,
-            @Param("teamName") String teamName
+            @Param("teamName") String teamName,
+            @Param("ignoredStatusId") UUID ignoredStatusId
     );
 
     List<Teams> findByEventId(UUID eventId);
