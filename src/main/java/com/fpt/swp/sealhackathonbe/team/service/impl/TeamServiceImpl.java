@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -63,6 +64,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamEventRegistrationService teamEventRegistrationService;
     private final EventParticipantRepository eventParticipantRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -329,7 +331,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional
-    public void removeMember(UUID teamId, UUID userId, UUID currentUserId) {
+    public void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason) {
         // Thành viên được tự rời; leader được kick thành viên hoặc tự rời.
         // Leader rời sẽ chuyển quyền cho thành viên active tham gia sớm nhất, hoặc rút team nếu không còn ai.
         Teams team = teamsRepository.findByIdForUpdate(teamId)
@@ -340,9 +342,14 @@ public class TeamServiceImpl implements TeamService {
 
         boolean isLeader = team.getLeaderUserId().equals(currentUserId);
         boolean isSelfLeaving = userId.equals(currentUserId);
+        boolean isLeaderRemovingMember = isLeader && !isSelfLeaving;
 
         if (!isLeader && !isSelfLeaving) {
             throw new AccessDeniedException("You do not have permission to remove this member");
+        }
+        String removalReason = trimToNull(reason);
+        if (isLeaderRemovingMember && removalReason == null) {
+            throw new BusinessConflictException("Removal reason is required");
         }
 
         assertRosterEditable(team);
@@ -365,6 +372,31 @@ public class TeamServiceImpl implements TeamService {
                 teamsRepository.save(team);
             }
         }
+
+        if (isLeaderRemovingMember) {
+            notifyMemberRemoved(team, userId, currentUserId, removalReason);
+        }
+    }
+
+    private void notifyMemberRemoved(Teams team, UUID removedUserId, UUID leaderUserId, String reason) {
+        String eventName = team.getEvent() != null ? team.getEvent().getEventName() : "the event";
+        String body = "You have been removed from team " + team.getTeamName()
+                + " in " + eventName + ". Reason: " + reason;
+        notificationService.sendNotification(
+                removedUserId,
+                leaderUserId,
+                team.getEventId(),
+                "Removed From Team",
+                body
+        );
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void deleteEmptyFormingTeam(Teams team) {
