@@ -8,6 +8,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.RemoveTeamMemberRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
@@ -242,10 +243,16 @@ public class TeamController {
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID teamId,
             @PathVariable UUID userId,
+            @RequestBody(required = false) RemoveTeamMemberRequest request,
             Authentication authentication
     ) {
         // Service phan biet leader kick member va member tu roi team.
-        teamService.removeMember(teamId, userId, currentUserId(authentication));
+        teamService.removeMember(
+                teamId,
+                userId,
+                currentUserId(authentication),
+                request != null ? request.getReason() : null
+        );
         return ResponseEntity.noContent().build();
     }
 
