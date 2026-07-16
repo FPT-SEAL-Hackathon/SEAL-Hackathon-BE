@@ -320,6 +320,11 @@ public class AwardServiceImpl implements AwardService {
     }
 
     private void validateAwardTierNotAlreadyGranted(Event event, Category category, AwardTier tier) {
+        // Cho phép các giải thưởng Đặc biệt (Special Award) được trao nhiều lần
+        if (tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special")) {
+            return;
+        }
+
         UUID categoryId = category != null ? category.getCategoryId() : null;
         if (awardRepository.existsPublishedAwardTierInScope(event.getEventId(), categoryId, tier.getId())) {
             throw new IllegalStateException(String.format(
@@ -341,7 +346,9 @@ public class AwardServiceImpl implements AwardService {
             AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
             AwardTier tier = pattern.getAwardTier();
 
-            if (!requestedTierIds.add(tier.getId())) {
+            boolean isSpecialAward = tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special");
+
+            if (!isSpecialAward && !requestedTierIds.add(tier.getId())) {
                 throw new IllegalStateException("Duplicate award tier in selected award patterns: " + tier.getTierName());
             }
 

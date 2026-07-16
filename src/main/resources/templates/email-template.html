@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">SEAL Hackathon Notification</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f3f4f6;
+            padding-bottom: 40px;
+        }
+        .main {
+            background-color: #ffffff;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 600px;
+            border-spacing: 0;
+            color: #1f2937;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-top: 40px;
+        }
+        .header {
+            background-color: #2563eb;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header-title {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .content {
+            padding: 40px 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .greeting {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #111827;
+        }
+        .message-body {
+            margin-bottom: 30px;
+            color: #4b5563;
+        }
+        .button-wrapper {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .action-button {
+            background-color: #2563eb;
+            color: #ffffff !important;
+            padding: 14px 32px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-block;
+            font-size: 16px;
+        }
+        .code-box {
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            padding: 20px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #0f172a;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 24px 30px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .fallback-link {
+            font-size: 12px;
+            color: #6b7280;
+            word-break: break-all;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .fallback-link a {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <center class="wrapper">
+        <table class="main" width="100%">
+            <tr>
+                <td class="header">
+                    <h1 class="header-title">SEAL Hackathon</h1>
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <div class="greeting" th:if="${greeting != null}" th:text="${greeting}">Hi there,</div>
+                    
+                    <div class="message-body" th:utext="${message}">
+                        Here is your notification message.
+                    </div>
+                    
+                    <!-- Verification Code Block -->
+                    <div th:if="${verificationCode != null}" class="code-box" th:text="${verificationCode}">
+                        123456
+                    </div>
+                    
+                    <!-- Action Button Block -->
+                    <div th:if="${actionUrl != null}" class="button-wrapper">
+                        <a th:href="${actionUrl}" class="action-button" th:text="${actionText}">Click Here</a>
+                    </div>
+                    
+                    <!-- Fallback Link Block -->
+                    <div th:if="${actionUrl != null}" class="fallback-link">
+                        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                        <a th:href="${actionUrl}" th:text="${actionUrl}">https://example.com/link</a>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    <p>&copy; 2026 SEAL Hackathon. All rights reserved.</p>
+                    <p>If you did not request this email, please safely ignore it.</p>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>
