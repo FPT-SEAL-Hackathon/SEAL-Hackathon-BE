@@ -20,5 +20,7 @@ public interface UserOAuthAccountRepository extends JpaRepository<UserOAuthAccou
 
     List<UserOAuthAccount> findByUser_UserId(UUID userId);
 
+    Optional<UserOAuthAccount> findByUser_UserIdAndProvider(UUID userId, String provider);
+
     boolean existsByUser_UserIdAndProvider(UUID userId, String provider);
 }

@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.auth.oauth;
 
+import com.fpt.swp.sealhackathonbe.auth.service.impl.AccountLinkService;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,15 +29,18 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final OAuth2LoginService oauth2LoginService;
     private final OAuthCodeStore oauthCodeStore;
+    private final AccountLinkService accountLinkService;
     private final AppProperties appProperties;
 
     public OAuth2AuthenticationSuccessHandler(
             OAuth2LoginService oauth2LoginService,
             OAuthCodeStore oauthCodeStore,
+            AccountLinkService accountLinkService,
             AppProperties appProperties
     ) {
         this.oauth2LoginService = oauth2LoginService;
         this.oauthCodeStore = oauthCodeStore;
+        this.accountLinkService = accountLinkService;
         this.appProperties = appProperties;
     }
 
@@ -60,15 +64,42 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
         OAuthUserInfo info = OAuthUserInfo.fromGoogle(principal.getAttributes());
 
-        User user;
+        OAuth2LoginService.OAuthLoginOutcome outcome;
         try {
-            user = oauth2LoginService.loginOrCreate(info);
+            outcome = oauth2LoginService.loginOrCreate(info);
         } catch (Exception ex) {
             log.error("OAuth login failed for provider {}", registrationId.toUpperCase(Locale.ROOT), ex);
             redirectWithError(request, response, "oauth_login_failed");
             return;
         }
 
+        // Email đã thuộc một user hiện có: KHÔNG tạo user thứ hai.
+        // Phát linkingToken ngắn hạn để user xác minh quyền sở hữu
+        // (mật khẩu local hoặc OTP email) rồi mới gắn Google vào user đó.
+        if (outcome.isLinkRequired()) {
+            String linkingToken;
+            try {
+                linkingToken = accountLinkService.createGoogleLinkTicket(outcome.linkTarget(), info);
+            } catch (Exception ex) {
+                log.error("Could not create account-link ticket", ex);
+                redirectWithError(request, response, "oauth_login_failed");
+                return;
+            }
+
+            String linkRedirectUrl = UriComponentsBuilder
+                    .fromUriString(appProperties.getFrontendUrl())
+                    .path("/oauth2/success")
+                    .queryParam("link_token", linkingToken)
+                    .queryParam("email", info.getEmail())
+                    .build()
+                    .toUriString();
+
+            clearAuthenticationAttributes(request);
+            getRedirectStrategy().sendRedirect(request, response, linkRedirectUrl);
+            return;
+        }
+
+        User user = outcome.user();
         String code = oauthCodeStore.issue(user.getUserId());
 
         String redirectUrl = UriComponentsBuilder

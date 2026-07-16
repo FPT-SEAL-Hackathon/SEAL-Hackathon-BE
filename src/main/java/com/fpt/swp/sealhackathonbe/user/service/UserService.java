@@ -10,8 +10,10 @@ import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.AccountLinkService;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
+import com.fpt.swp.sealhackathonbe.core.exception.AccountLinkRequiredException;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
@@ -82,6 +84,9 @@ public class UserService {
 
     @Autowired
     private TokenHashUtil tokenHashUtil;
+
+    @Autowired
+    private AccountLinkService accountLinkService;
 
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
@@ -289,8 +294,26 @@ public class UserService {
             );
         }
 
-        if (userRepo.existsByEmail(request.getEmail())) {
-            throw new BusinessConflictException("Email already exists");
+        // Một người = một bản ghi Users:
+        // - Email đã có tài khoản LOCAL → báo trùng như trước.
+        // - Email thuộc user Google-only (chưa có mật khẩu) → KHÔNG tạo user mới,
+        //   phát linkingToken để xác minh OTP email rồi thiết lập mật khẩu
+        //   cho chính user đó (POST /api/v1/auth/local/setup-password).
+        var sameEmailUsers = userRepo.findByEmailAndIsDeletedFalse(request.getEmail());
+        if (!sameEmailUsers.isEmpty()) {
+            boolean hasLocalAccount = sameEmailUsers.stream()
+                    .anyMatch(existing -> Boolean.TRUE.equals(existing.getLocalLoginEnabled()));
+            if (hasLocalAccount) {
+                throw new BusinessConflictException("Email already exists");
+            }
+
+            User oauthOnlyUser = sameEmailUsers.get(0);
+            String linkingToken = accountLinkService.createLocalSetupTicket(oauthOnlyUser);
+            throw new AccountLinkRequiredException(
+                    "This email already has a Google sign-in. Verify the email code to set a password for the same account",
+                    linkingToken,
+                    oauthOnlyUser.getEmail()
+            );
         }
 
         UserType userType = userTypeRepo
