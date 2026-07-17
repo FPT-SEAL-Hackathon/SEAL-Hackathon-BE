@@ -12,6 +12,7 @@ import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
+import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -41,6 +42,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRepository roundRepository;
+    private final RoundRankingRepository roundRankingRepository;
     private final EntityManager entityManager;
 
     public SubmissionCommandServiceImpl(
@@ -49,6 +51,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             TeamsRepository teamsRepository,
             TeamMembersRepository teamMembersRepository,
             RoundRepository roundRepository,
+            RoundRankingRepository roundRankingRepository,
             EntityManager entityManager,
             EventParticipantService eventParticipantService) {
         this.submissionsRepository = submissionsRepository;
@@ -56,6 +59,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.roundRepository = roundRepository;
+        this.roundRankingRepository = roundRankingRepository;
         this.entityManager = entityManager;
     }
 
@@ -165,7 +169,34 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             throw new RuntimeException("Team cannot submit to a round outside its event");
         }
 
+        validateTeamAdvancedFromPreviousRound(team, round);
+
         return round;
+    }
+
+    private void validateTeamAdvancedFromPreviousRound(Teams team, Round round) {
+        Integer roundOrder = round.getRoundOrder();
+        if (roundOrder == null || roundOrder <= 1) {
+            return;
+        }
+
+        UUID categoryId = round.getCategory().getCategoryId();
+        Round previousRound = roundRepository
+                .findTopByCategoryCategoryIdAndRoundOrderLessThanOrderByRoundOrderDesc(categoryId, roundOrder)
+                .orElseThrow(() -> new RuntimeException("Previous round not found for this round"));
+
+        boolean advanced = roundRankingRepository
+                .findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(
+                        previousRound.getRoundId(),
+                        categoryId,
+                        team.getTeamId()
+                )
+                .map(ranking -> Boolean.TRUE.equals(ranking.getIsAdvanced()))
+                .orElse(false);
+
+        if (!advanced) {
+            throw new RuntimeException("Team has not advanced from the previous round");
+        }
     }
 
     private Round findRound(UUID roundId) {
