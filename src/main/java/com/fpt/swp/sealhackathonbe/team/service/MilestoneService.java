@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 public class MilestoneService {
 
     private final TeamMilestoneRepository milestoneRepository;
+    private final com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository teamsRepository;
 
     // ── Read ─────────────────────────────────────────────────────────────────
 
@@ -53,8 +54,26 @@ public class MilestoneService {
     // ── Toggle done ───────────────────────────────────────────────────────────
 
     @Transactional
-    public MilestoneResponse toggle(UUID milestoneId, UUID mentorUserId) {
-        TeamMilestone milestone = getOwned(milestoneId, mentorUserId);
+    public MilestoneResponse toggle(UUID milestoneId, UUID currentUserId) {
+        TeamMilestone milestone = milestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new EntityNotFoundException("Milestone not found"));
+                
+        // Check if user is mentor who created it
+        boolean isMentor = milestone.getMentorUserId().equals(currentUserId);
+        
+        // Or if user is team leader
+        boolean isLeader = false;
+        if (!isMentor) {
+            com.fpt.swp.sealhackathonbe.team.entity.Teams team = teamsRepository.findById(milestone.getTeamId()).orElse(null);
+            if (team != null && team.getLeaderUserId().equals(currentUserId)) {
+                isLeader = true;
+            }
+        }
+        
+        if (!isMentor && !isLeader) {
+            throw new AccessDeniedException("You are not authorized to toggle this milestone");
+        }
+        
         milestone.setIsDone(!milestone.getIsDone());
         return toResponse(milestoneRepository.save(milestone));
     }
