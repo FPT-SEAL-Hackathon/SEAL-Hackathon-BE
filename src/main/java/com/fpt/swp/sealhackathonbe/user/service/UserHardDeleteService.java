@@ -192,6 +192,9 @@ public class UserHardDeleteService {
         if (dataExportLogRepository.existsByExportedBy_UserId(userId)) {
             blockers.add("data export logs");
         }
+        if (userRepository.countCalibrationSamplesAddedBy(userId) > 0) {
+            blockers.add("calibration samples added");
+        }
         return blockers;
     }
 

@@ -61,6 +61,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("UPDATE User u SET u.approvedBy = NULL WHERE u.approvedBy.userId = :userId")
     int clearApprovedBy(@Param("userId") UUID userId);
 
+    // Hard delete user: CalibrationSamples có FK AddedByID → Users nhưng
+    // không có JPA entity trong codebase, phải check bằng native query.
+    @Query(value = "SELECT COUNT(*) FROM dbo.CalibrationSamples WHERE AddedByID = :userId", nativeQuery = true)
+    long countCalibrationSamplesAddedBy(@Param("userId") UUID userId);
+
     // Phát hiện hồ sơ trùng khi complete-profile (loại trừ chính user hiện tại).
     boolean existsByEmailAndIsDeletedFalseAndUserIdNot(String email, UUID userId);
 

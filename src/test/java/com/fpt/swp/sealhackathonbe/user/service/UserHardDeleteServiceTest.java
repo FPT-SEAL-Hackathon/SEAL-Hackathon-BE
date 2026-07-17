@@ -192,6 +192,21 @@ class UserHardDeleteServiceTest {
     }
 
     @Test
+    void rejectsWhenUserStillOwnsCalibrationSamples() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        when(userRepository.findAllByEmailIgnoreCase(EMAIL))
+                .thenReturn(List.of(user(targetId, EMAIL, "FPT Student")));
+        actor(actorId);
+        when(userRepository.countCalibrationSamplesAddedBy(targetId)).thenReturn(2L);
+
+        BusinessConflictException exception = assertThrows(BusinessConflictException.class,
+                () -> service.hardDeleteByEmail(EMAIL, actorId, null));
+        assertTrue(exception.getMessage().contains("calibration samples"));
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
     void deletesMemberAndNotifiesRemainingTeamMembers() {
         UUID actorId = UUID.randomUUID();
         UUID targetId = UUID.randomUUID();
