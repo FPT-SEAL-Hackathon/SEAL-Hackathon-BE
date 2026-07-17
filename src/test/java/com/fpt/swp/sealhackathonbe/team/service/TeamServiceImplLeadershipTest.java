@@ -79,6 +79,9 @@ class TeamServiceImplLeadershipTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.fpt.swp.sealhackathonbe.team.service.impl.TeamJoinRequestCleaner teamJoinRequestCleaner;
+
     @InjectMocks
     private TeamServiceImpl teamService;
 
@@ -200,7 +203,7 @@ class TeamServiceImplLeadershipTest {
         when(teamMembersRepository.findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(teamId))
                 .thenReturn(List.of(successor));
 
-        teamService.removeMember(teamId, leaderId, leaderId);
+        teamService.removeMember(teamId, leaderId, leaderId, null);
 
         assertFalse(leader.getActive());
         assertNotNull(leader.getLeftAt());
@@ -221,12 +224,65 @@ class TeamServiceImplLeadershipTest {
         when(teamMembersRepository.findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(teamId))
                 .thenReturn(List.of());
 
-        teamService.removeMember(teamId, leaderId, leaderId);
+        teamService.removeMember(teamId, leaderId, leaderId, null);
 
         verify(teamJoinRequestsRepository).deleteByTeamId(teamId);
         verify(teamMembersRepository).deleteByTeamId(teamId);
         verify(teamsRepository).delete(team);
         verify(teamsRepository, never()).save(team);
+    }
+
+    @Test
+    void leaderCanDisbandFormingTeam() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        TeamMembers leader = member(team, leaderId);
+        TeamMembers other = member(team, memberId);
+
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndActiveTrue(teamId))
+                .thenReturn(List.of(leader, other));
+
+        teamService.disbandTeam(teamId, leaderId);
+
+        verify(teamEventRegistrationService).removePendingRegistration(team.getEventId(), leaderId);
+        verify(teamEventRegistrationService).removePendingRegistration(team.getEventId(), memberId);
+        verify(teamJoinRequestsRepository).deleteByTeamId(teamId);
+        verify(teamMembersRepository).deleteByTeamId(teamId);
+        verify(teamsRepository).delete(team);
+    }
+
+    @Test
+    void nonLeaderCannotDisbandTeam() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> teamService.disbandTeam(teamId, UUID.randomUUID())
+        );
+        verify(teamsRepository, never()).delete(team);
+    }
+
+    @Test
+    void nonFormingTeamCannotBeDisbanded() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(ACTIVE_STATUS);
+
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+
+        assertThrows(
+                BusinessConflictException.class,
+                () -> teamService.disbandTeam(teamId, leaderId)
+        );
+        verify(teamsRepository, never()).delete(team);
     }
 
     @Test
@@ -241,7 +297,7 @@ class TeamServiceImplLeadershipTest {
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
                 .thenReturn(Optional.of(member));
 
-        teamService.removeMember(teamId, memberId, memberId);
+        teamService.removeMember(teamId, memberId, memberId, null);
 
         assertFalse(member.getActive());
         verify(teamsRepository, never()).save(team);
@@ -263,7 +319,7 @@ class TeamServiceImplLeadershipTest {
 
         assertThrows(
                 BusinessConflictException.class,
-                () -> teamService.removeMember(teamId, memberId, leaderId)
+                () -> teamService.removeMember(teamId, memberId, leaderId, "Roster is locked")
         );
     }
 

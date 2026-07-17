@@ -71,6 +71,17 @@ public class SecurityConfig {
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
             "/api/v1/auth/oauth2/**",
+            // Luồng liên kết Google <-> local: xác thực bằng linkingToken ngắn hạn
+            // (không phải JWT) nên là public. google/unlink KHÔNG whitelist —
+            // yêu cầu đăng nhập.
+            "/auth/google/link",
+            "/auth/link/send-otp",
+            "/auth/link/verify-otp",
+            "/auth/local/setup-password",
+            "/api/v1/auth/google/link",
+            "/api/v1/auth/link/send-otp",
+            "/api/v1/auth/link/verify-otp",
+            "/api/v1/auth/local/setup-password",
             "/oauth2/authorization/**",
             "/login/oauth2/code/**",
             "/api/v1/public/**",

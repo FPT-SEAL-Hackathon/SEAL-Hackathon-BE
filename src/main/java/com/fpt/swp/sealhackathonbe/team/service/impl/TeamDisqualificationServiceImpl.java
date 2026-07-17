@@ -45,6 +45,7 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
     private final TeamMembersRepository teamMembersRepository;
     private final EventParticipantRepository eventParticipantRepository;
     private final ParticipantStatusRepository participantStatusRepository;
+    private final TeamJoinRequestCleaner teamJoinRequestCleaner;
 
     @Override
     @Transactional
@@ -84,6 +85,10 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
         submissionsRepository.saveAll(submissions);
 
         suspendEventParticipants(team);
+
+        // Team bị loại: đóng mọi join request PENDING còn treo của team.
+        teamJoinRequestCleaner.rejectPendingRequestsForTeam(
+                teamId, adminUserId, "Team has been disqualified");
 
         Disqualifications disqualification = new Disqualifications();
         disqualification.setTeamId(teamId);

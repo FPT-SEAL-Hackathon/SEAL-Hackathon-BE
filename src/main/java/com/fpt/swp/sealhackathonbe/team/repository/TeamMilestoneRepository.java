@@ -15,4 +15,7 @@ public interface TeamMilestoneRepository extends JpaRepository<TeamMilestone, UU
 
     /** Lấy milestones của một team do một mentor cụ thể tạo. */
     List<TeamMilestone> findByTeamIdAndMentorUserIdOrderBySortOrderAscCreatedAtAsc(UUID teamId, UUID mentorUserId);
+
+    // Hard delete user: user còn là mentor của milestone (MentorUserID NOT NULL) → chặn xóa.
+    boolean existsByMentorUserId(UUID mentorUserId);
 }

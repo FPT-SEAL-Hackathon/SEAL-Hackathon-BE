@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -106,4 +107,13 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
             @Param("university") String university,
             Pageable pageable
     );
+
+    // Hard delete user: xóa các lượt đăng ký sự kiện của user.
+    long deleteByUserId(UUID userId);
+
+    // Hard delete user: gỡ tham chiếu "người duyệt" (ApprovedBy nullable)
+    // trên đơn của các user khác trước khi xóa user.
+    @Modifying
+    @Query("UPDATE EventParticipant ep SET ep.approvedBy = NULL WHERE ep.approvedBy = :userId")
+    int clearApprovedBy(@Param("userId") UUID userId);
 }
