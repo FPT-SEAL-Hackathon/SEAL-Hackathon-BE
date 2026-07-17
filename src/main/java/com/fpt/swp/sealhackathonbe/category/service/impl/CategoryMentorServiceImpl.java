@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.category.service.CategoryMentorService;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
@@ -35,6 +36,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final UserRepository userRepository;
     private final UserTypeRepository userTypeRepository;
     private final NotificationService notificationService;
+    private final RoundJudgeRepository roundJudgeRepository;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -53,11 +55,14 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
         UserType expertType = userTypeRepository.findByTypeName("Expert")
                 .orElseThrow(() -> new RuntimeException("Expert role not found"));
 
+        // BR-19 (chiều ngược): nếu user đã là judge active trong bất kỳ round nào
+        // của category này → không được assign làm mentor cho cùng category đó.
         for (User mentor : mentors) {
-            String typeName = mentor.getUserType().getTypeName();
-            if (typeName.toLowerCase().contains("judge")) {
-                mentor.setUserType(expertType);
-                userRepository.save(mentor);
+            boolean isJudgeInCategory = roundJudgeRepository
+                    .existsActiveJudgeInCategory(mentor.getUserId(), categoryId);
+            if (isJudgeInCategory) {
+                throw new IllegalArgumentException(
+                        "User " + mentor.getFullName() + " is already a judge in a round of this category");
             }
         }
 
