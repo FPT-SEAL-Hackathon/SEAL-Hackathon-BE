@@ -214,9 +214,10 @@ public class JwtServiceImpl implements JwtService {
 
     /**
      * Kích hoạt tài khoản nếu token xác minh email còn hiệu lực.
+     * Trả về User đã được kích hoạt để caller có thể cấp phiên đăng nhập ngay.
      */
     @Transactional
-    public void verifyEmail(String token) {
+    public User verifyEmail(String token) {
         if (token == null || token.isBlank()) {
             throw new BadRequestException(
                     "Invalid verification token"
@@ -258,5 +259,7 @@ public class JwtServiceImpl implements JwtService {
         verificationToken.setUsedAt(
                 LocalDateTime.now()
         );
+
+        return user;
     }
 }
