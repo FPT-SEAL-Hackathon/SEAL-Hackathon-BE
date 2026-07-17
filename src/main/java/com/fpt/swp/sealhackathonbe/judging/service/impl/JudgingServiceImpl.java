@@ -321,6 +321,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .judgeName(judging.getRoundJudge() != null ? judging.getRoundJudge().getJudge().getFullName() : null)
                 .roundCriterionId(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getRoundCriterionId() : null)
                 .criterionName(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getCriterionName() : null)
+                .criterionWeight(judging.getRoundCriterion() != null ? judging.getRoundCriterion().getWeight() : null)
                 .scoreValue(judging.getScoreValue())
                 .comment(judging.getComment())
                 .scoredAt(judging.getScoredAt())

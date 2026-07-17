@@ -25,6 +25,7 @@ import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
@@ -108,19 +109,26 @@ public class RankingServiceImpl implements RankingService {
                 // Lấy danh sách điểm từ Map thay vì gọi DB
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
-                if (!judgings.isEmpty()) {
-                    int validScoreCount = 0;
-                    for (Judging j : judgings) {
-                        // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
-                        if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
-                            totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
-                            validScoreCount++;
-                        }
-                    }
-                    if (validScoreCount > 0) {
-                        averageScore = totalScore.divide(BigDecimal.valueOf(validScoreCount), 4, RoundingMode.HALF_UP);
-                    }
-                }
+                  if (!judgings.isEmpty()) {
+                      long distinctJudges = judgings.stream()
+                              .filter(j -> j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration()))
+                              .map(j -> j.getRoundJudge().getRoundJudgeId())
+                              .distinct()
+                              .count();
+
+                      for (Judging j : judgings) {
+                          // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
+                          if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
+                              totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
+                          }
+                      }
+                      
+                      // Tính trung bình cộng dựa trên số lượng Giám khảo thực tế chấm, thay vì số lượng tiêu chí
+                      if (distinctJudges > 0) {
+                          totalScore = totalScore.divide(BigDecimal.valueOf(distinctJudges), 4, RoundingMode.HALF_UP);
+                          averageScore = totalScore;
+                      }
+                  }
             }
 
             // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
@@ -180,13 +188,25 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
-    public void publishRoundRankings(UUID roundId, UUID categoryId) {
+    public void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId) {
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Rankings must be computed before publishing.");
         }
         for (RoundRanking r : existingRankings) {
             r.setIsPublished(true);
+            
+            // Disqualify team if they did not advance
+            if (Boolean.FALSE.equals(r.getIsAdvanced())) {
+                try {
+                    DisqualifyTeamRequest req = new DisqualifyTeamRequest();
+                    req.setReason("Eliminated automatically due to not advancing in round");
+                    teamDisqualificationService.disqualifyTeam(r.getTeam().getTeamId(), req, adminUserId);
+                } catch (Exception e) {
+                    log.warn("Failed to automatically disqualify team {} (probably already disqualified): {}", 
+                             r.getTeam().getTeamId(), e.getMessage());
+                }
+            }
         }
         roundRankingRepository.saveAll(existingRankings);
     }
