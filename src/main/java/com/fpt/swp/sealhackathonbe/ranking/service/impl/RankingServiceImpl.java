@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ranking.service.impl;
 
 import com.fpt.swp.sealhackathonbe.core.constant.RankingStatusConstants;
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
@@ -13,6 +14,7 @@ import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.EventRankingRepository;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 
 
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
@@ -26,7 +28,9 @@ import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualification
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +58,8 @@ public class RankingServiceImpl implements RankingService {
     private final EntityManager entityManager;
     private final RoundService roundService;
     private final CategoryRepository categoryRepository;
+    private final NotificationService notificationService;
+    private final TeamMembersRepository teamMembersRepository;
 
 
     @Override
@@ -64,9 +70,6 @@ public class RankingServiceImpl implements RankingService {
         Round roundRef = entityManager.getReference(Round.class, roundId);
         Category categoryRef = entityManager.getReference(Category.class, categoryId);
         List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
-        submissionsList = submissionsList.stream()
-                .filter(submission -> Boolean.TRUE.equals(submission.getIsScoreApproved()))
-                .toList();
 
         List<UUID> submissionIds = submissionsList.stream()
                 .map(SubmissionResponse::getSubmissionId)
@@ -91,13 +94,6 @@ public class RankingServiceImpl implements RankingService {
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         Map<UUID, RoundRanking> existingRankingMap = existingRankings.stream()
                 .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
-        Set<UUID> eligibleTeamIds = new HashSet<>(submissionToTeamMap.values());
-        List<RoundRanking> staleRankings = existingRankings.stream()
-                .filter(ranking -> !eligibleTeamIds.contains(ranking.getTeam().getTeamId()))
-                .toList();
-        if (!staleRankings.isEmpty()) {
-            roundRankingRepository.deleteAll(staleRankings);
-        }
 
         // 1. Lấy toàn bộ điểm của tất cả submissions, nhóm lại thành Map<SubmissionID, List<Judging>>
         Map<UUID, List<Judging>> judgingsMap = judgingService.getJudgingsGroupedBySubmissionIds(submissionIds);
@@ -119,26 +115,19 @@ public class RankingServiceImpl implements RankingService {
                 // Lấy danh sách điểm từ Map thay vì gọi DB
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
-                  if (!judgings.isEmpty()) {
-                      long distinctJudges = judgings.stream()
-                              .filter(j -> j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration()))
-                              .map(j -> j.getRoundJudge().getRoundJudgeId())
-                              .distinct()
-                              .count();
-
-                      for (Judging j : judgings) {
-                          // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
-                          if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
-                              totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
-                          }
-                      }
-                      
-                      // Tính trung bình cộng dựa trên số lượng Giám khảo thực tế chấm, thay vì số lượng tiêu chí
-                      if (distinctJudges > 0) {
-                          totalScore = totalScore.divide(BigDecimal.valueOf(distinctJudges), 4, RoundingMode.HALF_UP);
-                          averageScore = totalScore;
-                      }
-                  }
+                if (!judgings.isEmpty()) {
+                    int validScoreCount = 0;
+                    for (Judging j : judgings) {
+                        // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
+                        if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
+                            totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
+                            validScoreCount++;
+                        }
+                    }
+                    if (validScoreCount > 0) {
+                        averageScore = totalScore.divide(BigDecimal.valueOf(validScoreCount), 4, RoundingMode.HALF_UP);
+                    }
+                }
             }
 
             // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
@@ -203,14 +192,18 @@ public class RankingServiceImpl implements RankingService {
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Rankings must be computed before publishing.");
         }
+        List<UUID> recipientIds = new ArrayList<>();
         for (RoundRanking r : existingRankings) {
             r.setIsPublished(true);
             
-            // Disqualify team if they did not advance
-            if (Boolean.FALSE.equals(r.getIsAdvanced())) {
+            List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(r.getTeam().getTeamId());
+            members.forEach(m -> recipientIds.add(m.getUserId()));
+
+            // Disqualify team if they did not advance and are not already disqualified
+            if (Boolean.FALSE.equals(r.getIsAdvanced()) && !TeamStatusConstants.DISQUALIFIED.equals(r.getTeam().getTeamStatusId())) {
                 try {
                     DisqualifyTeamRequest req = new DisqualifyTeamRequest();
-                    req.setReason("Eliminated automatically due to not advancing in round");
+                    req.setReason("Did not reach the top positions to advance to the next round");
                     teamDisqualificationService.disqualifyTeam(r.getTeam().getTeamId(), req, adminUserId);
                 } catch (Exception e) {
                     log.warn("Failed to automatically disqualify team {} (probably already disqualified): {}", 
@@ -219,13 +212,26 @@ public class RankingServiceImpl implements RankingService {
             }
         }
         roundRankingRepository.saveAll(existingRankings);
+
+        if (!recipientIds.isEmpty()) {
+            String roundName = existingRankings.get(0).getRound().getRoundName();
+            UUID eventId = existingRankings.get(0).getRound().getCategory().getEvent().getEventId();
+            
+            notificationService.sendBroadcastNotification(
+                    recipientIds.stream().distinct().toList(),
+                    adminUserId,
+                    eventId,
+                    "Round Leaderboard Published",
+                    "The leaderboard for round " + roundName + " has been published. Go to the Leaderboard page to see the results!"
+            );
+        }
     }
 
     @Override
     @Transactional
     public List<EventRankingDTO> computeEventRankings(UUID eventId) {
         Event eventRef = entityManager.find(Event.class, eventId);
-        if (eventRef == null) throw new IllegalArgumentException("Event ID không tồn tại: " + eventId);
+        if (eventRef == null) throw new IllegalArgumentException("Event ID does not exist: " + eventId);
         
         List<Category> categories = categoryRepository.findByEventEventId(eventId);
         List<EventRankingDTO> allComputedRankings = new ArrayList<>();
@@ -265,6 +271,7 @@ public class RankingServiceImpl implements RankingService {
                     .toList();
             
             // Lấy danh sách ranking hiện có của Event & Category để update thay vì insert mới
+            // Get existing Event & Category rankings to update instead of inserting new ones
             List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
             Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
                     .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
@@ -272,10 +279,10 @@ public class RankingServiceImpl implements RankingService {
             List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
             
             if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
-                throw new IllegalStateException("Điểm xếp hạng vòng chung kết chưa được tính cho category: " + categoryRef.getCategoryName());
+                throw new IllegalStateException("Final round rankings have not been computed for category: " + categoryRef.getCategoryName());
             }
 
-            Map<UUID, BigDecimal> teamFinalRoundScores = finalRoundRankings.stream()
+            Map<UUID, BigDecimal> dScores = finalRoundRankings.stream()
                     .collect(Collectors.toMap(
                             r -> r.getTeam().getTeamId(),
                             RoundRanking::getTotalScore
@@ -287,7 +294,7 @@ public class RankingServiceImpl implements RankingService {
 
                 // Nếu Đội không bị tước tư cách -> Lấy điểm từ Vòng Chung Kết
                 if (!disqualifiedTeamIds.contains(teamId)) {
-                    finalScore = teamFinalRoundScores.getOrDefault(teamId, BigDecimal.ZERO);
+                    finalScore = dScores.getOrDefault(teamId, BigDecimal.ZERO);
                 }
 
                 // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
