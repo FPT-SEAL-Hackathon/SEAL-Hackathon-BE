@@ -23,4 +23,9 @@ public interface UserOAuthAccountRepository extends JpaRepository<UserOAuthAccou
     Optional<UserOAuthAccount> findByUser_UserIdAndProvider(UUID userId, String provider);
 
     boolean existsByUser_UserIdAndProvider(UUID userId, String provider);
+
+    /**
+     * Hard delete user: xóa toàn bộ định danh OAuth của user.
+     */
+    long deleteByUser_UserId(UUID userId);
 }

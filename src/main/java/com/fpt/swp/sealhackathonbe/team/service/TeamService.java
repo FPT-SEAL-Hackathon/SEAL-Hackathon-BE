@@ -33,4 +33,7 @@ public interface TeamService {
     void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason);
 
     TeamResponse transferLeadership(UUID teamId, UUID newLeaderUserId, UUID currentUserId);
+
+    // Leader giải tán team đang FORMING: gỡ đăng ký PENDING và xóa team + request + membership.
+    void disbandTeam(UUID teamId, UUID currentUserId);
 }

@@ -14,6 +14,7 @@ import com.fpt.swp.sealhackathonbe.auth.service.impl.AccountLinkService;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
 import com.fpt.swp.sealhackathonbe.core.exception.AccountLinkRequiredException;
+import com.fpt.swp.sealhackathonbe.core.exception.AccountRemovedException;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
@@ -23,6 +24,7 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.DeletedUserTombstoneRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.transaction.Transactional;
@@ -65,6 +67,9 @@ public class UserService {
     private UserRepository userRepo;
 
     @Autowired
+    private DeletedUserTombstoneRepository tombstoneRepository;
+
+    @Autowired
     private UserTypeRepository userTypeRepo;
 
     @Autowired
@@ -97,6 +102,8 @@ public class UserService {
      */
     public LoginResponse verify(LoginRequest request) {
 
+        failIfAccountRemoved(request.getEmail());
+
         Authentication authentication =
                 authManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
@@ -123,6 +130,23 @@ public class UserService {
         }
 
         throw new RuntimeException("Invalid email or password");
+    }
+
+    /**
+     * Email từng bị organizer xóa cứng (còn tombstone) và CHƯA có tài khoản mới:
+     * báo rõ "tài khoản đã bị gỡ, hãy tạo tài khoản mới" thay vì "sai mật khẩu".
+     * Không chặn đăng ký lại — chỉ can thiệp ở bước đăng nhập.
+     */
+    private void failIfAccountRemoved(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        if (userRepo.findByEmailAndIsDeletedFalse(email).isEmpty()
+                && tombstoneRepository.existsByEmailIgnoreCaseAndExpiresAtAfter(email, LocalDateTime.now())) {
+            throw new AccountRemovedException(
+                    "Tài khoản của bạn đã bị gỡ khỏi hệ thống trong quá trình phát triển. "
+                            + "Vui lòng tạo tài khoản mới.");
+        }
     }
 
     /**

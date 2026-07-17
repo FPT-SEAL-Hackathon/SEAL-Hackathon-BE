@@ -71,6 +71,7 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
     private final NotificationService notificationService;
+    private final TeamJoinRequestCleaner teamJoinRequestCleaner;
 
     @Override
     @Transactional(readOnly = true)
@@ -102,7 +103,9 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     @Override
     @Transactional
     public List<EventParticipantResponse> registerTeam(UUID teamId, UUID currentUserId) {
-        Teams team = teamsRepository.findById(teamId)
+        // Lock team để register không đua với approve join request:
+        // hai luồng cùng lock nên sĩ số tại thời điểm đăng ký là chốt.
+        Teams team = teamsRepository.findByIdForUpdate(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         if (!team.getLeaderUserId().equals(currentUserId)) {
@@ -183,6 +186,11 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
         team.setTeamStatusId(TEAM_STATUS_PENDING);
         team.setUpdatedAt(now);
         teamsRepository.save(team);
+
+        // Roster đã khóa (FORMING -> PENDING): đóng mọi join request còn treo
+        // để không tồn tại request PENDING mà không ai xử lý được.
+        teamJoinRequestCleaner.rejectPendingRequestsForTeam(
+                teamId, currentUserId, "Team is no longer accepting members");
 
         return responses;
     }

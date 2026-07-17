@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -48,6 +49,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     List<User> findByEmailAndIsDeletedFalse(String email);
+
+    // Hard delete user: lấy MỌI tài khoản trùng email, kể cả đã soft-delete,
+    // để xóa sạch khỏi hệ thống.
+    @EntityGraph(attributePaths = {"userType", "accountStatus"})
+    List<User> findAllByEmailIgnoreCase(String email);
+
+    // Hard delete user: gỡ tham chiếu "người duyệt" trên các user khác
+    // (ApprovedByUserID nullable) trước khi xóa user.
+    @Modifying
+    @Query("UPDATE User u SET u.approvedBy = NULL WHERE u.approvedBy.userId = :userId")
+    int clearApprovedBy(@Param("userId") UUID userId);
 
     // Phát hiện hồ sơ trùng khi complete-profile (loại trừ chính user hiện tại).
     boolean existsByEmailAndIsDeletedFalseAndUserIdNot(String email, UUID userId);

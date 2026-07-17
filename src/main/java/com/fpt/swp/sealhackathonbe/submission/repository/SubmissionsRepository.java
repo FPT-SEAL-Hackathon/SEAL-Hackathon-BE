@@ -31,4 +31,7 @@ public interface SubmissionsRepository extends JpaRepository<Submissions, UUID> 
     // Chi giu lai neu sau nay can check trung submission truoc khi upsert.
     boolean existsByTeamIdAndRoundId(UUID teamId, UUID roundId);
 
+    // Hard delete user: submission thuoc ve team nen duoc GIU LAI,
+    // chi gan lai nguoi nop sang leader hien tai cua team.
+    List<Submissions> findBySubmittedByUserId(UUID submittedByUserId);
 }

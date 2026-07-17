@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface CriterionTemplateRepository extends JpaRepository<CriterionTemplate, UUID> {
     List<CriterionTemplate> findAllByIsActiveTrue();
+
+    // Hard delete user: user còn là người tạo criterion template → chặn xóa.
+    boolean existsByCreatedBy_UserId(UUID userId);
 }

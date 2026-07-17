@@ -50,6 +50,9 @@ class TeamDisqualificationServiceImplTest {
     @Mock
     private ParticipantStatusRepository participantStatusRepository;
 
+    @Mock
+    private com.fpt.swp.sealhackathonbe.team.service.impl.TeamJoinRequestCleaner teamJoinRequestCleaner;
+
     @InjectMocks
     private TeamDisqualificationServiceImpl service;
 

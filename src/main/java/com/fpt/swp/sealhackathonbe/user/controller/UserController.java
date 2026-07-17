@@ -8,6 +8,7 @@ import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserRoleRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserStatusRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UserFacetsResponse;
 import com.fpt.swp.sealhackathonbe.user.dto.UserManagementResponse;
+import com.fpt.swp.sealhackathonbe.user.service.UserHardDeleteService;
 import com.fpt.swp.sealhackathonbe.user.service.UserManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,6 +54,7 @@ public class UserController {
     );
 
     private final UserManagementService userManagementService;
+    private final UserHardDeleteService userHardDeleteService;
     private final AuthenticationServiceImpl authenticationService;
 
     @Operation(summary = "Search users (role/status nhận nhiều giá trị phân tách bằng dấu phẩy)")
@@ -184,6 +186,22 @@ public class UserController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "User deactivated successfully"
+        ));
+    }
+
+    @Operation(summary = "Hard delete ALL accounts with this email (dev tool): "
+            + "removes personal data permanently, keeps collective data, "
+            + "notifies remaining team members; email is reusable immediately")
+    @DeleteMapping("/hard-delete")
+    public ResponseEntity<Map<String, Object>> hardDelete(
+            @RequestParam String email,
+            @RequestParam(required = false) String reason
+    ) {
+        int deletedAccounts = userHardDeleteService.hardDeleteByEmail(email, currentUserId(), reason);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User permanently deleted",
+                "deletedAccounts", deletedAccounts
         ));
     }
 

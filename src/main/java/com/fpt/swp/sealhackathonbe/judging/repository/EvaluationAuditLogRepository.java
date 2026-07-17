@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface EvaluationAuditLogRepository extends JpaRepository<EvaluationAuditLog, UUID> {
     List<EvaluationAuditLog> findByEvent_EventIdOrderByCreatedAtDesc(UUID eventId);
+
+    // Hard delete user: user còn audit chấm điểm (ActorUserID NOT NULL) → chặn xóa.
+    boolean existsByActor_UserId(UUID userId);
 }

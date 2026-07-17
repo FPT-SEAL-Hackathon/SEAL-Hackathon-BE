@@ -12,4 +12,9 @@ public interface AccountLinkTicketRepository extends JpaRepository<AccountLinkTi
     Optional<AccountLinkTicket> findByTokenHash(String tokenHash);
 
     List<AccountLinkTicket> findByUser_UserIdAndPurposeAndConsumedAtIsNull(UUID userId, String purpose);
+
+    /**
+     * Hard delete user: xóa toàn bộ ticket liên kết tài khoản của user.
+     */
+    long deleteByUser_UserId(UUID userId);
 }
