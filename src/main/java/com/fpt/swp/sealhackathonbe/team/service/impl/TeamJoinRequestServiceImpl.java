@@ -39,11 +39,13 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
     private static final String REQUEST_STATUS_PENDING = "PENDING";
     private static final String REQUEST_STATUS_APPROVED = "APPROVED";
     private static final String REQUEST_STATUS_REJECTED = "REJECTED";
+    private static final String REQUEST_STATUS_CANCELLED = "CANCELLED";
 
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
     private final TeamEventRegistrationService teamEventRegistrationService;
+    private final TeamJoinRequestCleaner teamJoinRequestCleaner;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -117,7 +119,11 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
                 .findByRequestIdAndRequestStatus(requestId, REQUEST_STATUS_PENDING)
                 .orElseThrow(() -> new EntityNotFoundException("Pending join request not found"));
 
-        Teams team = joinRequest.getTeam();
+        // Lock team (cùng pattern removeMember/transferLeadership) để hai lượt approve
+        // đồng thời — hoặc approve đua với register-event — không cùng qua được
+        // check max size / trạng thái FORMING rồi ghi vượt sĩ số.
+        Teams team = teamsRepository.findByIdForUpdate(joinRequest.getTeamId())
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         if (!team.getLeaderUserId().equals(leaderUserId)) {
             throw new AccessDeniedException("Only team leader can handle join request");
@@ -152,6 +158,15 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
             teamMembersRepository.save(member);
 
             joinRequest.setRequestStatus(REQUEST_STATUS_APPROVED);
+
+            // User đã có team: tự hủy các request PENDING khác của họ trong event
+            // để leader các team khác không còn thấy request chết.
+            teamJoinRequestCleaner.cancelOtherPendingRequestsForUser(
+                    joinRequest.getUserId(),
+                    team.getEventId(),
+                    team.getTeamId()
+            );
+
             eventPublisher.publishEvent(new TeamJoinApprovedEvent(
                     joinRequest.getUserId(),
                     leaderUserId,
@@ -170,6 +185,38 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
 
         TeamJoinRequests savedRequest = teamJoinRequestsRepository.save(joinRequest);
         return TeamMapper.toJoinTeamRequestResponse(savedRequest);
+    }
+
+    @Override
+    @Transactional
+    public JoinTeamRequestResponse cancelJoinRequest(UUID requestId, UUID currentUserId) {
+        // Người xin vào team tự hủy request PENDING của chính mình.
+        // Không cho hủy request của người khác, không cho hủy request đã xử lý.
+        TeamJoinRequests joinRequest = teamJoinRequestsRepository
+                .findByRequestIdAndRequestStatus(requestId, REQUEST_STATUS_PENDING)
+                .orElseThrow(() -> new EntityNotFoundException("Pending join request not found"));
+
+        if (!joinRequest.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You can only cancel your own join request");
+        }
+
+        joinRequest.setRequestStatus(REQUEST_STATUS_CANCELLED);
+        joinRequest.setRespondedAt(LocalDateTime.now());
+        joinRequest.setResponseNote("Cancelled by requester");
+
+        TeamJoinRequests savedRequest = teamJoinRequestsRepository.save(joinRequest);
+        return TeamMapper.toJoinTeamRequestResponse(savedRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JoinTeamRequestResponse> getMyPendingJoinRequests(UUID currentUserId) {
+        // Người xin xem các request PENDING của chính mình (để hiển thị trạng thái + nút hủy).
+        return teamJoinRequestsRepository
+                .findByUserIdAndRequestStatus(currentUserId, REQUEST_STATUS_PENDING)
+                .stream()
+                .map(TeamMapper::toJoinTeamRequestResponse)
+                .toList();
     }
 
     private void assertRosterNotLocked(Teams team) {

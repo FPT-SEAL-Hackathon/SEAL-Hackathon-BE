@@ -34,3 +34,5 @@ build/
 
 ### Claude Code (worktree/cấu hình cục bộ của AI tool, không phải code dự án) ###
 .claude/
+CLAUDE.md
+AGENTS.md

@@ -4,7 +4,9 @@ import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
+import com.fpt.swp.sealhackathonbe.submission.entity.SubmissionHistory;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionHistoryRepository;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
@@ -35,6 +37,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private static final String ROUND_STATUS_SUBMISSION_OPEN = "Submission Open";
 
     private final SubmissionsRepository submissionsRepository;
+    private final SubmissionHistoryRepository submissionHistoryRepository;
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRepository roundRepository;
@@ -42,12 +45,14 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
+            SubmissionHistoryRepository submissionHistoryRepository,
             TeamsRepository teamsRepository,
             TeamMembersRepository teamMembersRepository,
             RoundRepository roundRepository,
             EntityManager entityManager,
             EventParticipantService eventParticipantService) {
         this.submissionsRepository = submissionsRepository;
+        this.submissionHistoryRepository = submissionHistoryRepository;
         this.teamsRepository = teamsRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.roundRepository = roundRepository;
@@ -74,6 +79,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
                 .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
 
+        recordSubmissionHistory(submission);
+
         return SubmissionMapper.toSubmissionResponse(submission);
     }
 
@@ -98,7 +105,10 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         sampleSubmission.setIsScoreApproved(false);
         sampleSubmission.setIsSampleSubmission(true);
 
-        return SubmissionMapper.toSubmissionResponse(submissionsRepository.save(sampleSubmission));
+        Submissions saved = submissionsRepository.save(sampleSubmission);
+        recordSubmissionHistory(saved);
+
+        return SubmissionMapper.toSubmissionResponse(saved);
     }
 
     private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
@@ -233,6 +243,37 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         query.setParameter("SubmittedByUserID", currentUserId);
 
         query.execute();
+    }
+
+    private void recordSubmissionHistory(Submissions submission) {
+        int nextVersion = submissionHistoryRepository
+                .findFirstBySubmissionIdOrderByVersionNumberDesc(submission.getSubmissionId())
+                .map(history -> history.getVersionNumber() + 1)
+                .orElse(1);
+
+        SubmissionHistory history = new SubmissionHistory();
+        history.setSubmissionId(submission.getSubmissionId());
+        history.setVersionNumber(nextVersion);
+        history.setTeamId(submission.getTeamId());
+        history.setRoundId(submission.getRoundId());
+        history.setSubmissionStatusId(submission.getSubmissionStatusId());
+        history.setRepositoryUrl(submission.getRepositoryUrl());
+        history.setDemoUrl(submission.getDemoUrl());
+        history.setReportUrl(submission.getReportUrl());
+        history.setSlideUrl(submission.getSlideUrl());
+        history.setRepoMetadataJson(submission.getRepoMetadataJson());
+        history.setRepoLastCommitAt(submission.getRepoLastCommitAt());
+        history.setRepoStarCount(submission.getRepoStarCount());
+        history.setRepoForkCount(submission.getRepoForkCount());
+        history.setSubmittedAt(submission.getSubmittedAt());
+        history.setLastUpdatedAt(submission.getLastUpdatedAt());
+        history.setSubmittedByUserId(submission.getSubmittedByUserId());
+        history.setNotes(submission.getNotes());
+        history.setIsScoreApproved(Boolean.TRUE.equals(submission.getIsScoreApproved()));
+        history.setIsSampleSubmission(Boolean.TRUE.equals(submission.getIsSampleSubmission()));
+        history.setSnapshotCreatedAt(LocalDateTime.now());
+
+        submissionHistoryRepository.save(history);
     }
 
     @Override

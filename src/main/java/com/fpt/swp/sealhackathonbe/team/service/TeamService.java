@@ -30,7 +30,10 @@ public interface TeamService {
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
-    void removeMember(UUID teamId, UUID userId, UUID currentUserId);
+    void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason);
 
     TeamResponse transferLeadership(UUID teamId, UUID newLeaderUserId, UUID currentUserId);
+
+    // Leader giải tán team đang FORMING: gỡ đăng ký PENDING và xóa team + request + membership.
+    void disbandTeam(UUID teamId, UUID currentUserId);
 }

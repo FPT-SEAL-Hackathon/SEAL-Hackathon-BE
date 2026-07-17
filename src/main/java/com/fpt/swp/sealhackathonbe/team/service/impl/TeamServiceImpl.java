@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -17,6 +18,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
@@ -26,6 +28,7 @@ import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TeamServiceImpl implements TeamService {
+    private static final int TEAM_NAME_MAX_LENGTH = 300;
+    private static final String REJECTED_TEAM_NAME_SUFFIX_PREFIX = " [rejected:";
+
     private static final UUID TEAM_STATUS_FORMING =
             TeamStatusConstants.FORMING;
     private static final UUID TEAM_STATUS_PENDING =
@@ -56,7 +62,10 @@ public class TeamServiceImpl implements TeamService {
     private final TeamJoinRequestsRepository teamJoinRequestsRepository;
     private final AuditLogRepository auditLogRepository;
     private final TeamEventRegistrationService teamEventRegistrationService;
+    private final TeamJoinRequestCleaner teamJoinRequestCleaner;
     private final EventParticipantRepository eventParticipantRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -71,19 +80,12 @@ public class TeamServiceImpl implements TeamService {
         validateTeamSizeConfig(event);
         validateCategoryBelongsToEvent(request.getCategoryId(), request.getEventId());
 
-        if (teamsRepository.existsByEventIdAndTeamNameWithActiveMembers(
-                request.getEventId(),
-                request.getTeamName(),
-                TEAM_STATUS_REJECTED
-        )) {
-            throw new BusinessConflictException("Team name already exists in this event");
-        }
+        LocalDateTime now = LocalDateTime.now();
+        releaseRejectedOrInactiveDuplicateTeamName(request.getEventId(), request.getTeamName(), now);
 
         if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, event.getEventId())) {
             throw new BusinessConflictException("User already belongs to an active team in this event");
         }
-
-        LocalDateTime now = LocalDateTime.now();
 
         Teams team = new Teams();
         team.setEventId(request.getEventId());
@@ -103,6 +105,11 @@ public class TeamServiceImpl implements TeamService {
         leaderMember.setActive(true);
 
         teamMembersRepository.save(leaderMember);
+
+        // User đã có team của riêng mình: tự hủy các request PENDING họ từng gửi
+        // sang team khác trong cùng event.
+        teamJoinRequestCleaner.cancelOtherPendingRequestsForUser(
+                currentUserId, event.getEventId(), savedTeam.getTeamId());
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
         return toTeamResponse(savedTeam, members);
@@ -167,6 +174,70 @@ public class TeamServiceImpl implements TeamService {
         return toTeamResponse(savedTeam, members);
     }
 
+    private void releaseRejectedOrInactiveDuplicateTeamName(UUID eventId, String teamName, LocalDateTime now) {
+        List<Teams> sameNameTeams = teamsRepository.findByEventIdAndTeamNameIgnoreCaseForUpdate(eventId, teamName);
+        List<Teams> teamsToRelease = new ArrayList<>();
+        List<TeamMembers> membersToDeactivate = new ArrayList<>();
+
+        for (Teams existingTeam : sameNameTeams) {
+            if (TEAM_STATUS_REJECTED.equals(existingTeam.getTeamStatusId())) {
+                releaseTeamName(existingTeam, now);
+                teamsToRelease.add(existingTeam);
+                continue;
+            }
+
+            List<TeamMembers> activeMembers =
+                    teamMembersRepository.findByTeamIdAndActiveTrue(existingTeam.getTeamId());
+            if (!activeMembers.isEmpty() && !allActiveMembersRejectedForEvent(existingTeam, activeMembers)) {
+                throw new BusinessConflictException("Team name already exists in this event");
+            }
+
+            existingTeam.setTeamStatusId(TEAM_STATUS_REJECTED);
+            existingTeam.setUpdatedAt(now);
+            teamsToRelease.add(existingTeam);
+
+            activeMembers.forEach(member -> {
+                member.setActive(false);
+                member.setLeftAt(now);
+            });
+            membersToDeactivate.addAll(activeMembers);
+        }
+
+        if (!teamsToRelease.isEmpty()) {
+            teamsRepository.saveAll(teamsToRelease);
+            teamsRepository.flush();
+        }
+        if (!membersToDeactivate.isEmpty()) {
+            teamMembersRepository.saveAll(membersToDeactivate);
+        }
+    }
+
+    private void releaseTeamName(Teams team, LocalDateTime now) {
+        String suffix = REJECTED_TEAM_NAME_SUFFIX_PREFIX + team.getTeamId() + "]";
+        String baseName = team.getTeamName();
+        int maxBaseLength = TEAM_NAME_MAX_LENGTH - suffix.length();
+        if (baseName.length() > maxBaseLength) {
+            baseName = baseName.substring(0, maxBaseLength);
+        }
+
+        team.setTeamName(baseName + suffix);
+        team.setUpdatedAt(now);
+    }
+
+    private boolean allActiveMembersRejectedForEvent(Teams team, List<TeamMembers> activeMembers) {
+        for (TeamMembers member : activeMembers) {
+            boolean rejected = eventParticipantRepository
+                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
+                    .map(participant -> participant.getParticipantStatus() != null
+                            && "REJECTED".equalsIgnoreCase(participant.getParticipantStatus().getStatusName()))
+                    .orElse(false);
+            if (!rejected) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     @Transactional
     public TeamResponse rejectTeam(UUID teamId, String note, UUID adminUserId) {
@@ -177,12 +248,35 @@ public class TeamServiceImpl implements TeamService {
             throw new BusinessConflictException("Only pending teams can be rejected");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         team.setTeamStatusId(TEAM_STATUS_REJECTED);
-        team.setUpdatedAt(LocalDateTime.now());
+        team.setUpdatedAt(now);
         Teams savedTeam = teamsRepository.save(team);
         saveEligibilityRejectedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
+        members.forEach(member -> {
+            member.setActive(false);
+            member.setLeftAt(now);
+        });
+        teamMembersRepository.saveAll(members);
+
+        // Team đã bị reject: đóng nốt mọi join request PENDING còn treo
+        // (roster khóa vĩnh viễn, leader không thể xử lý chúng nữa).
+        teamJoinRequestCleaner.rejectPendingRequestsForTeam(
+                savedTeam.getTeamId(), adminUserId, "Team registration was rejected");
+
+        eventPublisher.publishEvent(new TeamRegistrationRejectedEvent(
+                members.stream()
+                        .map(TeamMembers::getUserId)
+                        .distinct()
+                        .toList(),
+                adminUserId,
+                savedTeam.getEventId(),
+                savedTeam.getTeamName(),
+                note
+        ));
+
         return toTeamResponse(savedTeam, members);
     }
 
@@ -249,7 +343,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional
-    public void removeMember(UUID teamId, UUID userId, UUID currentUserId) {
+    public void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason) {
         // Thành viên được tự rời; leader được kick thành viên hoặc tự rời.
         // Leader rời sẽ chuyển quyền cho thành viên active tham gia sớm nhất, hoặc rút team nếu không còn ai.
         Teams team = teamsRepository.findByIdForUpdate(teamId)
@@ -260,9 +354,14 @@ public class TeamServiceImpl implements TeamService {
 
         boolean isLeader = team.getLeaderUserId().equals(currentUserId);
         boolean isSelfLeaving = userId.equals(currentUserId);
+        boolean isLeaderRemovingMember = isLeader && !isSelfLeaving;
 
         if (!isLeader && !isSelfLeaving) {
             throw new AccessDeniedException("You do not have permission to remove this member");
+        }
+        String removalReason = trimToNull(reason);
+        if (isLeaderRemovingMember && removalReason == null) {
+            throw new BusinessConflictException("Removal reason is required");
         }
 
         assertRosterEditable(team);
@@ -285,6 +384,31 @@ public class TeamServiceImpl implements TeamService {
                 teamsRepository.save(team);
             }
         }
+
+        if (isLeaderRemovingMember) {
+            notifyMemberRemoved(team, userId, currentUserId, removalReason);
+        }
+    }
+
+    private void notifyMemberRemoved(Teams team, UUID removedUserId, UUID leaderUserId, String reason) {
+        String eventName = team.getEvent() != null ? team.getEvent().getEventName() : "the event";
+        String body = "You have been removed from team " + team.getTeamName()
+                + " in " + eventName + ". Reason: " + reason;
+        notificationService.sendNotification(
+                removedUserId,
+                leaderUserId,
+                team.getEventId(),
+                "Removed From Team",
+                body
+        );
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void deleteEmptyFormingTeam(Teams team) {
@@ -292,6 +416,29 @@ public class TeamServiceImpl implements TeamService {
         teamJoinRequestsRepository.deleteByTeamId(teamId);
         teamMembersRepository.deleteByTeamId(teamId);
         teamsRepository.delete(team);
+    }
+
+    @Override
+    @Transactional
+    public void disbandTeam(UUID teamId, UUID currentUserId) {
+        // Leader giải tán team đang FORMING bằng một thao tác:
+        // gỡ đăng ký event PENDING của từng thành viên, rồi xóa team
+        // (kèm toàn bộ join request và membership) — không để team "trôi".
+        Teams team = teamsRepository.findByIdForUpdate(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
+
+        if (!team.getLeaderUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("Only the team leader can disband the team");
+        }
+
+        assertRosterEditable(team);
+
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
+        for (TeamMembers member : members) {
+            teamEventRegistrationService.removePendingRegistration(team.getEventId(), member.getUserId());
+        }
+
+        deleteEmptyFormingTeam(team);
     }
 
     @Override

@@ -26,4 +26,11 @@ public interface ConsultationRequestRepository extends JpaRepository<Consultatio
 
     // Đếm tổng request của 1 team
     long countByTeam_TeamId(UUID teamId);
+
+    // Hard delete user: user còn là mentor của consultation → chặn xóa.
+    boolean existsByMentor_UserId(UUID userId);
+
+    // Hard delete user: xóa các consultation do user tạo
+    // (ConsultationMessages xóa theo nhờ FK ON DELETE CASCADE trong DB).
+    long deleteByCreatedBy_UserId(UUID userId);
 }

@@ -8,6 +8,7 @@ import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.RemoveTeamMemberRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
@@ -235,6 +236,41 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    // Nguoi xin tu huy request PENDING cua chinh minh (khong cho huy cua nguoi khac).
+    @Operation(summary = "Cancel my own pending join request")
+    @DeleteMapping("/teams/requests/{requestId}")
+    public ResponseEntity<JoinTeamRequestResponse> cancelJoinRequest(
+            @PathVariable UUID requestId,
+            Authentication authentication
+    ) {
+        JoinTeamRequestResponse response =
+                teamJoinRequestService.cancelJoinRequest(requestId, currentUserId(authentication));
+        return ResponseEntity.ok(response);
+    }
+
+    // Nguoi xin xem cac request PENDING cua minh de biet trang thai va co the huy.
+    @Operation(summary = "List my pending join requests")
+    @GetMapping("/teams/requests/mine")
+    public ResponseEntity<List<JoinTeamRequestResponse>> getMyPendingJoinRequests(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                teamJoinRequestService.getMyPendingJoinRequests(currentUserId(authentication))
+        );
+    }
+
+    // Leader giai tan team dang FORMING trong mot thao tac (thay vi kick tung nguoi):
+    // go dang ky event PENDING cua tung thanh vien roi xoa team + request + membership.
+    @Operation(summary = "Disband a forming team (leader only)")
+    @PostMapping("/teams/{teamId}/disband")
+    public ResponseEntity<Void> disbandTeam(
+            @PathVariable UUID teamId,
+            Authentication authentication
+    ) {
+        teamService.disbandTeam(teamId, currentUserId(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
     // Leader duoc kick member hoac tu roi; member duoc tu roi team.
     // Neu leader roi, service tu chuyen quyen hoac xoa team FORMING neu khong con ai.
     @Operation(summary = "Remove a member or leave a team")
@@ -242,10 +278,16 @@ public class TeamController {
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID teamId,
             @PathVariable UUID userId,
+            @RequestBody(required = false) RemoveTeamMemberRequest request,
             Authentication authentication
     ) {
         // Service phan biet leader kick member va member tu roi team.
-        teamService.removeMember(teamId, userId, currentUserId(authentication));
+        teamService.removeMember(
+                teamId,
+                userId,
+                currentUserId(authentication),
+                request != null ? request.getReason() : null
+        );
         return ResponseEntity.noContent().build();
     }
 
