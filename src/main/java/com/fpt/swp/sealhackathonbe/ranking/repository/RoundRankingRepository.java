@@ -6,11 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface RoundRankingRepository extends JpaRepository<RoundRanking, UUID> {
     List<RoundRanking> findByRound_RoundIdAndCategory_CategoryId(UUID roundId, UUID categoryId);
+    Optional<RoundRanking> findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(UUID roundId, UUID categoryId, UUID teamId);
     List<RoundRanking> findByRoundRoundIdAndTeamTeamIdIn(UUID roundId, List<UUID> teamIds);
     List<RoundRanking> findByRoundRoundIdAndCategoryCategoryIdOrderByRankPositionAsc(UUID roundId, UUID categoryId, Pageable pageable);
 }
