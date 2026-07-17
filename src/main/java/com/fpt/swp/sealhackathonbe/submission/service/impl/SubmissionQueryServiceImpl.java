@@ -1,9 +1,11 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionHistoryResponse;
 import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
+import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionHistoryRepository;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
@@ -25,15 +27,18 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
             SubmissionStatusConstants.DISQUALIFIED;
 
     private final SubmissionsRepository submissionsRepository;
+    private final SubmissionHistoryRepository submissionHistoryRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final EventParticipantService eventParticipantService;
 
     public SubmissionQueryServiceImpl(
             SubmissionsRepository submissionsRepository,
+            SubmissionHistoryRepository submissionHistoryRepository,
             TeamMembersRepository teamMembersRepository,
             EventParticipantService eventParticipantService
     ) {
         this.submissionsRepository = submissionsRepository;
+        this.submissionHistoryRepository = submissionHistoryRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.eventParticipantService = eventParticipantService;
     }
@@ -91,6 +96,28 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         return submissionsRepository.findByEventId(eventId)
                 .stream()
                 .map(SubmissionMapper::toSubmissionResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubmissionHistoryResponse> getSubmissionHistoryByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId) {
+        TeamMembers membership = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
+                .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+        eventParticipantService.assertActiveParticipant(membership.getTeam().getEventId(), currentUserId);
+
+        return submissionHistoryRepository.findByTeamIdAndRoundIdOrderByVersionNumberDesc(teamId, roundId)
+                .stream()
+                .map(SubmissionMapper::toSubmissionHistoryResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubmissionHistoryResponse> getSubmissionHistoryBySubmissionId(UUID submissionId) {
+        return submissionHistoryRepository.findBySubmissionIdOrderByVersionNumberDesc(submissionId)
+                .stream()
+                .map(SubmissionMapper::toSubmissionHistoryResponse)
                 .toList();
     }
 }
