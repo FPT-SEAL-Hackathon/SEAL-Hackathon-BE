@@ -64,6 +64,9 @@ public class RankingServiceImpl implements RankingService {
         Round roundRef = entityManager.getReference(Round.class, roundId);
         Category categoryRef = entityManager.getReference(Category.class, categoryId);
         List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
+        submissionsList = submissionsList.stream()
+                .filter(submission -> Boolean.TRUE.equals(submission.getIsScoreApproved()))
+                .toList();
 
         List<UUID> submissionIds = submissionsList.stream()
                 .map(SubmissionResponse::getSubmissionId)
@@ -88,6 +91,13 @@ public class RankingServiceImpl implements RankingService {
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         Map<UUID, RoundRanking> existingRankingMap = existingRankings.stream()
                 .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
+        Set<UUID> eligibleTeamIds = new HashSet<>(submissionToTeamMap.values());
+        List<RoundRanking> staleRankings = existingRankings.stream()
+                .filter(ranking -> !eligibleTeamIds.contains(ranking.getTeam().getTeamId()))
+                .toList();
+        if (!staleRankings.isEmpty()) {
+            roundRankingRepository.deleteAll(staleRankings);
+        }
 
         // 1. Lấy toàn bộ điểm của tất cả submissions, nhóm lại thành Map<SubmissionID, List<Judging>>
         Map<UUID, List<Judging>> judgingsMap = judgingService.getJudgingsGroupedBySubmissionIds(submissionIds);
