@@ -45,4 +45,10 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    long countByTeamIdAndActiveTrue(UUID teamId);
 
    long deleteByTeamId(UUID teamId);
+
+   // Hard delete user: lay MOI membership active cua user (co the nhieu event).
+   List<TeamMembers> findAllByUserIdAndActiveTrue(UUID userId);
+
+   // Hard delete user: xoa toan bo membership (ke ca lich su inactive) cua user.
+   long deleteByUserId(UUID userId);
 }

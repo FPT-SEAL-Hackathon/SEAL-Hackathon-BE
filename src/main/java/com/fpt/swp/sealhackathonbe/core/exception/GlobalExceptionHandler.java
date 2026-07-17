@@ -108,6 +108,39 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Email đã thuộc user hiện có nhưng thiếu phương thức đăng nhập tương ứng:
+    // KHÔNG tạo user thứ hai — trả linkingToken để client chạy luồng xác minh
+    // (OTP email / mật khẩu) rồi liên kết vào đúng user đó.
+    @ExceptionHandler(AccountLinkRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleAccountLinkRequired(AccountLinkRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("ACCOUNT_LINK_REQUIRED")
+                .message(ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "This email already belongs to an existing account. Verification is required to link sign-in methods")
+                .path(currentPath())
+                .details(Map.of(
+                        "linkingToken", ex.getLinkingToken(),
+                        "email", ex.getEmail()
+                ))
+                .build());
+    }
+
+    // Tài khoản đã bị xóa cứng (còn tombstone): báo user tạo tài khoản mới
+    // thay vì trả "Invalid email or password" gây khó hiểu.
+    @ExceptionHandler(AccountRemovedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountRemoved(AccountRemovedException ex) {
+        return build(
+                HttpStatus.GONE,
+                "ACCOUNT_REMOVED",
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "This account has been removed. Please create a new account",
+                null
+        );
+    }
+
     @ExceptionHandler(BusinessConflictException.class)
     public ResponseEntity<ErrorResponse> handleBusinessConflict(BusinessConflictException ex) {
         return build(

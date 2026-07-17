@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface ConsultationMessageRepository extends JpaRepository<ConsultationMessage, UUID> {
     List<ConsultationMessage> findByRequest_RequestIdOrderByCreatedAtAsc(UUID requestId);
+
+    // Hard delete user: xóa các tin nhắn user đã gửi trong thread của người khác.
+    long deleteBySender_UserId(UUID userId);
 }

@@ -18,4 +18,9 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
     Optional<PasswordResetToken> findByTokenHash(String tokenHash);
 
     List<PasswordResetToken> findByUserAndUsedAtIsNull(User user);
+
+    /**
+     * Hard delete user: xóa toàn bộ token reset mật khẩu của user.
+     */
+    long deleteByUser_UserId(UUID userId);
 }

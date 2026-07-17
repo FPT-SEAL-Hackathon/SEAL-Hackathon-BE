@@ -10,8 +10,11 @@ import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
 import com.fpt.swp.sealhackathonbe.auth.entity.VerificationToken;
 import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.repository.VerificationTokenRepository;
+import com.fpt.swp.sealhackathonbe.auth.service.impl.AccountLinkService;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.JwtServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.config.AppProperties;
+import com.fpt.swp.sealhackathonbe.core.exception.AccountLinkRequiredException;
+import com.fpt.swp.sealhackathonbe.core.exception.AccountRemovedException;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
@@ -21,6 +24,7 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.DeletedUserTombstoneRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.transaction.Transactional;
@@ -63,6 +67,9 @@ public class UserService {
     private UserRepository userRepo;
 
     @Autowired
+    private DeletedUserTombstoneRepository tombstoneRepository;
+
+    @Autowired
     private UserTypeRepository userTypeRepo;
 
     @Autowired
@@ -83,6 +90,9 @@ public class UserService {
     @Autowired
     private TokenHashUtil tokenHashUtil;
 
+    @Autowired
+    private AccountLinkService accountLinkService;
+
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
 
@@ -91,6 +101,8 @@ public class UserService {
      * Xác thực tài khoản đã verify rồi cấp JWT và thông tin hồ sơ.
      */
     public LoginResponse verify(LoginRequest request) {
+
+        failIfAccountRemoved(request.getEmail());
 
         Authentication authentication =
                 authManager.authenticate(
@@ -118,6 +130,23 @@ public class UserService {
         }
 
         throw new RuntimeException("Invalid email or password");
+    }
+
+    /**
+     * Email từng bị organizer xóa cứng (còn tombstone) và CHƯA có tài khoản mới:
+     * báo rõ "tài khoản đã bị gỡ, hãy tạo tài khoản mới" thay vì "sai mật khẩu".
+     * Không chặn đăng ký lại — chỉ can thiệp ở bước đăng nhập.
+     */
+    private void failIfAccountRemoved(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        if (userRepo.findByEmailAndIsDeletedFalse(email).isEmpty()
+                && tombstoneRepository.existsByEmailIgnoreCaseAndExpiresAtAfter(email, LocalDateTime.now())) {
+            throw new AccountRemovedException(
+                    "Tài khoản của bạn đã bị gỡ khỏi hệ thống trong quá trình phát triển. "
+                            + "Vui lòng tạo tài khoản mới.");
+        }
     }
 
     /**
@@ -289,8 +318,26 @@ public class UserService {
             );
         }
 
-        if (userRepo.existsByEmail(request.getEmail())) {
-            throw new BusinessConflictException("Email already exists");
+        // Một người = một bản ghi Users:
+        // - Email đã có tài khoản LOCAL → báo trùng như trước.
+        // - Email thuộc user Google-only (chưa có mật khẩu) → KHÔNG tạo user mới,
+        //   phát linkingToken để xác minh OTP email rồi thiết lập mật khẩu
+        //   cho chính user đó (POST /api/v1/auth/local/setup-password).
+        var sameEmailUsers = userRepo.findByEmailAndIsDeletedFalse(request.getEmail());
+        if (!sameEmailUsers.isEmpty()) {
+            boolean hasLocalAccount = sameEmailUsers.stream()
+                    .anyMatch(existing -> Boolean.TRUE.equals(existing.getLocalLoginEnabled()));
+            if (hasLocalAccount) {
+                throw new BusinessConflictException("Email already exists");
+            }
+
+            User oauthOnlyUser = sameEmailUsers.get(0);
+            String linkingToken = accountLinkService.createLocalSetupTicket(oauthOnlyUser);
+            throw new AccountLinkRequiredException(
+                    "This email already has a Google sign-in. Verify the email code to set a password for the same account",
+                    linkingToken,
+                    oauthOnlyUser.getEmail()
+            );
         }
 
         UserType userType = userTypeRepo

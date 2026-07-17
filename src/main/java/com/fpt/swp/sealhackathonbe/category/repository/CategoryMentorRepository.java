@@ -23,4 +23,7 @@ public interface CategoryMentorRepository extends JpaRepository<CategoryMentor, 
     List<CategoryMentor> findByCategory_CategoryId(UUID categoryId);
     List<CategoryMentor> findByMentor_UserId(UUID mentorId);
     java.util.Optional<CategoryMentor> findByCategory_CategoryIdAndMentor_UserId(UUID categoryId, UUID mentorId);
+
+    // Hard delete user: user còn là mentor của category → chặn xóa.
+    boolean existsByMentor_UserId(UUID userId);
 }

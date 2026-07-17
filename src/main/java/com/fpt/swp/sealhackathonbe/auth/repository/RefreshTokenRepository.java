@@ -42,4 +42,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      * Chỉ xóa token có expiresAt nhỏ hơn mốc thời gian truyền vào.
      */
     long deleteByExpiresAtBefore(LocalDateTime expiresAt);
+
+    /**
+     * Hard delete user: xóa toàn bộ phiên refresh token của user.
+     */
+    long deleteByUser_UserId(UUID userId);
 }

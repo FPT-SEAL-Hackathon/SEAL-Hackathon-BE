@@ -24,4 +24,9 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
      * Tìm các token chưa sử dụng của user để vô hiệu hóa khi cấp token mới.
      */
     List<VerificationToken> findByUserAndUsedAtIsNull(User user);
+
+    /**
+     * Hard delete user: xóa toàn bộ token xác minh của user.
+     */
+    long deleteByUser_UserId(UUID userId);
 }

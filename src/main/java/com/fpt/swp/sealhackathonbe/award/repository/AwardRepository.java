@@ -67,4 +67,7 @@ public interface AwardRepository extends JpaRepository<Award, UUID> {
             @Param("categoryId") UUID categoryId,
             @Param("awardTierId") UUID awardTierId
     );
+
+    // Hard delete user: user còn là người trao giải (AwardedByID NOT NULL) → chặn xóa.
+    boolean existsByAwardedBy_UserId(UUID userId);
 }
