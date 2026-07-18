@@ -29,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final CategoryRepository categoryRepository;
     private final CategoryMentorRepository categoryMentorRepository;
@@ -107,7 +108,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                         title,
                         body);
             } catch (Exception e) {
-                System.err.println("Failed to send mentor notification: " + e.getMessage());
+                log.warn("Failed to send mentor notification", e);
             }
         }
 

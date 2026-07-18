@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.user.service;
 
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
+import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserManagementRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserRoleRequest;
@@ -46,6 +47,8 @@ class UserManagementServiceRoleGuardTest {
     private TeamMembersRepository teamMembersRepository;
     @Mock
     private AuditLogRepository auditLogRepository;
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
     @Mock
     private UserService userService;
 

@@ -30,6 +30,7 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -51,9 +52,9 @@ import java.util.UUID;
 @Service
 public class UserService {
     private static final UUID FPT_STUDENT_ID =
-            UserRoleConstants.ROLE_ADMIN;
+            UserRoleConstants.ROLE_FPT_STUDENT;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UserRoleConstants.ROLE_USER;
+            UserRoleConstants.ROLE_EXTERNAL_STUDENT;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int VERIFICATION_TOKEN_BYTES = 32;
 
@@ -129,7 +130,7 @@ public class UserService {
             return issueSession(user);
         }
 
-        throw new RuntimeException("Invalid email or password");
+        throw new BadCredentialsException("Invalid email or password");
     }
 
     /**
@@ -159,9 +160,10 @@ public class UserService {
         String accessToken = jwtServiceImpl.generateAccessToken(user);
         String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
+        // Chỉ lưu HASH của refresh token: lộ DB không đồng nghĩa lộ phiên đăng nhập.
         RefreshToken tokenEntity = RefreshToken.builder()
                 .user(user)
-                .tokenHash(refreshToken)
+                .tokenHash(tokenHashUtil.hash(refreshToken))
                 .issuedAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .revokedAt(null)
@@ -296,7 +298,7 @@ public class UserService {
     public void logout(String refreshToken) {
 
         refreshTokenRepository
-                .findByTokenHash(refreshToken)
+                .findByTokenHash(tokenHashUtil.hash(refreshToken))
                 .filter(token -> token.getRevokedAt() == null)
                 .ifPresent(token -> {
                     token.setRevokedAt(LocalDateTime.now());
@@ -313,7 +315,8 @@ public class UserService {
 
         if (!request.getPassword()
                 .equals(request.getConfirmPassword())) {
-            throw new RuntimeException(
+            // BadRequestException để handler trả 400 thay vì 500 như RuntimeException trần.
+            throw new BadRequestException(
                     "Password and Confirm Password do not match"
             );
         }

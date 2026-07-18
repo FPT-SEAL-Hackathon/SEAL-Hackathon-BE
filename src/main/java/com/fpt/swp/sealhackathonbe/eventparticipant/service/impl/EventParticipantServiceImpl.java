@@ -54,9 +54,9 @@ public class EventParticipantServiceImpl implements EventParticipantService {
     private static final String STATUS_TEMPORARY = "TEMPORARY";
     private static final String STATUS_UNVERIFIED = "UNVERIFIED";
     private static final UUID FPT_STUDENT_ID =
-            UserRoleConstants.ROLE_ADMIN;
+            UserRoleConstants.ROLE_FPT_STUDENT;
     private static final UUID EXTERNAL_STUDENT_ID =
-            UserRoleConstants.ROLE_USER;
+            UserRoleConstants.ROLE_EXTERNAL_STUDENT;
 
     private final EventParticipantRepository eventParticipantRepository;
     private final ParticipantStatusRepository participantStatusRepository;

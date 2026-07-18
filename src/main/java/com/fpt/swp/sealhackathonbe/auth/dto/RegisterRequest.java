@@ -17,7 +17,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class RegisterRequest {
     @NotBlank(message = "Full name is required")
-    @Size(max = 255, message = "Full name must not exceed 255 characters")
+    // Khớp cột Users.FullName nvarchar(200): DTO 255 cũ khiến tên 201-255 ký tự
+    // qua validation nhưng tràn cột DB → 500.
+    @Size(max = 200, message = "Full name must not exceed 200 characters")
     private String fullName;
 
     private UUID userTypeId;
@@ -40,8 +42,9 @@ public class RegisterRequest {
     private String studentCode;
 
     @NotBlank(message = "University is required")
-    @Size(max = 255, message = "University must not exceed 255 characters")
-    private String universityName;;
+    // Khớp cột Users.UniversityName nvarchar(200).
+    @Size(max = 200, message = "University must not exceed 200 characters")
+    private String universityName;
 
     @NotBlank(message = "Phone number is required")
     @Size(max = 10, message = "Phone number must not exceed 10 characters")
