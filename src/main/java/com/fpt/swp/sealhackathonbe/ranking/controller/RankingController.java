@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import org.springframework.security.core.Authentication;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,10 +28,20 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class RankingController {
 
     private final RankingService rankingService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public RankingController(RankingService rankingService) {
+    public RankingController(RankingService rankingService, UserRepository userRepository) {
         this.rankingService = rankingService;
+        this.userRepository = userRepository;
+    }
+
+    private UUID currentUserId(Authentication authentication) {
+        User user = userRepository.findByEmail(authentication.getName());
+        if (user == null) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        return user.getUserId();
     }
 
     /**
@@ -59,9 +72,10 @@ public class RankingController {
     @Operation(summary = "Publish rankings for a round", description = "Publishes the computed rankings for a specific round and category")
     public ResponseEntity<Void> publishRoundRankings(
             @PathVariable("roundId") UUID roundId,
-            @RequestParam UUID categoryId
+            @RequestParam UUID categoryId,
+            Authentication authentication
     ){
-        rankingService.publishRoundRankings(roundId, categoryId);
+        rankingService.publishRoundRankings(roundId, categoryId, currentUserId(authentication));
         return ResponseEntity.ok().build();
     }
 
