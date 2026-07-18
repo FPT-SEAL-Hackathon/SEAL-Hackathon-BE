@@ -10,6 +10,8 @@ import com.fpt.swp.sealhackathonbe.consultation.entity.ConsultationRequest;
 import com.fpt.swp.sealhackathonbe.consultation.entity.ConsultationStatus;
 import com.fpt.swp.sealhackathonbe.consultation.repository.ConsultationMessageRepository;
 import com.fpt.swp.sealhackathonbe.consultation.repository.ConsultationRequestRepository;
+import com.fpt.swp.sealhackathonbe.consultation.repository.TeamMentorNoteRepository;
+import com.fpt.swp.sealhackathonbe.consultation.entity.TeamMentorNote;
 import com.fpt.swp.sealhackathonbe.consultation.service.ConsultationService;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
@@ -43,6 +45,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final TeamsRepository teamsRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final RoundJudgeRepository roundJudgeRepository;
+    private final TeamMentorNoteRepository teamMentorNoteRepository;
 
     @Override
     @Transactional
@@ -201,6 +204,86 @@ public class ConsultationServiceImpl implements ConsultationService {
         req.setStatus(ConsultationStatus.RESOLVED);
         req.setClosedAt(LocalDateTime.now());
         return ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+    }
+
+    @Override
+    public TeamMentorNoteResponse getTeamMentorNote(User mentor, UUID teamId) {
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Team not found"));
+                
+        // Verify mentor is assigned to this category
+        categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(team.getCategory().getCategoryId(), mentor.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not assigned to this team's category"));
+                
+        TeamMentorNote note = teamMentorNoteRepository.findByTeamIdAndMentorId(teamId, mentor.getUserId()).orElse(null);
+        if (note == null) {
+            return TeamMentorNoteResponse.builder()
+                    .teamId(teamId)
+                    .mentorId(mentor.getUserId())
+                    .note("")
+                    .build();
+        }
+        
+        return TeamMentorNoteResponse.builder()
+                .teamId(note.getTeamId())
+                .mentorId(note.getMentorId())
+                .note(note.getNote())
+                .updatedAt(note.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public TeamMentorNoteResponse updateTeamMentorNote(User mentor, UUID teamId, TeamMentorNoteRequest request) {
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Team not found"));
+                
+        categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(team.getCategory().getCategoryId(), mentor.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not assigned to this team's category"));
+                
+        TeamMentorNote note = teamMentorNoteRepository.findByTeamIdAndMentorId(teamId, mentor.getUserId()).orElse(null);
+        
+        if (note == null) {
+            note = TeamMentorNote.builder()
+                    .team(team)
+                    .teamId(teamId)
+                    .mentor(mentor)
+                    .mentorId(mentor.getUserId())
+                    .note(request.getNote())
+                    .build();
+        } else {
+            note.setNote(request.getNote());
+        }
+        
+        note = teamMentorNoteRepository.save(note);
+        
+        return TeamMentorNoteResponse.builder()
+                .teamId(note.getTeamId())
+                .mentorId(note.getMentorId())
+                .note(note.getNote())
+                .updatedAt(note.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public java.util.List<TeamMentorNoteResponse> getMyTeamMentorNotes(User user, UUID teamId) {
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Team not found"));
+        
+        boolean isMember = team.getLeaderUserId().equals(user.getUserId()) || 
+                           teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, user.getUserId()).isPresent();
+        if (!isMember) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "You are not a member of this team");
+        }
+        
+        return teamMentorNoteRepository.findByTeamId(teamId).stream()
+                .map(note -> TeamMentorNoteResponse.builder()
+                        .teamId(note.getTeamId())
+                        .mentorId(note.getMentorId())
+                        .note(note.getNote())
+                        .updatedAt(note.getUpdatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private ConsultationRequest getMentorAssignedRequest(User mentor, UUID requestId) {
