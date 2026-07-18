@@ -60,8 +60,8 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     private static final String STATUS_TEMPORARY = "TEMPORARY";
     private static final UUID TEAM_STATUS_FORMING = TeamStatusConstants.FORMING;
     private static final UUID TEAM_STATUS_PENDING = TeamStatusConstants.PENDING;
-    private static final UUID FPT_STUDENT_ID = UserRoleConstants.ROLE_ADMIN;
-    private static final UUID EXTERNAL_STUDENT_ID = UserRoleConstants.ROLE_USER;
+    private static final UUID FPT_STUDENT_ID = UserRoleConstants.ROLE_FPT_STUDENT;
+    private static final UUID EXTERNAL_STUDENT_ID = UserRoleConstants.ROLE_EXTERNAL_STUDENT;
 
     private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;

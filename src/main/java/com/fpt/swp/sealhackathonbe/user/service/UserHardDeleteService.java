@@ -36,9 +36,12 @@ import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -54,10 +57,13 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserHardDeleteService {
 
     public static final String DEFAULT_REASON = "Removed during development";
     private static final int TOMBSTONE_RETENTION_DAYS = 7;
+    // Khớp cột DeletedUserTombstones.Reason nvarchar(500) — chặn tràn cột (500 rollback).
+    private static final int MAX_REASON_LENGTH = 500;
     private static final String ROLE_ORGANIZER = "Organizer";
     private static final String ROLE_ADMIN = "Admin";
 
@@ -96,6 +102,10 @@ public class UserHardDeleteService {
         String normalizedEmail = email == null ? "" : email.trim();
         if (normalizedEmail.isBlank()) {
             throw new BadRequestException("Email is required.");
+        }
+
+        if (reason != null && reason.length() > MAX_REASON_LENGTH) {
+            throw new BadRequestException("Reason must not exceed " + MAX_REASON_LENGTH + " characters.");
         }
 
         List<User> accounts = userRepository.findAllByEmailIgnoreCase(normalizedEmail);
@@ -232,7 +242,7 @@ public class UserHardDeleteService {
             }
 
             for (TeamMembers member : remaining) {
-                notificationService.sendNotification(
+                notifyAfterCommit(
                         member.getUserId(),
                         actor.getUserId(),
                         team.getEventId(),
@@ -241,6 +251,29 @@ public class UserHardDeleteService {
                                 + " đã bị gỡ hoàn toàn khỏi hệ thống (" + reason + ").");
             }
         }
+    }
+
+    // Notification (persist + bắn realtime SSE) chỉ gửi SAU khi transaction xóa
+    // commit thành công: lỗi publish không làm rollback cả cụm xóa, và team
+    // không nhận thông báo "đã gỡ thành viên" khi việc xóa thực ra bị rollback.
+    private void notifyAfterCommit(UUID recipientId, UUID actorId, UUID eventId, String title, String body) {
+        Runnable send = () -> {
+            try {
+                notificationService.sendNotification(recipientId, actorId, eventId, title, body);
+            } catch (RuntimeException ex) {
+                log.warn("Failed to send hard-delete notification to {}", recipientId, ex);
+            }
+        };
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            send.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                send.run();
+            }
+        });
     }
 
     /**

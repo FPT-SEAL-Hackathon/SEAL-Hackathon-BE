@@ -98,7 +98,10 @@ public class EmailService {
 
     private void sendHtmlEmail(String recipient, String subject, Context context) {
         if (!mailEnabled) {
-            log.info("Email \"{}\" skipped: mail is disabled (set NOTIFICATION_MAIL_ENABLED=true to enable)", subject);
+            // WARN thay vì INFO: đây là nguyên nhân phổ biến của "không nhận
+            // được mail verify" trên môi trường dev, cần đập vào mắt trong log.
+            log.warn("Email \"{}\" to {} skipped: mail is disabled (set NOTIFICATION_MAIL_ENABLED=true to enable)",
+                    subject, recipient);
             return;
         }
         if (recipient == null || recipient.isBlank()) {

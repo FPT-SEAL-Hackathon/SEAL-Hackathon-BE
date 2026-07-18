@@ -50,7 +50,7 @@ public class OAuth2LoginService {
     }
 
     private static final UUID EXTERNAL_STUDENT_ID =
-            UserRoleConstants.ROLE_USER;
+            UserRoleConstants.ROLE_EXTERNAL_STUDENT;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;

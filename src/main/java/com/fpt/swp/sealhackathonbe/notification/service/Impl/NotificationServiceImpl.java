@@ -1,8 +1,10 @@
 package com.fpt.swp.sealhackathonbe.notification.service.Impl;
 
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.notification.Repository.NotificationRepository;
+import jakarta.persistence.EntityNotFoundException;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationPushEvent;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationResponse;
 import com.fpt.swp.sealhackathonbe.notification.entity.Notification;
@@ -203,31 +205,31 @@ public class NotificationServiceImpl implements NotificationService {
 
     private void validateContent(String title, String body) {
         if (title == null || title.trim().isEmpty()) {
-            throw new RuntimeException("Notification title is required");
+            throw new BadRequestException("Notification title is required");
         }
         if (title.trim().length() > 300) {
-            throw new RuntimeException("Notification title must not exceed 300 characters");
+            throw new BadRequestException("Notification title must not exceed 300 characters");
         }
         if (body == null || body.trim().isEmpty()) {
-            throw new RuntimeException("Notification body is required");
+            throw new BadRequestException("Notification body is required");
         }
     }
 
     private User getUser(UUID userId, String errorMessage) {
         if (userId == null) {
-            throw new RuntimeException(errorMessage);
+            throw new BadRequestException(errorMessage);
         }
-        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException(errorMessage));
+        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException(errorMessage));
     }
 
     private User getUserByEmail(String email, String errorMessage) {
         if (email == null || email.trim().isEmpty()) {
-            throw new RuntimeException(errorMessage);
+            throw new BadRequestException(errorMessage);
         }
 
         User user = userRepository.findByEmail(email.trim());
         if (user == null) {
-            throw new RuntimeException(errorMessage);
+            throw new EntityNotFoundException(errorMessage);
         }
         return user;
     }
@@ -236,17 +238,17 @@ public class NotificationServiceImpl implements NotificationService {
         if (eventId == null) {
             return null;
         }
-        return eventRepository.findById(eventId).orElseThrow(() -> new RuntimeException("Event not found"));
+        return eventRepository.findById(eventId).orElseThrow(() -> new EntityNotFoundException("Event not found"));
     }
 
     private Notification getUserNotification(UUID notificationId, UUID userId) {
         if (notificationId == null) {
-            throw new RuntimeException("Notification id is required");
+            throw new BadRequestException("Notification id is required");
         }
 
         User user = getUser(userId, "User not found");
         return notificationRepository.findByIdAndRecipientUserID(notificationId, user)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Notification not found"));
     }
 
     private NotificationResponse dispatchAndConvert(Notification notification) {
