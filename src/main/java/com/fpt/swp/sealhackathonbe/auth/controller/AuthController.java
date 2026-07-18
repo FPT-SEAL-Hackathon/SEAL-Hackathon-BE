@@ -132,16 +132,15 @@ public class AuthController {
     }
 
     /**
-     * Xác minh email để kích hoạt tài khoản sau khi đăng ký.
+     * Xác minh email để kích hoạt tài khoản và cấp phiên đăng nhập ngay sau đó.
+     * Frontend lưu token nhận được và redirect vào dashboard mà không cần nhập lại mật khẩu.
      */
     @GetMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(
+    public ResponseEntity<LoginResponse> verifyEmail(
             @RequestParam String token) {
 
-        jwtServiceImpl.verifyEmail(token);
+        User user = jwtServiceImpl.verifyEmail(token);
 
-        return ResponseEntity.ok(
-                "Email verified successfully"
-        );
+        return ResponseEntity.ok(userService.issueSession(user));
     }
 }

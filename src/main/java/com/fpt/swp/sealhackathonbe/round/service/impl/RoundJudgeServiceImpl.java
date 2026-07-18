@@ -32,6 +32,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
@@ -146,7 +147,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
                 notificationService.sendNotification(rj.getJudge().getUserId(), user.getUserId(), event.getEventId(),
                         title, body);
             } catch (Exception e) {
-                System.err.println("Failed to send notification: " + e.getMessage());
+                log.warn("Failed to send judge assignment notification", e);
             }
         }
 

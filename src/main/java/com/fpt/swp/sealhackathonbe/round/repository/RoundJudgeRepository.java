@@ -35,4 +35,8 @@ public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
     boolean existsByJudge_UserId(UUID userId);
 
     boolean existsByAssignedBy_UserId(UUID userId);
+
+    // BR-19 (chiều ngược): user đã là judge active trong round của category → không được assign làm mentor.
+    @Query("SELECT COUNT(rj) > 0 FROM RoundJudge rj WHERE rj.judge.userId = :judgeId AND rj.round.category.categoryId = :categoryId AND rj.isActive = true")
+    boolean existsActiveJudgeInCategory(@Param("judgeId") UUID judgeId, @Param("categoryId") UUID categoryId);
 }

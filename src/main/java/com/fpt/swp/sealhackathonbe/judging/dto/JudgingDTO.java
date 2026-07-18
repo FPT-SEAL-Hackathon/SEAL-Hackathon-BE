@@ -15,6 +15,7 @@ public class JudgingDTO {
     private String judgeName;
     private UUID roundCriterionId;
     private String criterionName;
+    private BigDecimal criterionWeight;
     private BigDecimal scoreValue;
     private String comment;
     private LocalDateTime scoredAt;

@@ -17,13 +17,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Quản lý mốc tiến độ (milestone) của team — chỉ mentor và expert mới có quyền thao tác.
+ * Quản lý mốc tiến độ (milestone) của team — chỉ mentor và expert mới có quyền
+ * thao tác.
  */
 @Tag(name = "Team Milestones", description = "Mentor APIs for managing team milestones")
 @RestController
 @RequestMapping("/api/v1/teams/{teamId}/milestones")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_ORGANIZER')")
 public class MilestoneController {
 
     private final MilestoneService milestoneService;
@@ -31,6 +31,7 @@ public class MilestoneController {
 
     @Operation(summary = "List all milestones for a team")
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_ORGANIZER', 'ROLE_FPT_STUDENT', 'ROLE_EXTERNAL_STUDENT')")
     public ResponseEntity<List<MilestoneResponse>> list(@PathVariable UUID teamId) {
         return ResponseEntity.ok(milestoneService.getByTeam(teamId));
     }
@@ -40,21 +41,19 @@ public class MilestoneController {
     @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
     public ResponseEntity<MilestoneResponse> create(
             @PathVariable UUID teamId,
-            @Valid @RequestBody CreateMilestoneRequest request
-    ) {
+            @Valid @RequestBody CreateMilestoneRequest request) {
         UUID mentorId = authService.getCurrentUser().getUserId();
         return ResponseEntity.ok(milestoneService.create(teamId, mentorId, request));
     }
 
     @Operation(summary = "Toggle milestone done/undone")
     @PatchMapping("/{milestoneId}/toggle")
-    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT', 'ROLE_FPT_STUDENT', 'ROLE_EXTERNAL_STUDENT')")
     public ResponseEntity<MilestoneResponse> toggle(
             @PathVariable UUID teamId,
-            @PathVariable UUID milestoneId
-    ) {
-        UUID mentorId = authService.getCurrentUser().getUserId();
-        return ResponseEntity.ok(milestoneService.toggle(milestoneId, mentorId));
+            @PathVariable UUID milestoneId) {
+        UUID currentUserId = authService.getCurrentUser().getUserId();
+        return ResponseEntity.ok(milestoneService.toggle(milestoneId, currentUserId));
     }
 
     @Operation(summary = "Delete a milestone")
@@ -62,8 +61,7 @@ public class MilestoneController {
     @PreAuthorize("hasAnyAuthority('ROLE_MENTOR', 'ROLE_EXPERT')")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable UUID teamId,
-            @PathVariable UUID milestoneId
-    ) {
+            @PathVariable UUID milestoneId) {
         UUID mentorId = authService.getCurrentUser().getUserId();
         milestoneService.delete(milestoneId, mentorId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Milestone deleted"));

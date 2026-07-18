@@ -192,6 +192,16 @@ class UserHardDeleteServiceTest {
     }
 
     @Test
+    void rejectsReasonLongerThanColumnLimit() {
+        UUID actorId = UUID.randomUUID();
+        String tooLong = "x".repeat(501);
+
+        assertThrows(com.fpt.swp.sealhackathonbe.core.exception.BadRequestException.class,
+                () -> service.hardDeleteByEmail(EMAIL, actorId, tooLong));
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
     void rejectsWhenUserStillOwnsCalibrationSamples() {
         UUID actorId = UUID.randomUUID();
         UUID targetId = UUID.randomUUID();

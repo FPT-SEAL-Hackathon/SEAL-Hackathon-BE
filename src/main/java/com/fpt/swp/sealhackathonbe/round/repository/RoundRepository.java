@@ -24,6 +24,11 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
 
+    Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanOrderByRoundOrderDesc(
+            UUID categoryId,
+            Integer roundOrder
+    );
+
     boolean existsByCategoryCategoryIdAndRoundNameIgnoreCase(UUID categoryId, String roundName);
 
     @Query("SELECT COUNT(r) FROM Round r WHERE r.category.event.eventId = :eventId")

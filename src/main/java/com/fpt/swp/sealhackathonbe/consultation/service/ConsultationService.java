@@ -22,9 +22,12 @@ public interface ConsultationService {
     ConsultationRequestResponse rejectRequest(User mentor, UUID requestId, String reason);
     ConsultationRequestResponse markInProgress(User mentor, UUID requestId);
     ConsultationRequestResponse resolveRequest(User mentor, UUID requestId);
+    TeamMentorNoteResponse getTeamMentorNote(User mentor, UUID teamId);
+    TeamMentorNoteResponse updateTeamMentorNote(User mentor, UUID teamId, TeamMentorNoteRequest request);
 
     // Team
     List<MentorProfileResponse> getMyMentors(User user);
+    List<TeamMentorNoteResponse> getMyTeamMentorNotes(User user, UUID teamId);
     ConsultationRequestResponse createConsultationRequest(User user, CreateConsultationRequestRequest requestDto);
     Page<ConsultationRequestResponse> getMyTeamRequests(User user, String status, Pageable pageable);
     ConsultationRequestResponse cancelRequest(User user, UUID requestId);
