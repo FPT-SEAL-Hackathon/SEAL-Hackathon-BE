@@ -13,6 +13,7 @@ import com.fpt.swp.sealhackathonbe.consultation.repository.ConsultationRequestRe
 import com.fpt.swp.sealhackathonbe.consultation.repository.TeamMentorNoteRepository;
 import com.fpt.swp.sealhackathonbe.consultation.entity.TeamMentorNote;
 import com.fpt.swp.sealhackathonbe.consultation.service.ConsultationService;
+import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -21,6 +22,7 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ConsultationServiceImpl implements ConsultationService {
 
     private final ConsultationRequestRepository requestRepository;
@@ -46,6 +49,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final TeamMembersRepository teamMembersRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final TeamMentorNoteRepository teamMentorNoteRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -164,7 +168,16 @@ public class ConsultationServiceImpl implements ConsultationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PENDING request can be accepted");
         }
         req.setStatus(ConsultationStatus.ACCEPTED);
-        return ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        ConsultationRequestResponse response = ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        // Notify team leader
+        sendNotificationSafe(
+                req.getCreatedBy().getUserId(),
+                mentor.getUserId(),
+                req.getEvent().getEventId(),
+                "Consultation Request Accepted",
+                String.format("Expert %s has accepted your consultation request \u201c%s\u201d.", mentor.getFullName(), req.getTitle())
+        );
+        return response;
     }
 
     @Override
@@ -180,7 +193,16 @@ public class ConsultationServiceImpl implements ConsultationService {
         ConsultationMessage msg = ConsultationMessage.builder()
                 .request(req).sender(mentor).content("REJECTED REASON: " + reason).build();
         messageRepository.save(msg);
-        return ConsultationRequestResponse.from(requestRepository.save(req), reason, 0);
+        ConsultationRequestResponse response = ConsultationRequestResponse.from(requestRepository.save(req), reason, 0);
+        // Notify team leader
+        sendNotificationSafe(
+                req.getCreatedBy().getUserId(),
+                mentor.getUserId(),
+                req.getEvent().getEventId(),
+                "Consultation Request Rejected",
+                String.format("Expert %s has rejected your consultation request \u201c%s\u201d. Reason: %s", mentor.getFullName(), req.getTitle(), reason)
+        );
+        return response;
     }
 
     @Override
@@ -191,7 +213,16 @@ public class ConsultationServiceImpl implements ConsultationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only ACCEPTED request can be marked IN_PROGRESS");
         }
         req.setStatus(ConsultationStatus.IN_PROGRESS);
-        return ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        ConsultationRequestResponse response = ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        // Notify team leader
+        sendNotificationSafe(
+                req.getCreatedBy().getUserId(),
+                mentor.getUserId(),
+                req.getEvent().getEventId(),
+                "Consultation In Progress",
+                String.format("Expert %s is now working on your consultation request \u201c%s\u201d.", mentor.getFullName(), req.getTitle())
+        );
+        return response;
     }
 
     @Override
@@ -203,7 +234,16 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
         req.setStatus(ConsultationStatus.RESOLVED);
         req.setClosedAt(LocalDateTime.now());
-        return ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        ConsultationRequestResponse response = ConsultationRequestResponse.from(requestRepository.save(req), null, 0);
+        // Notify team leader
+        sendNotificationSafe(
+                req.getCreatedBy().getUserId(),
+                mentor.getUserId(),
+                req.getEvent().getEventId(),
+                "Consultation Request Resolved",
+                String.format("Expert %s has resolved your consultation request \u201c%s\u201d.", mentor.getFullName(), req.getTitle())
+        );
+        return response;
     }
 
     @Override
@@ -256,7 +296,17 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
         
         note = teamMentorNoteRepository.save(note);
-        
+
+        // Notify team leader about updated note
+        UUID eventId = team.getEvent() != null ? team.getEvent().getEventId() : null;
+        sendNotificationSafe(
+                team.getLeaderUserId(),
+                mentor.getUserId(),
+                eventId,
+                "Expert Note Updated",
+                String.format("Expert %s has updated a note for your team \u201c%s\u201d.", mentor.getFullName(), team.getTeamName())
+        );
+
         return TeamMentorNoteResponse.builder()
                 .teamId(note.getTeamId())
                 .mentorId(note.getMentorId())
@@ -355,6 +405,15 @@ public class ConsultationServiceImpl implements ConsultationService {
             messageRepository.save(msg);
         }
 
+        // Notify mentor about new consultation request
+        sendNotificationSafe(
+                mentor.getUserId(),
+                user.getUserId(),
+                team.getEvent().getEventId(),
+                "New Consultation Request",
+                String.format("Team \u201c%s\u201d has sent a new consultation request: \u201c%s\u201d.", team.getTeamName(), requestDto.getTitle())
+        );
+
         return ConsultationRequestResponse.from(request, null, 0);
     }
 
@@ -425,6 +484,22 @@ public class ConsultationServiceImpl implements ConsultationService {
         req.setUpdatedAt(LocalDateTime.now());
         requestRepository.save(req);
 
+        // Cross-notify: mentor messages notify team leader; team messages notify mentor
+        boolean senderIsMentor = isMentorRole(user);
+        UUID recipientId = senderIsMentor
+                ? req.getCreatedBy().getUserId()   // mentor → team leader
+                : req.getMentor().getUserId();       // team leader → mentor
+        String preview = messageDto.getContent() != null && messageDto.getContent().length() > 80
+                ? messageDto.getContent().substring(0, 80) + "..."
+                : messageDto.getContent();
+        sendNotificationSafe(
+                recipientId,
+                user.getUserId(),
+                req.getEvent().getEventId(),
+                "New Message in Consultation",
+                String.format("%s sent a message in \u201c%s\u201d: %s", user.getFullName(), req.getTitle(), preview)
+        );
+
         return ConsultationMessageResponse.from(msg);
     }
 
@@ -470,5 +545,17 @@ public class ConsultationServiceImpl implements ConsultationService {
     private boolean isMentorRole(User user) {
         String roleName = getRoleName(user);
         return "Mentor".equalsIgnoreCase(roleName) || "Expert".equalsIgnoreCase(roleName);
+    }
+
+    /**
+     * Send a notification without throwing an exception on failure,
+     * so that the main business operation is never blocked by a notification error.
+     */
+    private void sendNotificationSafe(UUID recipientId, UUID senderId, UUID eventId, String title, String body) {
+        try {
+            notificationService.sendNotification(recipientId, senderId, eventId, title, body);
+        } catch (Exception e) {
+            log.warn("Failed to send consultation notification to user {}: {}", recipientId, e.getMessage());
+        }
     }
 }
