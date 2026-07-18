@@ -109,8 +109,8 @@ public class RankingServiceImpl implements RankingService {
             BigDecimal totalScore = BigDecimal.ZERO;
             BigDecimal averageScore = BigDecimal.ZERO;
 
-            // KIỂM TRA VI PHẠM (Dùng hàm .contains() của Set cực nhanh)
-            boolean isDisqualified = disqualifiedSubIds.contains(submissionId) || disqualifiedTeamIds.contains(teamId);
+            // KIỂM TRA VI PHẠM (Chỉ kiểm tra submission bị disqualify, team disqualify do rớt hạng vẫn giữ điểm)
+            boolean isDisqualified = disqualifiedSubIds.contains(submissionId);
             if (!isDisqualified) {
                 // Lấy danh sách điểm từ Map thay vì gọi DB
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
@@ -253,11 +253,7 @@ public class RankingServiceImpl implements RankingService {
                 continue;
             }
 
-            UUID completedStatusId = RankingStatusConstants.RANKING_COMPLETED;
-            if (!completedStatusId.equals(finalRound.getRoundStatusId())) {
-                log.warn("Skipping Event Ranking computation for Category {} because final round is not Completed.", categoryRef.getCategoryName());
-                continue;
-            }
+            // (Removed strict "Completed" check to allow computation if rankings exist)
 
             List<UUID> teamIds = entityManager.createQuery(
                     "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
@@ -279,7 +275,8 @@ public class RankingServiceImpl implements RankingService {
             List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
             
             if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
-                throw new IllegalStateException("Final round rankings have not been computed for category: " + categoryRef.getCategoryName());
+                log.warn("Skipping Event Ranking computation for Category {} because final round rankings have not been computed.", categoryRef.getCategoryName());
+                continue;
             }
 
             Map<UUID, BigDecimal> dScores = finalRoundRankings.stream()
