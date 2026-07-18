@@ -1,7 +1,5 @@
 package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
-import com.fpt.swp.sealhackathonbe.auth.entity.RefreshToken;
-import com.fpt.swp.sealhackathonbe.auth.repository.RefreshTokenRepository;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtFilterService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
@@ -39,9 +37,6 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
     private UserDetailsService userDetailsService;
 
     @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Autowired
     private UserRepository userRepository;
 
     /**
@@ -69,18 +64,19 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
             return;
         }
 
-        RefreshToken tokenEntity =
-                refreshTokenRepository.findByTokenHash(token).orElse(null);
-
-        if (tokenEntity != null && tokenEntity.getRevokedAt() != null) {
-            writeUnauthorized(request, response, "Token has been revoked");
-            return;
-        }
-
         try {
             String username = jwtServiceImpl.extractUserName(token);
             String role = jwtServiceImpl.extractRole(token);
             String userIdClaim = jwtServiceImpl.extractUserId(token);
+
+            // Chỉ ACCESS token mới có claim userId + role; refresh token không có.
+            // Chặn tại đây để refresh token (hạn 7 ngày) không thể dùng làm
+            // Bearer access token, đồng thời khỏi cần tra bảng RefreshTokens
+            // trên mỗi request như trước.
+            if (role == null || userIdClaim == null) {
+                writeUnauthorized(request, response, "Token is invalid or expired");
+                return;
+            }
 
             if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {

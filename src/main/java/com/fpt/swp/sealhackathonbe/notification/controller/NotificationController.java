@@ -10,13 +10,14 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -35,15 +36,6 @@ public class NotificationController {
     private final NotificationRealtimeService notificationRealtimeService;
     private final UserRepository userRepository;
 
-    private ResponseEntity<Map<String, Object>> buildErrorResponse(String message, int statusCode) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", message);
-        response.put("statusCode", statusCode);
-        response.put("data", null);
-
-        return new ResponseEntity<>(response, HttpStatus.valueOf(statusCode));
-    }
-
     private ResponseEntity<Map<String, Object>> buildSuccessResponse(Object data, String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("message", message);
@@ -55,14 +47,16 @@ public class NotificationController {
 
     // Permission:
     // Luôn lấy userId từ Authentication để user chỉ thao tác trên dữ liệu của mình.
+    // Lỗi được để nổi lên GlobalExceptionHandler (log + đúng HTTP status +
+    // đồng nhất ErrorResponse) thay vì tự nuốt thành 400 không log.
     private UUID currentUserId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
-            throw new RuntimeException("Unauthenticated user");
+            throw new BadCredentialsException("Unauthenticated user");
         }
 
         User user = userRepository.findByEmail(authentication.getName());
         if (user == null) {
-            throw new RuntimeException("Authenticated user not found");
+            throw new EntityNotFoundException("Authenticated user not found");
         }
 
         return user.getUserId();
@@ -79,22 +73,18 @@ public class NotificationController {
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication
     ) {
-        try {
-            UUID userId = currentUserId(authentication);
-            Page<NotificationResponse> notification = notificationService.getNotification(userId, page, size);
+        UUID userId = currentUserId(authentication);
+        Page<NotificationResponse> notification = notificationService.getNotification(userId, page, size);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("data", notification.getContent());
-            response.put("totalPages", notification.getTotalPages());
-            response.put("totalElements", notification.getTotalElements());
-            response.put("currentPage", notification.getNumber());
-            response.put("message", "Notifications retrieved successfully");
-            response.put("statusCode", 200);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", notification.getContent());
+        response.put("totalPages", notification.getTotalPages());
+        response.put("totalElements", notification.getTotalElements());
+        response.put("currentPage", notification.getNumber());
+        response.put("message", "Notifications retrieved successfully");
+        response.put("statusCode", 200);
 
-            return ResponseEntity.ok((response));
-        } catch (Exception e) {
-            return  buildErrorResponse(e.getMessage(), 400);
-        }
+        return ResponseEntity.ok(response);
     }
 
     @Operation(
@@ -104,14 +94,10 @@ public class NotificationController {
     )
     @GetMapping("/unread-count")
     public ResponseEntity<Map<String, Object>> getUnreadNotificationCount(Authentication authentication) {
-        try {
-            UUID userId = currentUserId(authentication);
-            long unreadCount = notificationService.countUnread(userId);
+        UUID userId = currentUserId(authentication);
+        long unreadCount = notificationService.countUnread(userId);
 
-            return buildSuccessResponse(unreadCount, "Unread notifications counted successfully");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(unreadCount, "Unread notifications counted successfully");
     }
 
     @Operation(
@@ -138,20 +124,16 @@ public class NotificationController {
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
     ) {
-        try {
-            UUID senderId = currentUserId(authentication);
-            NotificationResponse notification = notificationService.sendNotification(
-                    request.getRecipientUserId(),
-                    senderId,
-                    request.getEventId(),
-                    request.getTitle(),
-                    request.getBody()
-            );
+        UUID senderId = currentUserId(authentication);
+        NotificationResponse notification = notificationService.sendNotification(
+                request.getRecipientUserId(),
+                senderId,
+                request.getEventId(),
+                request.getTitle(),
+                request.getBody()
+        );
 
-            return buildSuccessResponse(notification, "Notification sent successfully");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(notification, "Notification sent successfully");
     }
 
     @Operation(
@@ -167,20 +149,16 @@ public class NotificationController {
             @Valid @RequestBody CreateNotificationByEmailRequest request,
             Authentication authentication
     ) {
-        try {
-            UUID senderId = currentUserId(authentication);
-            NotificationResponse notification = notificationService.sendNotificationByEmail(
-                    request.getRecipientEmail(),
-                    senderId,
-                    request.getEventId(),
-                    request.getTitle(),
-                    request.getBody()
-            );
+        UUID senderId = currentUserId(authentication);
+        NotificationResponse notification = notificationService.sendNotificationByEmail(
+                request.getRecipientEmail(),
+                senderId,
+                request.getEventId(),
+                request.getTitle(),
+                request.getBody()
+        );
 
-            return buildSuccessResponse(notification, "Notification sent successfully");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(notification, "Notification sent successfully");
     }
 
     @Operation(
@@ -196,20 +174,16 @@ public class NotificationController {
             @Valid @RequestBody BroadcastNotificationRequest request,
             Authentication authentication
     ) {
-        try {
-            UUID senderId = currentUserId(authentication);
-            List<NotificationResponse> notifications = notificationService.sendBroadcastNotification(
-                    request.getRecipientUserIds(),
-                    senderId,
-                    request.getEventId(),
-                    request.getTitle(),
-                    request.getBody()
-            );
+        UUID senderId = currentUserId(authentication);
+        List<NotificationResponse> notifications = notificationService.sendBroadcastNotification(
+                request.getRecipientUserIds(),
+                senderId,
+                request.getEventId(),
+                request.getTitle(),
+                request.getBody()
+        );
 
-            return buildSuccessResponse(notifications, "Broadcast notification sent successfully");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(notifications, "Broadcast notification sent successfully");
     }
 
     @Operation(
@@ -222,14 +196,10 @@ public class NotificationController {
             @PathVariable UUID notificationId,
             Authentication authentication
     ) {
-        try {
-            UUID userId = currentUserId(authentication);
-            NotificationResponse notification = notificationService.markAsRead(notificationId, userId);
+        UUID userId = currentUserId(authentication);
+        NotificationResponse notification = notificationService.markAsRead(notificationId, userId);
 
-            return buildSuccessResponse(notification, "Notification marked as read");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(notification, "Notification marked as read");
     }
 
     @Operation(
@@ -239,14 +209,10 @@ public class NotificationController {
     )
     @PatchMapping("/read-all")
     public ResponseEntity<Map<String, Object>> markAllNotificationsAsRead(Authentication authentication) {
-        try {
-            UUID userId = currentUserId(authentication);
-            long updatedCount = notificationService.markAllAsRead(userId);
+        UUID userId = currentUserId(authentication);
+        long updatedCount = notificationService.markAllAsRead(userId);
 
-            return buildSuccessResponse(updatedCount, "Notifications marked as read");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(updatedCount, "Notifications marked as read");
     }
 
     @Operation(
@@ -259,13 +225,9 @@ public class NotificationController {
             @PathVariable UUID notificationId,
             Authentication authentication
     ) {
-        try {
-            UUID userId = currentUserId(authentication);
-            notificationService.deleteNotification(notificationId, userId);
+        UUID userId = currentUserId(authentication);
+        notificationService.deleteNotification(notificationId, userId);
 
-            return buildSuccessResponse(null, "Notification deleted successfully");
-        } catch (Exception e) {
-            return buildErrorResponse(e.getMessage(), 400);
-        }
+        return buildSuccessResponse(null, "Notification deleted successfully");
     }
 }

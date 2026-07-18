@@ -105,7 +105,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("""
             SELECT u
             FROM User u
-            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+            WHERE (:includeDeleted = true OR u.isDeleted = false OR u.isDeleted IS NULL)
               AND (
                     :search IS NULL
                     OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -150,6 +150,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("statusesEmpty") boolean statusesEmpty,
             @Param("joinedFrom") LocalDateTime joinedFrom,
             @Param("joinedTo") LocalDateTime joinedTo,
+            @Param("includeDeleted") boolean includeDeleted,
             Pageable pageable
     );
 

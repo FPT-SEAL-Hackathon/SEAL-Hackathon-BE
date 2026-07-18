@@ -1,10 +1,12 @@
 package com.fpt.swp.sealhackathonbe.team.repository;
 
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +47,11 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
    long countByTeamIdAndActiveTrue(UUID teamId);
 
    long deleteByTeamId(UUID teamId);
+
+   // Batch cho trang quan ly user: nap membership active cua ca page trong
+   // MOT query (kem team + status) thay vi query rieng tung user (N+1).
+   @EntityGraph(attributePaths = {"team", "team.teamStatus"})
+   List<TeamMembers> findByUserIdInAndActiveTrue(Collection<UUID> userIds);
 
    // Hard delete user: lay MOI membership active cua user (co the nhieu event).
    List<TeamMembers> findAllByUserIdAndActiveTrue(UUID userId);
