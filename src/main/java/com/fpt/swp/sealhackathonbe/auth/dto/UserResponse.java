@@ -34,5 +34,9 @@ public class UserResponse {
 
     private String universityName;
 
+    private String bio;
+    private String github;
+    private String portfolio;
+
     private LocalDateTime createdAt;
 }

@@ -180,4 +180,48 @@ public class UserProfileService {
         }
         return value.trim();
     }
+
+    @Transactional
+    public UserResponse updateProfile(User currentUser, com.fpt.swp.sealhackathonbe.user.dto.UpdateProfileRequest request) {
+        String statusName = currentUser.getAccountStatus() != null
+                ? currentUser.getAccountStatus().getStatusName()
+                : "";
+        if ("Suspended".equalsIgnoreCase(statusName) || "Rejected".equalsIgnoreCase(statusName)) {
+            throw new AccessDeniedException("This account is not allowed to update its profile.");
+        }
+
+        String phone = trimToNull(request.getPhone());
+        String role = currentUser.getUserType().getTypeName().trim().replace(" ", "_").toUpperCase();
+        boolean isFpt = "FPT_STUDENT".equals(role) || "ROLE_FPT_STUDENT".equals(role);
+
+        String fptStudentCode = isFpt ? trimToNull(request.getFptStudentCode()) : null;
+        String externalStudentCode = !isFpt ? trimToNull(request.getExternalStudentCode()) : null;
+
+        // Check conflicts for existing phone or student codes
+        List<String> conflictFields = new ArrayList<>();
+        if (phone != null && userRepository.existsByPhoneAndIsDeletedFalseAndUserIdNot(phone, currentUser.getUserId())) {
+            conflictFields.add("phone");
+        }
+        if (fptStudentCode != null && userRepository.existsByFptStudentCodeAndIsDeletedFalseAndUserIdNot(fptStudentCode, currentUser.getUserId())) {
+            conflictFields.add("fptStudentCode");
+        }
+        if (externalStudentCode != null && userRepository.existsByExternalStudentCodeAndIsDeletedFalseAndUserIdNot(externalStudentCode, currentUser.getUserId())) {
+            conflictFields.add("externalStudentCode");
+        }
+        if (!conflictFields.isEmpty()) {
+            throw new ProfileConflictException("Thông tin tài khoản đã tồn tại.", conflictFields, true);
+        }
+
+        currentUser.setFullName(request.getFullName().trim());
+        currentUser.setPhone(phone);
+        currentUser.setFptStudentCode(fptStudentCode);
+        currentUser.setExternalStudentCode(externalStudentCode);
+        currentUser.setUniversityName(trimToNull(request.getUniversityName()));
+        currentUser.setBio(trimToNull(request.getBio()));
+        currentUser.setGithub(trimToNull(request.getGithub()));
+        currentUser.setPortfolio(trimToNull(request.getPortfolio()));
+
+        User saved = userRepository.save(currentUser);
+        return userService.toUserResponse(saved);
+    }
 }

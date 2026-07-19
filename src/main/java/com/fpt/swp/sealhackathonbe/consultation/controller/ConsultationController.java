@@ -133,18 +133,18 @@ public class ConsultationController {
         return ResponseEntity.ok(consultationService.resolveRequest(getCurrentUser(auth), requestId));
     }
 
-    @GetMapping("/expert/teams/{teamId}/note")
+    @GetMapping("/expert/consultation-requests/{requestId}/note")
     @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
-    @Operation(summary = "Get private mentor note for team")
-    public ResponseEntity<TeamMentorNoteResponse> getTeamMentorNote(Authentication auth, @PathVariable UUID teamId) {
-        return ResponseEntity.ok(consultationService.getTeamMentorNote(getCurrentUser(auth), teamId));
+    @Operation(summary = "Get private mentor note for request")
+    public ResponseEntity<TeamMentorNoteResponse> getTeamMentorNote(Authentication auth, @PathVariable UUID requestId) {
+        return ResponseEntity.ok(consultationService.getTeamMentorNote(getCurrentUser(auth), requestId));
     }
 
-    @PutMapping("/expert/teams/{teamId}/note")
+    @PutMapping("/expert/consultation-requests/{requestId}/note")
     @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
-    @Operation(summary = "Update private mentor note for team")
-    public ResponseEntity<TeamMentorNoteResponse> updateTeamMentorNote(Authentication auth, @PathVariable UUID teamId, @RequestBody TeamMentorNoteRequest request) {
-        return ResponseEntity.ok(consultationService.updateTeamMentorNote(getCurrentUser(auth), teamId, request));
+    @Operation(summary = "Update private mentor note for request")
+    public ResponseEntity<TeamMentorNoteResponse> updateTeamMentorNote(Authentication auth, @PathVariable UUID requestId, @RequestBody TeamMentorNoteRequest request) {
+        return ResponseEntity.ok(consultationService.updateTeamMentorNote(getCurrentUser(auth), requestId, request));
     }
 
     // ==========================================
@@ -158,11 +158,11 @@ public class ConsultationController {
         return ResponseEntity.ok(consultationService.getMyMentors(getCurrentUser(auth)));
     }
 
-    @GetMapping("/teams/{teamId}/mentor-notes")
+    @GetMapping("/consultation-requests/{requestId}/mentor-notes")
     @PreAuthorize("hasAnyRole('FPT_STUDENT', 'EXTERNAL_STUDENT')")
-    @Operation(summary = "Get mentor notes for my team")
-    public ResponseEntity<java.util.List<TeamMentorNoteResponse>> getMyTeamMentorNotes(Authentication auth, @PathVariable UUID teamId) {
-        return ResponseEntity.ok(consultationService.getMyTeamMentorNotes(getCurrentUser(auth), teamId));
+    @Operation(summary = "Get mentor notes for my request")
+    public ResponseEntity<java.util.List<TeamMentorNoteResponse>> getMyTeamMentorNotes(Authentication auth, @PathVariable UUID requestId) {
+        return ResponseEntity.ok(consultationService.getMyTeamMentorNotes(getCurrentUser(auth), requestId));
     }
 
     @PostMapping("/consultation-requests")

@@ -44,16 +44,11 @@ public class TeamServiceImpl implements TeamService {
     private static final int TEAM_NAME_MAX_LENGTH = 300;
     private static final String REJECTED_TEAM_NAME_SUFFIX_PREFIX = " [rejected:";
 
-    private static final UUID TEAM_STATUS_FORMING =
-            TeamStatusConstants.FORMING;
-    private static final UUID TEAM_STATUS_PENDING =
-            TeamStatusConstants.PENDING;
-    private static final UUID TEAM_STATUS_ACTIVE =
-            TeamStatusConstants.ACTIVE;
-    private static final UUID TEAM_STATUS_DISQUALIFIED =
-            TeamStatusConstants.DISQUALIFIED;
-    private static final UUID TEAM_STATUS_REJECTED =
-            TeamStatusConstants.REJECTED;
+    private static final UUID TEAM_STATUS_FORMING = TeamStatusConstants.FORMING;
+    private static final UUID TEAM_STATUS_PENDING = TeamStatusConstants.PENDING;
+    private static final UUID TEAM_STATUS_ACTIVE = TeamStatusConstants.ACTIVE;
+    private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_REJECTED = TeamStatusConstants.REJECTED;
 
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
@@ -70,8 +65,10 @@ public class TeamServiceImpl implements TeamService {
     @Override
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest request, UUID currentUserId) {
-        // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt động
-        // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader vào TeamMembers -> map ra DTO.
+        // Luồng tạo team: client gửi event/category/name -> kiểm tra event còn hoạt
+        // động
+        // và cấu hình size -> kiểm tra trùng tên/team active -> lưu Teams -> lưu leader
+        // vào TeamMembers -> map ra DTO.
         Event event = getActiveEvent(request.getEventId());
         teamEventRegistrationService.assertEventOpenForRegistration(request.getEventId());
         // Team-first: tạo team không cần là EventParticipant — chỉ cần student
@@ -127,8 +124,7 @@ public class TeamServiceImpl implements TeamService {
         return teamsRepository.findByEventIdWithActiveMembers(eventId)
                 .stream()
                 .map(team -> {
-                    List<TeamMembers> members =
-                            teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+                    List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
                     return toTeamResponse(team, members);
                 })
                 .toList();
@@ -139,7 +135,7 @@ public class TeamServiceImpl implements TeamService {
     public List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId) {
         Event event = getActiveEvent(eventId);
 
-        return teamsRepository.findByEventIdWithActiveMembers(eventId)
+        return teamsRepository.findByEventId(eventId)
                 .stream()
                 .map(team -> toEligibilityReviewResponse(team, event))
                 .toList();
@@ -158,7 +154,8 @@ public class TeamServiceImpl implements TeamService {
 
         TeamEligibilityReviewResponse review = toEligibilityReviewResponse(team, event);
         if (!Boolean.TRUE.equals(review.getEligibleForCompetition())) {
-            // Nêu rõ lý do (size min/max, hồ sơ thiếu...) để organizer biết cần gì trước khi duyệt.
+            // Nêu rõ lý do (size min/max, hồ sơ thiếu...) để organizer biết cần gì trước
+            // khi duyệt.
             String reasons = review.getIssues() != null && !review.getIssues().isEmpty()
                     ? String.join("; ", review.getIssues())
                     : "unknown reason";
@@ -186,8 +183,7 @@ public class TeamServiceImpl implements TeamService {
                 continue;
             }
 
-            List<TeamMembers> activeMembers =
-                    teamMembersRepository.findByTeamIdAndActiveTrue(existingTeam.getTeamId());
+            List<TeamMembers> activeMembers = teamMembersRepository.findByTeamIdAndActiveTrue(existingTeam.getTeamId());
             if (!activeMembers.isEmpty() && !allActiveMembersRejectedForEvent(existingTeam, activeMembers)) {
                 throw new BusinessConflictException("Team name already exists in this event");
             }
@@ -274,8 +270,7 @@ public class TeamServiceImpl implements TeamService {
                 adminUserId,
                 savedTeam.getEventId(),
                 savedTeam.getTeamName(),
-                note
-        ));
+                note));
 
         return toTeamResponse(savedTeam, members);
     }
@@ -283,7 +278,8 @@ public class TeamServiceImpl implements TeamService {
     @Override
     @Transactional(readOnly = true)
     public TeamResponse getById(UUID teamId) {
-        // Luồng xem team theo ID: teamId -> Teams -> danh sách member active -> TeamResponse.
+        // Luồng xem team theo ID: teamId -> Teams -> danh sách member active ->
+        // TeamResponse.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
@@ -309,7 +305,8 @@ public class TeamServiceImpl implements TeamService {
     @Override
     @Transactional(readOnly = true)
     public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId) {
-        // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ User
+        // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ
+        // User
         // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
@@ -345,7 +342,8 @@ public class TeamServiceImpl implements TeamService {
     @Transactional
     public void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason) {
         // Thành viên được tự rời; leader được kick thành viên hoặc tự rời.
-        // Leader rời sẽ chuyển quyền cho thành viên active tham gia sớm nhất, hoặc rút team nếu không còn ai.
+        // Leader rời sẽ chuyển quyền cho thành viên active tham gia sớm nhất, hoặc rút
+        // team nếu không còn ai.
         Teams team = teamsRepository.findByIdForUpdate(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
@@ -373,8 +371,8 @@ public class TeamServiceImpl implements TeamService {
         teamEventRegistrationService.removePendingRegistration(team.getEventId(), userId);
 
         if (team.getLeaderUserId().equals(userId)) {
-            List<TeamMembers> remainingMembers =
-                    teamMembersRepository.findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(teamId);
+            List<TeamMembers> remainingMembers = teamMembersRepository
+                    .findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(teamId);
 
             if (remainingMembers.isEmpty()) {
                 deleteEmptyFormingTeam(team);
@@ -399,8 +397,7 @@ public class TeamServiceImpl implements TeamService {
                 leaderUserId,
                 team.getEventId(),
                 "Removed From Team",
-                body
-        );
+                body);
     }
 
     private String trimToNull(String value) {
@@ -458,8 +455,7 @@ public class TeamServiceImpl implements TeamService {
         }
         teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, newLeaderUserId)
                 .orElseThrow(() -> new BusinessConflictException(
-                        "New leader must be an active member of this team"
-                ));
+                        "New leader must be an active member of this team"));
 
         team.setLeaderUserId(newLeaderUserId);
         team.setUpdatedAt(LocalDateTime.now());
@@ -470,12 +466,12 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private TeamEligibilityReviewResponse toEligibilityReviewResponse(Teams team, Event event) {
-        List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+        List<TeamMembers> members = teamMembersRepository.findByTeamIdOrderByJoinedAtAsc(team.getTeamId());
         List<TeamEligibilityMemberResponse> memberResponses = members.stream()
                 .map(this::toEligibilityMemberResponse)
                 .toList();
 
-        long activeMemberCount = members.size();
+        long activeMemberCount = members.stream().filter(TeamMembers::getActive).count();
         List<String> issues = new ArrayList<>();
 
         Integer minTeamSize = event.getMinTeamSize();
@@ -544,12 +540,15 @@ public class TeamServiceImpl implements TeamService {
                 issues.add("Phone format is invalid");
             }
 
-            if (isBlank(user.getUniversityName())) {
-                issues.add("University name is missing");
-            }
+            boolean hasFptCode = !isBlank(user.getFptStudentCode());
+            boolean hasExternalCode = !isBlank(user.getExternalStudentCode());
+            boolean hasUniversity = !isBlank(user.getUniversityName());
 
-            if (isBlank(user.getFptStudentCode()) && isBlank(user.getExternalStudentCode())) {
+            if (!hasFptCode && !hasExternalCode) {
                 issues.add("Student code is missing");
+            }
+            if (!hasFptCode && hasExternalCode && !hasUniversity) {
+                issues.add("University name is missing");
             }
 
             String accountStatusName = user.getAccountStatus() != null
@@ -577,8 +576,7 @@ public class TeamServiceImpl implements TeamService {
             response.setUniversityName(user.getUniversityName());
             response.setUserTypeName(user.getUserType() != null ? user.getUserType().getTypeName() : null);
             response.setAccountStatusName(
-                    user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null
-            );
+                    user.getAccountStatus() != null ? user.getAccountStatus().getStatusName() : null);
         }
 
         return response;
@@ -600,8 +598,7 @@ public class TeamServiceImpl implements TeamService {
         auditLog.setEntityId(team.getTeamId());
         auditLog.setActorUserId(adminUserId);
         auditLog.setNewValueJson(
-                "{\"status\":\"Active\",\"note\":\"" + escapeJson(note) + "\"}"
-        );
+                "{\"status\":\"Active\",\"note\":\"" + escapeJson(note) + "\"}");
         auditLog.setOccurredAt(LocalDateTime.now());
         auditLog.setNotes(note);
 
@@ -615,8 +612,7 @@ public class TeamServiceImpl implements TeamService {
         auditLog.setEntityId(team.getTeamId());
         auditLog.setActorUserId(adminUserId);
         auditLog.setNewValueJson(
-                "{\"status\":\"Rejected\",\"note\":\"" + escapeJson(note) + "\"}"
-        );
+                "{\"status\":\"Rejected\",\"note\":\"" + escapeJson(note) + "\"}");
         auditLog.setOccurredAt(LocalDateTime.now());
         auditLog.setNotes(note);
 

@@ -100,10 +100,15 @@ public class TeamMapper {
                 ? user.getAccountStatus().getStatusName()
                 : null;
 
+        boolean hasFptCode = !isBlank(user.getFptStudentCode());
+        boolean hasExternalCode = !isBlank(user.getExternalStudentCode());
+        boolean hasUniversity = !isBlank(user.getUniversityName());
+
+        boolean studentInfoValid = (hasFptCode) || (hasExternalCode && hasUniversity);
+
         return !isBlank(user.getFullName())
                 && hasValidPhoneLength(user.getPhone())
-                && !isBlank(user.getUniversityName())
-                && (!isBlank(user.getFptStudentCode()) || !isBlank(user.getExternalStudentCode()))
+                && studentInfoValid
                 && "Active".equalsIgnoreCase(accountStatusName);
     }
 

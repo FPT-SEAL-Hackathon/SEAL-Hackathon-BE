@@ -54,7 +54,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public NotificationResponse sendNotification(
             UUID recipientUserId,
             UUID sentByUserId,
