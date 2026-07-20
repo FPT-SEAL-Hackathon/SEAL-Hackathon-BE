@@ -49,6 +49,8 @@ public class RoundServiceImpl implements RoundService {
                 .judgingDeadline(request.getJudgingDeadline())
                 .startDate(request.getStartDate())
                 .endDate(request.getStartDate())
+                .appealStartTime(request.getAppealStartTime())
+                .appealEndTime(request.getAppealEndTime())
                 .advancementTopN(request.getAdvancementTopN())
                 .isCalibrationRound(request.getIsCalibrationRound())
                 .build();
@@ -86,6 +88,8 @@ public class RoundServiceImpl implements RoundService {
         round.setEndDate(request.getEndDate());
         round.setSubmissionDeadline(request.getSubmissionDeadline());
         round.setJudgingDeadline(request.getJudgingDeadline());
+        round.setAppealStartTime(request.getAppealStartTime());
+        round.setAppealEndTime(request.getAppealEndTime());
         round.setAdvancementTopN(request.getAdvancementTopN());
         round.setIsCalibrationRound(request.getIsCalibrationRound());
 

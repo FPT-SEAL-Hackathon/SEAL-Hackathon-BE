@@ -76,12 +76,28 @@ public class JudgingServiceImpl implements JudgingService {
         RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
                 .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
 
-        // 4. Check Judging Deadline
+        // 4. Check Judging Deadline and 3-layer tight validation
         Round round = judge.getRound();
-        if (round != null && round.getJudgingDeadline() != null) {
-            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+        if (round != null) {
+            LocalDateTime now = LocalDateTime.now();
+            
+            // Layer 1: Time bounds
+            if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
+                throw new IllegalStateException("The judging period for this round has not started yet.");
+            }
+            if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
                 throw new IllegalStateException("The judging deadline for this round has passed.");
             }
+            
+            // Layer 2: Round Status
+            if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
+                throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
+            }
+        }
+        
+        // Layer 3: Submission Score Finalize check
+        if (Boolean.TRUE.equals(submission.getIsScoreApproved())) {
+            throw new IllegalStateException("The score for this submission has been finalized by the Organizer and cannot be modified.");
         }
 
         // 5. Extract Team and Event from the submission hierarchy
@@ -190,12 +206,28 @@ public class JudgingServiceImpl implements JudgingService {
 
             RoundCriterion criterion = existingJudging.getRoundCriterion();
 
-            // 4. Check Judging Deadline
+            // 4. Check Judging Deadline and 3-layer tight validation
             Round round = existingJudging.getRoundJudge().getRound();
-            if (round != null && round.getJudgingDeadline() != null) {
-                if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+            if (round != null) {
+                LocalDateTime now = LocalDateTime.now();
+                
+                // Layer 1: Time bounds
+                if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
+                    throw new IllegalStateException("The judging period for this round has not started yet.");
+                }
+                if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
                     throw new IllegalStateException("The judging deadline for this round has passed.");
                 }
+                
+                // Layer 2: Round Status
+                if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
+                    throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
+                }
+            }
+            
+            // Layer 3: Submission Score Finalize check
+            if (Boolean.TRUE.equals(existingJudging.getSubmission().getIsScoreApproved())) {
+                throw new IllegalStateException("The score for this submission has been finalized by the Organizer and cannot be modified.");
             }
 
             // 5. Validate that the score value does not exceed the maximum allowed value

@@ -79,6 +79,18 @@ public class RankingController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/admin/rounds/{roundId}/approve-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Approve rankings for a round", description = "Approves and locks the computed rankings for a specific round and category")
+    public ResponseEntity<Void> approveRoundRankings(
+            @PathVariable("roundId") UUID roundId,
+            @RequestParam UUID categoryId,
+            Authentication authentication
+    ){
+        rankingService.approveRoundRankings(roundId, categoryId, currentUserId(authentication));
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/admin/events/{eventId}/publish-rankings")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     @Operation(summary = "Publish rankings for an event", description = "Publishes the computed final rankings for a specific event and category")
@@ -108,6 +120,17 @@ public class RankingController {
             Authentication authentication
     ){
         rankingService.publishCategoryEventRankings(categoryId, currentUserId(authentication));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/admin/categories/{categoryId}/approve-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Approve rankings for a category", description = "Approves and locks the computed final rankings for a specific category")
+    public ResponseEntity<Void> approveCategoryEventRankings(
+            @PathVariable("categoryId") UUID categoryId,
+            Authentication authentication
+    ){
+        rankingService.approveCategoryEventRankings(categoryId, currentUserId(authentication));
         return ResponseEntity.ok().build();
     }
 

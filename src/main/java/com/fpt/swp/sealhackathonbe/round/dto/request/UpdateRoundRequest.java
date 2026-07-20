@@ -17,6 +17,8 @@ public class UpdateRoundRequest {
     private LocalDateTime judgingDeadline;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private LocalDateTime appealStartTime;
+    private LocalDateTime appealEndTime;
     private Integer advancementTopN;
     private Boolean isCalibrationRound;
 }

@@ -15,10 +15,16 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,6 +38,8 @@ public class AppealServiceImpl implements AppealService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final SubmissionsRepository submissionsRepository;
+    private final RoundRepository roundRepository;
 
     @Override
     @Transactional
@@ -50,12 +58,35 @@ public class AppealServiceImpl implements AppealService {
             throw new RuntimeException("This team already has a pending appeal. Please wait for it to be resolved before submitting a new one.");
         }
 
+        // Validate appeal window for the latest round the team participated in
+        List<Submissions> teamSubmissions = submissionsRepository.findByTeamId(request.getTeamId());
+        if (teamSubmissions.isEmpty()) {
+            throw new RuntimeException("Cannot appeal. Team has not submitted to any round yet.");
+        }
+
+        Submissions latestSubmission = teamSubmissions.stream()
+                .max(Comparator.comparing(Submissions::getSubmittedAt, Comparator.nullsFirst(Comparator.naturalOrder())))
+                .orElse(teamSubmissions.get(teamSubmissions.size() - 1));
+
+        Round latestRound = roundRepository.findById(latestSubmission.getRoundId())
+                .orElseThrow(() -> new RuntimeException("Round not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (latestRound.getAppealStartTime() == null || latestRound.getAppealEndTime() == null) {
+            throw new RuntimeException("Appeal time window is not configured for the latest round.");
+        }
+
+        if (now.isBefore(latestRound.getAppealStartTime()) || now.isAfter(latestRound.getAppealEndTime())) {
+            throw new RuntimeException("The appeal window is closed or not yet open for this round.");
+        }
+
         Appeals appeal = Appeals.builder()
                 .team(team)
                 .event(event)
                 .category(category)
                 .title(request.getTitle())
                 .reason(request.getReason())
+                .appealType(request.getAppealType())
                 .status(AppealStatus.PENDING)
                 .createdBy(user)
                 .build();
@@ -107,6 +138,7 @@ public class AppealServiceImpl implements AppealService {
                 .categoryName(appeal.getCategory().getCategoryName())
                 .title(appeal.getTitle())
                 .reason(appeal.getReason())
+                .appealType(appeal.getAppealType())
                 .status(appeal.getStatus())
                 .resolutionNote(appeal.getResolutionNote())
                 .resolvedBy(appeal.getResolvedBy() != null ? appeal.getResolvedBy().getUserId() : null)
