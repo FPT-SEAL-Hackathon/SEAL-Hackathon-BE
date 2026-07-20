@@ -58,9 +58,15 @@ public class ProfileController {
         }
 
         if (request.getUniversityName() != null) {
-            user.setUniversityName(
-                    request.getUniversityName().isBlank() ? null : request.getUniversityName().trim()
-            );
+            String universityName = request.getUniversityName().trim();
+            // External Student bắt buộc có trường (điều kiện eligibility lập team/
+            // đăng ký event) — không cho tự xóa trắng rồi kẹt ở bước đăng ký.
+            boolean isExternalStudent = user.getUserType() != null
+                    && "External Student".equalsIgnoreCase(user.getUserType().getTypeName());
+            if (universityName.isBlank() && isExternalStudent) {
+                throw new BadRequestException("University is required for External Student.");
+            }
+            user.setUniversityName(universityName.isBlank() ? null : universityName);
         }
 
         User saved = userRepository.save(user);
