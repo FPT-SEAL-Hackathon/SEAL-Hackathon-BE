@@ -12,8 +12,6 @@ public class CreateConsultationRequestRequest {
     @Size(max = 150)
     private String title;
 
-    private java.util.UUID mentorId;
-
     @NotBlank
     @Size(max = 3000)
     private String description;

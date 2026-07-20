@@ -190,9 +190,7 @@ public class UserHardDeleteService {
         if (categoryMentorRepository.existsByMentor_UserId(userId)) {
             blockers.add("category mentor assignments");
         }
-        if (consultationRequestRepository.existsByMentor_UserId(userId)) {
-            blockers.add("consultations as mentor");
-        }
+
         if (teamMilestoneRepository.existsByMentorUserId(userId)) {
             blockers.add("team milestones as mentor");
         }
