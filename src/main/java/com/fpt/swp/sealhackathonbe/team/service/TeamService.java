@@ -20,6 +20,8 @@ public interface TeamService {
 
     List<TeamResponse> getByEventId(UUID eventId);
 
+    List<TeamResponse> getTeamsByUserId(UUID userId);
+
     List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId);
 
     TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId);

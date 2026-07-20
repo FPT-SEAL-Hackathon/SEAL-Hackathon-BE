@@ -132,6 +132,18 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TeamResponse> getTeamsByUserId(UUID userId) {
+        return teamsRepository.findByUserId(userId)
+                .stream()
+                .map(team -> {
+                    List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(team.getTeamId());
+                    return toTeamResponse(team, members);
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId) {
         Event event = getActiveEvent(eventId);
 

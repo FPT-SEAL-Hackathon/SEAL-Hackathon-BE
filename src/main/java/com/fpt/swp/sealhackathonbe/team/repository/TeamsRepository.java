@@ -39,6 +39,15 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
     List<Teams> findByEventIdWithActiveMembers(@Param("eventId") UUID eventId);
     List<Teams> findByLeaderUserId(UUID leaderUserId);
 
+    @Query("""
+            select distinct team
+            from Teams team
+            left join TeamMembers member on member.teamId = team.teamId
+            where (team.leaderUserId = :userId)
+               or (member.userId = :userId and member.active = true)
+            """)
+    List<Teams> findByUserId(@Param("userId") UUID userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select team from Teams team where team.teamId = :teamId")
     Optional<Teams> findByIdForUpdate(@Param("teamId") UUID teamId);
