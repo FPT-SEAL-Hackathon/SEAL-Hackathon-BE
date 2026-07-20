@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,6 +64,16 @@ public class JudgingController {
             Authentication authentication) {
         judgingService.updateJudging(updateScoreSubmissionDTOs);
         return ResponseEntity.ok(Map.of("message", "Scores have been updated successfully by the Server."));
+    }
+
+    @DeleteMapping("/judging/submission/{submissionId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Delete judging scores", description = "Allows judges to delete their previously submitted scores for a submission")
+    public ResponseEntity<Map<String, String>> deleteJudging(
+            @PathVariable("submissionId") UUID submissionId,
+            @RequestParam(value = "reason", required = false) String reason) {
+        judgingService.deleteJudging(submissionId, reason);
+        return ResponseEntity.ok(Map.of("message", "Scores have been deleted successfully."));
     }
 
     @PostMapping("/judging/batch-scores")

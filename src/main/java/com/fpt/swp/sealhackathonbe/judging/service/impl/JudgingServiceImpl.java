@@ -395,4 +395,64 @@ public class JudgingServiceImpl implements JudgingService {
         submission.setIsScoreApproved(false);
         submissionRepository.save(submission);
     }
+
+    @Override
+    @Transactional
+    public void deleteJudging(UUID submissionId, String reason) {
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + submissionId));
+
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
+                .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
+
+        Round round = judge.getRound();
+        if (round != null && round.getJudgingDeadline() != null) {
+            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                throw new IllegalStateException("The judging deadline for this round has passed.");
+            }
+        }
+
+        Teams team = submission.getTeam();
+        Event event = (team != null) ? team.getEvent() : null;
+        if (event == null) {
+            throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
+        }
+
+        List<Judging> existingScores = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId());
+        List<Judging> scoresToDelete = existingScores.stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                .collect(Collectors.toList());
+
+        if (scoresToDelete.isEmpty()) {
+            throw new IllegalStateException("No active scores found for this submission to delete.");
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+        for (Judging judging : scoresToDelete) {
+            judging.setIsActive(false);
+
+            String oldComment = judging.getComment() != null ? judging.getComment().replace("\"", "\\\"") : "";
+            String oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", judging.getScoreValue(), oldComment);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setScore(judging);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setOldValue(oldValue);
+            auditLog.setNewValue(null);
+            auditLog.setReason(reason != null && !reason.trim().isEmpty() ? reason : "Judge removed their scores");
+            auditLogs.add(auditLog);
+        }
+
+        judgingRepository.saveAll(scoresToDelete);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+    }
 }
