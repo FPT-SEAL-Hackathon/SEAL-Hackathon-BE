@@ -19,4 +19,5 @@ public interface JudgingService {
     Map<UUID, List<Judging>> getJudgingsGroupedBySubmissionIds(List<UUID> submissionIds);
     List<EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId);
     void rejectSubmissionScores(UUID submissionId, String reason);
+    void deleteJudging(UUID submissionId, String reason);
 }

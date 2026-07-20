@@ -17,4 +17,5 @@ public interface TeamDisqualificationService {
 
     // Lay team bi loai theo round va category, sap xep ban ghi loai moi nhat truoc.
     List<DisqualifiedTeamResponse> getDisqualifiedTeams(UUID roundId, UUID categoryId);
+    List<DisqualifiedTeamResponse> getDisqualifiedTeamsByCategory(UUID categoryId);
 }
