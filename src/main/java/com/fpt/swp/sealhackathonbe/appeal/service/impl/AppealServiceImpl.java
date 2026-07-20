@@ -45,6 +45,11 @@ public class AppealServiceImpl implements AppealService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        boolean hasPendingAppeal = appealRepository.existsByTeam_TeamIdAndStatus(request.getTeamId(), AppealStatus.PENDING);
+        if (hasPendingAppeal) {
+            throw new RuntimeException("This team already has a pending appeal. Please wait for it to be resolved before submitting a new one.");
+        }
+
         Appeals appeal = Appeals.builder()
                 .team(team)
                 .event(event)

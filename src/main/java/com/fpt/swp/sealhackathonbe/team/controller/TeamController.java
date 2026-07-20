@@ -248,6 +248,13 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get all teams the current user belongs to")
+    @GetMapping("/teams/mine")
+    public ResponseEntity<List<TeamResponse>> getMyTeams(Authentication authentication) {
+        UUID userId = currentUserId(authentication);
+        return ResponseEntity.ok(teamService.getTeamsByUserId(userId));
+    }
+
     // Nguoi xin xem cac request PENDING cua minh de biet trang thai va co the huy.
     @Operation(summary = "List my pending join requests")
     @GetMapping("/teams/requests/mine")
