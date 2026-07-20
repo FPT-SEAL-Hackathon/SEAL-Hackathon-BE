@@ -112,6 +112,15 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<DisqualifiedTeamResponse> getDisqualifiedTeamsByCategory(UUID categoryId) {
+        return disqualificationsRepository.findActiveTeamDisqualificationsByCategory(categoryId)
+                .stream()
+                .map(TeamMapper::toDisqualifiedTeamResponse)
+                .toList();
+    }
+
     private void suspendEventParticipants(Teams team) {
         ParticipantStatus suspendedStatus = participantStatusRepository
                 .findByStatusNameIgnoreCase(PARTICIPANT_STATUS_SUSPENDED)
