@@ -70,6 +70,9 @@ public class UserController {
             @RequestParam(required = false) String accountStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedTo,
+            // Cho admin xem cả account đã soft-delete (hiển thị mờ, readonly);
+            // default false để không đổi contract với client cũ.
+            @RequestParam(defaultValue = "false") boolean includeDeleted,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
@@ -82,6 +85,7 @@ public class UserController {
                 splitCsv(firstNonBlankParam(status, accountStatus)),
                 joinedFrom,
                 joinedTo,
+                includeDeleted,
                 toPageable(page, size, sortBy, sortDir)
         );
         return ResponseEntity.ok(response);

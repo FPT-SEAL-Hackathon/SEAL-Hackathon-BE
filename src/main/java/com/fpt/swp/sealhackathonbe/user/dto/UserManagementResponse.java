@@ -31,6 +31,8 @@ public class UserManagementResponse {
     private String universityName;
     private LocalDateTime accountExpiresAt;
     private Boolean emailVerified;
+    // Soft-deleted (isDeleted=1): hiển thị mờ + readonly trên trang quản lý.
+    private Boolean deleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

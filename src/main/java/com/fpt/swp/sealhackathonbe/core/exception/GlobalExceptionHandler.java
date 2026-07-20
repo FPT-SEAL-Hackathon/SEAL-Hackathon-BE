@@ -217,6 +217,19 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage(), null);
     }
 
+    // Hai request cùng sửa/xóa một bản ghi (ví dụ 2 organizer hard-delete cùng
+    // email): trả 409 để client retry, thay vì 500 do StaleObjectState.
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            org.springframework.dao.OptimisticLockingFailureException ex) {
+        return build(
+                HttpStatus.CONFLICT,
+                "CONCURRENT_MODIFICATION",
+                "This record was changed by another request. Please refresh and try again.",
+                null
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at path {}", request.getRequestURI(), ex);
