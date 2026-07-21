@@ -4,6 +4,8 @@ import com.fpt.swp.sealhackathonbe.appeal.dto.AppealRequestDTO;
 import com.fpt.swp.sealhackathonbe.appeal.dto.AppealResolutionDTO;
 import com.fpt.swp.sealhackathonbe.appeal.dto.AppealResponseDTO;
 import com.fpt.swp.sealhackathonbe.appeal.service.AppealService;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,16 +25,17 @@ import java.util.UUID;
 public class AppealController {
 
     private final AppealService appealService;
+    private final UserRepository userRepository;
 
     private UUID currentUserId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Unauthorized");
         }
-        try {
-            return UUID.fromString(authentication.getName());
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid User ID in token");
+        User user = userRepository.findByEmail(authentication.getName());
+        if (user == null) {
+            throw new RuntimeException("Authenticated user not found");
         }
+        return user.getUserId();
     }
 
     @PostMapping
