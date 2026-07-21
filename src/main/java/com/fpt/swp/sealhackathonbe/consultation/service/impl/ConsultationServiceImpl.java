@@ -593,7 +593,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
                         .request(req)
                         .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
-                        .content("[AI Mentor]: Câu hỏi này vượt quá dữ liệu của mình. Hệ thống đã báo cho các Mentor thật để hỗ trợ bạn nhé!")
+                        .content("[AI Mentor]: This question exceeds my knowledge base. The system has notified the human Mentors to assist you!")
                         .build();
                 messageRepository.save(aiMsg);
             }

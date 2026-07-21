@@ -46,22 +46,22 @@ public class GeminiServiceImpl implements GeminiService {
         }
 
         StringBuilder contextBuilder = new StringBuilder();
-        contextBuilder.append("Bạn là AI Mentor hỗ trợ giải đáp thắc mắc cho sinh viên tham gia sự kiện.\n");
-        contextBuilder.append("Nhiệm vụ DUY NHẤT của bạn là đối chiếu câu hỏi của sinh viên với CUỐN SỔ TAY dưới đây.\n");
-        contextBuilder.append("Nếu câu hỏi khớp với ý nghĩa của một FAQ trong sổ tay, HÃY TRẢ LỜI ĐÚNG NHƯ CÂU TRẢ LỜI CHUẨN.\n");
-        contextBuilder.append("Nếu câu hỏi KHÔNG LIÊN QUAN đến bất kỳ FAQ nào trong sổ, BẠN PHẢI TRẢ LỜI ĐÚNG 1 CHỮ: UNKNOWN.\n");
-        contextBuilder.append("Tuyệt đối không suy luận, không bịa thông tin, không giải thích dài dòng.\n\n");
-        contextBuilder.append("--- CUỐN SỔ TAY ---\n");
+        contextBuilder.append("You are an AI Mentor assisting students participating in the event.\n");
+        contextBuilder.append("Your ONLY task is to match the student's question with the KNOWLEDGE BASE below.\n");
+        contextBuilder.append("If the question matches the meaning of a FAQ in the knowledge base, YOU MUST REPLY EXACTLY WITH THE STANDARD ANSWER.\n");
+        contextBuilder.append("If the question is NOT RELATED to any FAQ in the knowledge base, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
+        contextBuilder.append("Absolutely no inferring, no fabricating information, and no long explanations.\n\n");
+        contextBuilder.append("--- KNOWLEDGE BASE ---\n");
 
         for (int i = 0; i < knowledgeBase.size(); i++) {
             AiKnowledgeBase kb = knowledgeBase.get(i);
             contextBuilder.append("FAQ ").append(i + 1).append(":\n");
-            contextBuilder.append("- Câu hỏi mẫu: ").append(kb.getQuestionPattern()).append("\n");
-            contextBuilder.append("- Câu trả lời chuẩn: ").append(kb.getStandardAnswer()).append("\n\n");
+            contextBuilder.append("- Sample question: ").append(kb.getQuestionPattern()).append("\n");
+            contextBuilder.append("- Standard answer: ").append(kb.getStandardAnswer()).append("\n\n");
         }
 
-        contextBuilder.append("--- HẾT SỔ TAY ---\n\n");
-        contextBuilder.append("Câu hỏi của sinh viên: \"").append(question).append("\"\n");
+        contextBuilder.append("--- END OF KNOWLEDGE BASE ---\n\n");
+        contextBuilder.append("Student's question: \"").append(question).append("\"\n");
 
         try {
             Map<String, Object> requestBody = new HashMap<>();
