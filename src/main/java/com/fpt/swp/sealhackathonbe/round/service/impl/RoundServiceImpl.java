@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.round.service.impl;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
+import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.round.dto.request.CreateRoundRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.request.UpdateRoundRequest;
 import com.fpt.swp.sealhackathonbe.round.dto.response.RoundResponse;
@@ -16,8 +17,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,15 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
         int currentRound = roundRepository.findMaxRoundOrderByCategory(categoryId);
         int nextRound = currentRound + 1;
+
+        validateRoundTimeline(
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getSubmissionDeadline(),
+                request.getJudgingDeadline(),
+                category.getEvent()
+        );
+
         Round round = Round.builder()
                 .roundId(UUID.randomUUID())
                 .category(category)
@@ -48,7 +61,7 @@ public class RoundServiceImpl implements RoundService {
                 .submissionDeadline(request.getSubmissionDeadline())
                 .judgingDeadline(request.getJudgingDeadline())
                 .startDate(request.getStartDate())
-                .endDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .advancementTopN(request.getAdvancementTopN())
                 .isCalibrationRound(request.getIsCalibrationRound())
                 .build();
@@ -77,7 +90,6 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         RoundStatus roundStatus = roundStatusRepository.findById(request.getRoundStatusId())
                         .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
-
         round.setRoundName(request.getRoundName());
         round.setDescription(request.getDescription());
         round.setRoundOrder(request.getRoundOrder());
@@ -88,6 +100,14 @@ public class RoundServiceImpl implements RoundService {
         round.setJudgingDeadline(request.getJudgingDeadline());
         round.setAdvancementTopN(request.getAdvancementTopN());
         round.setIsCalibrationRound(request.getIsCalibrationRound());
+
+        validateRoundTimeline(
+                round.getStartDate(),
+                round.getEndDate(),
+                round.getSubmissionDeadline(),
+                round.getJudgingDeadline(),
+                round.getCategory().getEvent()
+        );
 
         return roundMapper.toRoundResponse(roundRepository.save(round));
     }
@@ -127,5 +147,42 @@ public class RoundServiceImpl implements RoundService {
         return round.getAdvancementTopN();
     }
 
+    private void validateRoundTimeline(LocalDateTime startDate, LocalDateTime endDate, LocalDateTime submissionDeadline, LocalDateTime judgingDeadline, Event event) {
+        if (startDate != null && endDate != null && !startDate.isBefore(endDate)) {
+            throw new BadRequestException("Start date must be strictly before end date");
+        }
+
+        if (event != null) {
+            LocalDateTime earliestAllowed = event.getEventStartDate().atStartOfDay();
+            LocalDateTime latestAllowed = event.getEventEndDate().atTime(LocalTime.MAX);
+
+            if (startDate != null && startDate.isBefore(earliestAllowed)) {
+                throw new BadRequestException("Round start date cannot be before event start date");
+            }
+            if (endDate != null && endDate.isAfter(latestAllowed)) {
+                throw new BadRequestException("Round end date cannot be after event end date");
+            }
+        }
+
+        if (submissionDeadline != null) {
+            if (startDate != null && submissionDeadline.isBefore(startDate)) {
+                throw new BadRequestException("Submission deadline must be after or equal to start date");
+            }
+            if (endDate != null && submissionDeadline.isAfter(endDate)) {
+                throw new BadRequestException("Submission deadline must be before or equal to end date");
+            }
+        }
+        if (judgingDeadline != null) {
+            if (submissionDeadline != null && judgingDeadline.isBefore(submissionDeadline)) {
+                throw new BadRequestException("Judging deadline must be after or equal to submission deadline");
+            } else if (startDate != null && judgingDeadline.isBefore(startDate)) {
+                throw new BadRequestException("Judging deadline must be after or equal to start date");
+            }
+            
+            if (endDate != null && judgingDeadline.isAfter(endDate)) {
+                throw new BadRequestException("Judging deadline must be before or equal to end date");
+            }
+        }
+    }
 
 }
