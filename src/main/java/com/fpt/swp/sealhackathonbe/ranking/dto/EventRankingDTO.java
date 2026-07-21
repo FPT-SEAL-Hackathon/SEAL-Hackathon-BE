@@ -24,4 +24,5 @@ public class EventRankingDTO {
     private Integer rankPosition;
     private LocalDateTime computedAt;
     private Boolean isPublished;
+    private Boolean isApproved;
 }

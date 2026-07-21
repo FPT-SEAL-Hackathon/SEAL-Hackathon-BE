@@ -12,6 +12,7 @@ import java.util.UUID;
 
 public interface JudgingService {
     List<JudgingDTO> getScoresBySubmissionAndJudgeId(UUID submissionId);
+    List<JudgingDTO> getPublishedScoresBySubmission(UUID submissionId);
     List<JudgingDTO> getBatchScoresBySubmissionIds(com.fpt.swp.sealhackathonbe.judging.dto.BatchScoreRequestDTO request);
     List<JudgingDTO> getScoresByJudgeId(UUID judgeUserId);
     void recordJudging(List<ScoreSubmissionDTO> dtos);

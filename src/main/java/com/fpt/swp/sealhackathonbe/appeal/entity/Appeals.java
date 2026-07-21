@@ -48,6 +48,10 @@ public class Appeals {
     @Column(name = "Status", nullable = false)
     private AppealStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "AppealType", nullable = false)
+    private AppealType appealType;
+
     @Column(name = "ResolutionNote", columnDefinition = "NVARCHAR(MAX)")
     private String resolutionNote;
 

@@ -22,4 +22,7 @@ public class AppealRequestDTO {
     
     @NotBlank(message = "Reason is required")
     private String reason;
+
+    @NotNull(message = "Appeal type is required")
+    private com.fpt.swp.sealhackathonbe.appeal.entity.AppealType appealType;
 }
