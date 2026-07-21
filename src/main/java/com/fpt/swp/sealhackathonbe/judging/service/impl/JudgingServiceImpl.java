@@ -31,6 +31,9 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
+import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
+import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +46,8 @@ public class JudgingServiceImpl implements JudgingService {
     private final AuthenticationServiceImpl authenticationServiceImpl;
     private final RoundJudgeService roundJudgeService;
     private final RoundJudgeRepository roundJudgeRepository;
+    private final TeamMembersRepository teamMembersRepository;
+    private final RoundRankingRepository roundRankingRepository;
 
 
     @Override
@@ -345,6 +350,59 @@ public class JudgingServiceImpl implements JudgingService {
                 .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
     }
+    @Override
+    @Transactional(readOnly = true)
+    public List<JudgingDTO> getPublishedScoresBySubmission(UUID submissionId) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
+        }
+
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+
+        UUID teamId = submission.getTeam().getTeamId();
+        UUID roundId = submission.getRoundId();
+        UUID categoryId = submission.getTeam().getCategoryId();
+
+        // 1. Verify user is in the team
+        boolean isTeamMember = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, actor.getUserId()).isPresent();
+        if (!isTeamMember) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not a member of this team.");
+        }
+
+        // 2. Check if the RoundRanking for this team and round is published
+        Optional<RoundRanking> roundRankingOpt = roundRankingRepository
+                .findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(roundId, categoryId, teamId);
+
+        if (roundRankingOpt.isEmpty() || !Boolean.TRUE.equals(roundRankingOpt.get().getIsPublished())) {
+            throw new org.springframework.security.access.AccessDeniedException("Results are not published yet.");
+        }
+
+        // 3. Fetch scores and anonymize judges
+        List<Judging> judgings = judgingRepository.findBySubmission_SubmissionIdIn(Collections.singletonList(submissionId));
+        
+        // Group by judge ID to assign consistent "Judge 1", "Judge 2" numbers
+        Map<UUID, String> judgeAnonymizationMap = new HashMap<>();
+        int judgeCounter = 1;
+        
+        List<JudgingDTO> results = new ArrayList<>();
+        for (Judging j : judgings) {
+            if (!Boolean.TRUE.equals(j.getIsActive())) continue;
+            
+            UUID judgeUserId = j.getRoundJudge().getJudge().getUserId();
+            if (!judgeAnonymizationMap.containsKey(judgeUserId)) {
+                judgeAnonymizationMap.put(judgeUserId, "Judge " + judgeCounter++);
+            }
+            
+            JudgingDTO dto = convertToDTO(j);
+            dto.setJudgeName(judgeAnonymizationMap.get(judgeUserId)); // Override with anonymous name
+            results.add(dto);
+        }
+
+        return results;
+    }
+
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
