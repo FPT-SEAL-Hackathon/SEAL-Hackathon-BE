@@ -98,6 +98,58 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RepositoryIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleRepositoryIntegrationException(RepositoryIntegrationException ex) {
+        HttpStatus status;
+        switch (ex.getErrorCode()) {
+            case INVALID_GITHUB_REPOSITORY_URL:
+                status = HttpStatus.BAD_REQUEST;
+                break;
+            case INVALID_GITHUB_TOKEN:
+                status = HttpStatus.UNAUTHORIZED;
+                break;
+            case GITHUB_REPOSITORY_FORBIDDEN:
+            case EVENT_REPOSITORY_ACCESS_DENIED:
+                status = HttpStatus.FORBIDDEN;
+                break;
+            case GITHUB_REPOSITORY_NOT_FOUND:
+            case REPOSITORY_INTEGRATION_NOT_FOUND:
+                status = HttpStatus.NOT_FOUND;
+                break;
+            case REPOSITORY_ALREADY_CONNECTED:
+                status = HttpStatus.CONFLICT;
+                break;
+            case REPOSITORY_SYNC_ALREADY_RUNNING:
+                status = HttpStatus.CONFLICT;
+                break;
+            case GITHUB_RATE_LIMITED:
+                status = HttpStatus.TOO_MANY_REQUESTS;
+                break;
+            case GITHUB_UPSTREAM_ERROR:
+                status = HttpStatus.BAD_GATEWAY;
+                break;
+            case GITHUB_TIMEOUT:
+                status = HttpStatus.GATEWAY_TIMEOUT;
+                break;
+            case TOKEN_ENCRYPTION_CONFIGURATION_ERROR:
+            default:
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+                break;
+        }
+
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(status);
+        if (ex.getRetryAfter() != null) {
+            builder.header("Retry-After", ex.getRetryAfter());
+        }
+
+        return builder.body(ErrorResponse.builder()
+                .status(status.value())
+                .error(ex.getErrorCode().name())
+                .message(ex.getMessage() != null ? ex.getMessage() : "Repository integration error")
+                .path(currentPath())
+                .build());
+    }
+
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<ErrorResponse> handleBadRequestExceptions(Exception ex) {
         return build(

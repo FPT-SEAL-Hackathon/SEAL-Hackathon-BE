@@ -48,6 +48,8 @@ public class RoundServiceImpl implements RoundService {
                 request.getEndDate(),
                 request.getSubmissionDeadline(),
                 request.getJudgingDeadline(),
+                request.getAppealStartTime(),
+                request.getAppealEndTime(),
                 category.getEvent()
         );
 
@@ -110,6 +112,8 @@ public class RoundServiceImpl implements RoundService {
                 round.getEndDate(),
                 round.getSubmissionDeadline(),
                 round.getJudgingDeadline(),
+                round.getAppealStartTime(),
+                round.getAppealEndTime(),
                 round.getCategory().getEvent()
         );
 
@@ -151,7 +155,15 @@ public class RoundServiceImpl implements RoundService {
         return round.getAdvancementTopN();
     }
 
-    private void validateRoundTimeline(LocalDateTime startDate, LocalDateTime endDate, LocalDateTime submissionDeadline, LocalDateTime judgingDeadline, Event event) {
+    private void validateRoundTimeline(
+            LocalDateTime startDate, 
+            LocalDateTime endDate, 
+            LocalDateTime submissionDeadline, 
+            LocalDateTime judgingDeadline, 
+            LocalDateTime appealStartTime,
+            LocalDateTime appealEndTime,
+            Event event
+    ) {
         if (startDate != null && endDate != null && !startDate.isBefore(endDate)) {
             throw new BadRequestException("Start date must be strictly before end date");
         }
@@ -166,6 +178,7 @@ public class RoundServiceImpl implements RoundService {
             if (endDate != null && endDate.isAfter(latestAllowed)) {
                 throw new BadRequestException("Round end date cannot be after event end date");
             }
+
         }
 
         if (submissionDeadline != null) {
@@ -186,6 +199,10 @@ public class RoundServiceImpl implements RoundService {
             if (endDate != null && judgingDeadline.isAfter(endDate)) {
                 throw new BadRequestException("Judging deadline must be before or equal to end date");
             }
+        }
+        
+        if (appealStartTime != null && appealEndTime != null && !appealStartTime.isBefore(appealEndTime)) {
+            throw new BadRequestException("Appeal start time must be strictly before appeal end time");
         }
     }
 

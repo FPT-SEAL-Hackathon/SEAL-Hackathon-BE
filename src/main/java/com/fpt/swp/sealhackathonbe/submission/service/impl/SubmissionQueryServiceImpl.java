@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionHistoryRepository;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
@@ -30,17 +31,32 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     private final SubmissionHistoryRepository submissionHistoryRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final EventParticipantService eventParticipantService;
+    private final com.fpt.swp.sealhackathonbe.integration.repository.repository.SubmissionRepositoryEntityRepository submissionRepositoryEntityRepository;
+    private final com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService;
 
     public SubmissionQueryServiceImpl(
             SubmissionsRepository submissionsRepository,
             SubmissionHistoryRepository submissionHistoryRepository,
             TeamMembersRepository teamMembersRepository,
-            EventParticipantService eventParticipantService
+            EventParticipantService eventParticipantService,
+            com.fpt.swp.sealhackathonbe.integration.repository.repository.SubmissionRepositoryEntityRepository submissionRepositoryEntityRepository,
+            com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService
     ) {
         this.submissionsRepository = submissionsRepository;
         this.submissionHistoryRepository = submissionHistoryRepository;
         this.teamMembersRepository = teamMembersRepository;
         this.eventParticipantService = eventParticipantService;
+        this.submissionRepositoryEntityRepository = submissionRepositoryEntityRepository;
+        this.submissionRepositoryService = submissionRepositoryService;
+    }
+
+    private SubmissionResponse enrichResponse(Submissions submission) {
+        SubmissionResponse response = SubmissionMapper.toSubmissionResponse(submission);
+        if (response != null && response.getSubmissionId() != null) {
+            submissionRepositoryEntityRepository.findBySubmission_SubmissionId(response.getSubmissionId())
+                    .ifPresent(repoEntity -> response.setRepository(submissionRepositoryService.mapToResponse(repoEntity)));
+        }
+        return response;
     }
 
     @Override
@@ -48,7 +64,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     public SubmissionResponse getSubmissionById(UUID submissionId) {
         // Controller -> service -> repository.findById -> mapper -> response.
         return submissionsRepository.findById(submissionId)
-                .map(SubmissionMapper::toSubmissionResponse)
+                .map(this::enrichResponse)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
     }
 
@@ -61,7 +77,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         eventParticipantService.assertActiveParticipant(membership.getTeam().getEventId(), currentUserId);
 
         return submissionsRepository.findByTeamIdAndRoundId(teamId, roundId)
-                .map(SubmissionMapper::toSubmissionResponse)
+                .map(this::enrichResponse)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
     }
 
@@ -71,7 +87,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         // Tra ve tat ca submission trong mot round cho man hinh danh sach/review.
         return submissionsRepository.findByRoundId(roundId)
                 .stream()
-                .map(SubmissionMapper::toSubmissionResponse)
+                .map(this::enrichResponse)
                 .toList();
     }
 
@@ -85,7 +101,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
                         List.of(SUBMISSION_STATUS_SCORED, SUBMISSION_STATUS_DISQUALIFIED)
                 )
                 .stream()
-                .map(SubmissionMapper::toSubmissionResponse)
+                .map(this::enrichResponse)
                 .toList();
     }
 
@@ -95,7 +111,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         // Luong du lieu: EventID -> Team.EventID -> Submissions -> SubmissionResponse.
         return submissionsRepository.findByEventId(eventId)
                 .stream()
-                .map(SubmissionMapper::toSubmissionResponse)
+                .map(this::enrichResponse)
                 .toList();
     }
 

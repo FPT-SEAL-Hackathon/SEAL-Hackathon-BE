@@ -44,6 +44,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final RoundRepository roundRepository;
     private final RoundRankingRepository roundRankingRepository;
     private final EntityManager entityManager;
+    private final com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
@@ -53,7 +54,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             RoundRepository roundRepository,
             RoundRankingRepository roundRankingRepository,
             EntityManager entityManager,
-            EventParticipantService eventParticipantService) {
+            EventParticipantService eventParticipantService,
+            com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService) {
         this.submissionsRepository = submissionsRepository;
         this.submissionHistoryRepository = submissionHistoryRepository;
         this.teamsRepository = teamsRepository;
@@ -61,6 +63,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         this.roundRepository = roundRepository;
         this.roundRankingRepository = roundRankingRepository;
         this.entityManager = entityManager;
+        this.submissionRepositoryService = submissionRepositoryService;
     }
 
     @Override
@@ -85,7 +88,15 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
 
         recordSubmissionHistory(submission);
 
-        return SubmissionMapper.toSubmissionResponse(submission);
+        SubmissionResponse response = SubmissionMapper.toSubmissionResponse(submission);
+        if (request.getRepositoryUrl() != null && !request.getRepositoryUrl().trim().isEmpty()) {
+            com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata metadata = 
+                    submissionRepositoryService.fetchMetadataOutsideTx(request.getRepositoryUrl());
+            com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse repoResp = 
+                    submissionRepositoryService.saveOrUpdateSubmissionRepository(submission.getSubmissionId(), request.getRepositoryUrl(), metadata);
+            response.setRepository(repoResp);
+        }
+        return response;
     }
 
     @Override
