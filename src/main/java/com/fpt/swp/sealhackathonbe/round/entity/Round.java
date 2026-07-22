@@ -48,6 +48,12 @@ public class Round {
     @Column(name = "JudgingDeadline")
     private LocalDateTime judgingDeadline;
 
+    @Column(name = "AppealStartTime")
+    private LocalDateTime appealStartTime;
+
+    @Column(name = "AppealEndTime")
+    private LocalDateTime appealEndTime;
+
     @Column(name = "AdvancementTopN")
     private Integer advancementTopN;
 

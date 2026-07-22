@@ -15,6 +15,7 @@ public interface RankingService {
      */
     List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId);
     void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId);
+    void approveRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId);
 
     /**
      * Compute final event rankings.
@@ -26,6 +27,7 @@ public interface RankingService {
 
     List<EventRankingDTO> computeCategoryEventRankings(UUID categoryId);
     void publishCategoryEventRankings(UUID categoryId, UUID adminUserId);
+    void approveCategoryEventRankings(UUID categoryId, UUID adminUserId);
 
     List<EventRankingDTO> getCategoryLeaderboard(UUID eventId, UUID categoryId);
     List<EventRankingDTO> getPublishedCategoryLeaderboard(UUID eventId, UUID categoryId);

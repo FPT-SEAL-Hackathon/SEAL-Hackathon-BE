@@ -1,5 +1,8 @@
 package com.fpt.swp.sealhackathonbe.consultation.service.impl;
 
+import com.fpt.swp.sealhackathonbe.ai.entity.AiKnowledgeBase;
+import com.fpt.swp.sealhackathonbe.ai.repository.AiKnowledgeBaseRepository;
+import com.fpt.swp.sealhackathonbe.ai.service.GeminiService;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.entity.CategoryMentor;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository;
@@ -50,6 +53,8 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final RoundJudgeRepository roundJudgeRepository;
     private final TeamMentorNoteRepository teamMentorNoteRepository;
     private final NotificationService notificationService;
+    private final AiKnowledgeBaseRepository aiKnowledgeBaseRepository;
+    private final GeminiService geminiService;
 
     @Override
     @Transactional
@@ -307,6 +312,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TeamMentorNoteResponse getTeamMentorNote(User mentor, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -545,20 +551,64 @@ public class ConsultationServiceImpl implements ConsultationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot send message in closed request");
         }
 
-        ConsultationMessage msg = ConsultationMessage.builder()
-                .request(req)
-                .sender(user)
-                .content(messageDto.getContent())
-                .attachmentUrl(messageDto.getAttachmentUrl())
-                .build();
-        messageRepository.save(msg);
+        boolean senderIsMentor = isMentorRole(user);
+
+        // -- AI MENTOR INTERCEPTION LOGIC --
+        if (!senderIsMentor) {
+            String question = messageDto.getContent();
+            List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
+
+            String aiResponse = geminiService.askAi(question, kb);
+
+            ConsultationMessage studentMsg = ConsultationMessage.builder()
+                    .request(req)
+                    .sender(user)
+                    .content(question)
+                    .attachmentUrl(messageDto.getAttachmentUrl())
+                    .build();
+            messageRepository.save(studentMsg);
+
+            if (aiResponse.startsWith("API_ERROR: ")) {
+                ConsultationMessage aiMsg = ConsultationMessage.builder()
+                        .request(req)
+                        .sender(req.getEvent().getCreatedBy())
+                        .content("[AI Mentor Error]: " + aiResponse)
+                        .build();
+                messageRepository.save(aiMsg);
+            } else if (!"UNKNOWN".equalsIgnoreCase(aiResponse)) {
+                ConsultationMessage aiMsg = ConsultationMessage.builder()
+                        .request(req)
+                        .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
+                        .content("[AI Mentor]: " + aiResponse)
+                        .build();
+                messageRepository.save(aiMsg);
+                
+                req.setUpdatedAt(LocalDateTime.now());
+                requestRepository.save(req);
+
+                // Do NOT notify mentors. We intercepted the question successfully!
+                var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
+                return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
+            } else {
+                ConsultationMessage aiMsg = ConsultationMessage.builder()
+                        .request(req)
+                        .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
+                        .content("[AI Mentor]: This question exceeds my knowledge base. The system has notified the human Mentors to assist you!")
+                        .build();
+                messageRepository.save(aiMsg);
+            }
+        } else {
+            ConsultationMessage msg = ConsultationMessage.builder()
+                    .request(req)
+                    .sender(user)
+                    .content(messageDto.getContent())
+                    .attachmentUrl(messageDto.getAttachmentUrl())
+                    .build();
+            messageRepository.save(msg);
+        }
 
         req.setUpdatedAt(LocalDateTime.now());
         requestRepository.save(req);
-
-        // Cross-notify: mentor messages notify team leader and other mentors; team
-        // messages notify all mentors
-        boolean senderIsMentor = isMentorRole(user);
 
         String preview = messageDto.getContent() != null && messageDto.getContent().length() > 80
                 ? messageDto.getContent().substring(0, 80) + "..."
@@ -568,15 +618,13 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .findByCategory_CategoryId(req.getCategory().getCategoryId());
 
         if (senderIsMentor) {
-            // Notify Team Leader
             sendNotificationSafe(
                     req.getCreatedBy().getUserId(),
                     user.getUserId(),
                     req.getEvent().getEventId(),
                     "New Message in Consultation",
-                    String.format("%s sent a message in \u201c%s\u201d: %s", user.getFullName(), req.getTitle(),
+                    String.format("%s sent a message in \"%s\": %s", user.getFullName(), req.getTitle(),
                             preview));
-            // Notify other mentors in the category
             for (CategoryMentor cm : categoryMentors) {
                 if (!cm.getMentor().getUserId().equals(user.getUserId())) {
                     sendNotificationSafe(
@@ -584,24 +632,24 @@ public class ConsultationServiceImpl implements ConsultationService {
                             user.getUserId(),
                             req.getEvent().getEventId(),
                             "New Message in Consultation",
-                            String.format("Expert %s sent a message in \u201c%s\u201d: %s", user.getFullName(),
+                            String.format("Expert %s sent a message in \"%s\": %s", user.getFullName(),
                                     req.getTitle(), preview));
                 }
             }
         } else {
-            // Notify all mentors
             for (CategoryMentor cm : categoryMentors) {
                 sendNotificationSafe(
                         cm.getMentor().getUserId(),
                         user.getUserId(),
                         req.getEvent().getEventId(),
                         "New Message in Consultation",
-                        String.format("Team \u201c%s\u201d sent a message in \u201c%s\u201d: %s",
+                        String.format("Team \"%s\" sent a message in \"%s\": %s",
                                 req.getTeam().getTeamName(), req.getTitle(), preview));
             }
         }
 
-        return ConsultationMessageResponse.from(msg);
+        var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
+        return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
     }
 
     private void checkRequestAccess(User user, ConsultationRequest req) {

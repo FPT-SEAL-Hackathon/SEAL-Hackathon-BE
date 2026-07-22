@@ -65,4 +65,7 @@ public class RoundRanking {
 
     @Column(name = "IsPublished", nullable = false)
     private Boolean isPublished = false;
+
+    @Column(name = "IsApproved", nullable = false)
+    private Boolean isApproved = false;
 }

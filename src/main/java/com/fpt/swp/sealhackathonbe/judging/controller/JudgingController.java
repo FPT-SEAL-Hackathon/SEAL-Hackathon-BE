@@ -95,6 +95,14 @@ public class JudgingController {
         return ResponseEntity.ok(scores);
     }
 
+    @GetMapping("/judging/team-submission/{submissionId}/published")
+    @PreAuthorize("hasAnyRole('FPT_STUDENT', 'EXTERNAL_STUDENT')")
+    @Operation(summary = "Get published judging scores for a submission", description = "Retrieves published scores for a team's submission")
+    public ResponseEntity<List<JudgingDTO>> getPublishedScoresBySubmission(@PathVariable UUID submissionId) {
+        List<JudgingDTO> scores = judgingService.getPublishedScoresBySubmission(submissionId);
+        return ResponseEntity.ok(scores);
+    }
+
     @GetMapping("/judging/judge/{judgeUserId}")
     // RBAC:
     // Cho phép ORGANIZER hoặc chính judge xem lịch sử chấm của mình.
