@@ -234,16 +234,26 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
-    public void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId) {
+    public void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId, Integer appealDurationMinutes) {
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Rankings must be computed before publishing.");
         }
+        
+        // Update appeal window for the round
+        com.fpt.swp.sealhackathonbe.round.entity.Round round = existingRankings.get(0).getRound();
+        round.setAppealStartTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        if (appealDurationMinutes != null) {
+            round.setAppealEndTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusMinutes(appealDurationMinutes));
+        } else {
+            round.setAppealEndTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusMinutes(40)); // default 40 mins
+        }
+        
         List<UUID> recipientIds = new ArrayList<>();
         for (RoundRanking r : existingRankings) {
             r.setIsPublished(true);
             
-            List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(r.getTeam().getTeamId());
+            List<com.fpt.swp.sealhackathonbe.team.entity.TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(r.getTeam().getTeamId());
             members.forEach(m -> recipientIds.add(m.getUserId()));
 
             // We no longer automatically disqualify teams that do not advance.

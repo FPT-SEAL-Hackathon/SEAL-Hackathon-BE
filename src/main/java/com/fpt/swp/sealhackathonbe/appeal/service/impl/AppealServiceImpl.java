@@ -52,31 +52,21 @@ public class AppealServiceImpl implements AppealService {
                 .orElseThrow(() -> new RuntimeException("Category not found"));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        Round round = roundRepository.findById(request.getRoundId())
+                .orElseThrow(() -> new RuntimeException("Round not found"));
 
         boolean hasPendingAppeal = appealRepository.existsByTeam_TeamIdAndStatus(request.getTeamId(), AppealStatus.PENDING);
         if (hasPendingAppeal) {
             throw new RuntimeException("This team already has a pending appeal. Please wait for it to be resolved before submitting a new one.");
         }
 
-        // Validate appeal window for the latest round the team participated in
-        List<Submissions> teamSubmissions = submissionsRepository.findByTeamId(request.getTeamId());
-        if (teamSubmissions.isEmpty()) {
-            throw new RuntimeException("Cannot appeal. Team has not submitted to any round yet.");
-        }
-
-        Submissions latestSubmission = teamSubmissions.stream()
-                .max(Comparator.comparing(Submissions::getSubmittedAt, Comparator.nullsFirst(Comparator.naturalOrder())))
-                .orElse(teamSubmissions.get(teamSubmissions.size() - 1));
-
-        Round latestRound = roundRepository.findById(latestSubmission.getRoundId())
-                .orElseThrow(() -> new RuntimeException("Round not found"));
-
+        // Validate appeal window for the round
         LocalDateTime now = LocalDateTime.now();
-        if (latestRound.getAppealStartTime() == null || latestRound.getAppealEndTime() == null) {
-            throw new RuntimeException("Appeal time window is not configured for the latest round.");
+        if (round.getAppealStartTime() == null || round.getAppealEndTime() == null) {
+            throw new RuntimeException("Appeal time window is not configured for this round.");
         }
 
-        if (now.isBefore(latestRound.getAppealStartTime()) || now.isAfter(latestRound.getAppealEndTime())) {
+        if (now.isBefore(round.getAppealStartTime()) || now.isAfter(round.getAppealEndTime())) {
             throw new RuntimeException("The appeal window is closed or not yet open for this round.");
         }
 
@@ -84,6 +74,7 @@ public class AppealServiceImpl implements AppealService {
                 .team(team)
                 .event(event)
                 .category(category)
+                .round(round)
                 .title(request.getTitle())
                 .reason(request.getReason())
                 .appealType(request.getAppealType())
@@ -136,6 +127,8 @@ public class AppealServiceImpl implements AppealService {
                 .eventName(appeal.getEvent().getEventName())
                 .categoryId(appeal.getCategory().getCategoryId())
                 .categoryName(appeal.getCategory().getCategoryName())
+                .roundId(appeal.getRound() != null ? appeal.getRound().getRoundId() : null)
+                .roundName(appeal.getRound() != null ? appeal.getRound().getRoundName() : null)
                 .title(appeal.getTitle())
                 .reason(appeal.getReason())
                 .appealType(appeal.getAppealType())
