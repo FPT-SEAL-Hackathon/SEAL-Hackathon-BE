@@ -18,7 +18,9 @@ import org.springframework.boot.test.context.SpringBootTest;
         "spring.security.oauth2.client.registration.google.client-secret=test-google-client-secret",
         "spring.security.oauth2.client.registration.github.client-id=test-github-client-id",
         "spring.security.oauth2.client.registration.github.client-secret=test-github-client-secret",
-        "jwt.secret=test-jwt-secret-key-for-context-loads"
+        "jwt.secret=test-jwt-secret-key-for-context-loads",
+        "gemini.api.key=test-gemini-api-key",
+        "REPOSITORY_TOKEN_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 })
 class SealHackathonBeApplicationTests {
 
