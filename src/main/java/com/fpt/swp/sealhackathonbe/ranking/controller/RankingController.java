@@ -73,9 +73,10 @@ public class RankingController {
     public ResponseEntity<Void> publishRoundRankings(
             @PathVariable("roundId") UUID roundId,
             @RequestParam UUID categoryId,
+            @RequestParam(required = false) Integer appealDurationMinutes,
             Authentication authentication
     ){
-        rankingService.publishRoundRankings(roundId, categoryId, currentUserId(authentication));
+        rankingService.publishRoundRankings(roundId, categoryId, currentUserId(authentication), appealDurationMinutes);
         return ResponseEntity.ok().build();
     }
 
