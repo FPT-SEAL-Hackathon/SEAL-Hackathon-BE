@@ -74,3 +74,133 @@
   - Backend contains many pre-existing repository integration additions/modifications plus cleanup changes from the compile/test pass.
   - Frontend still has unmerged tracked files: `EventModal.tsx`, `src/features/events/types/round.ts`, and `AdminAppealsView.tsx`.
   - `conversation_log.md` remains untracked in the backend repo.
+
+## Summary of Recent Session (Date: 2026-07-23)
+
+### 1. Frontend Add User Dropdown Layering Fix
+- Investigated a UI bug where Add/Edit User Role and Status dropdowns appeared behind the modal/table.
+- Root cause:
+  - `UserFormModal` used an overlay with `zIndex: 70`.
+  - Radix `SelectContent` renders through a portal and defaulted below the modal layer.
+  - The Role/Status selects were also using native `<option>` children inside Radix `Select`, which is not the correct Radix API.
+- Fixed `SEAL-Hackathon-FE/src/pages/admin/components/AdminUsersView.tsx`:
+  - Replaced native `<option>` children with `SelectItem` for Role and Status.
+  - Added `className="z-[100]"` to the modal `FormSelect` `SelectContent`.
+- Frontend verification:
+  - `npx.cmd tsc --noEmit` still failed due to pre-existing unrelated errors in `LeaderDashboard.tsx`:
+    - Missing `@/features/submissions/components/SubmissionRepositoryField`.
+    - Missing `useAuth`.
+    - One implicit `any` callback parameter.
+
+### 2. Event/Round Date-Time Business Logic Audit
+- Investigated a backend 400 response:
+  - `Round start date cannot be before event start date`
+  - Path: `/api/v1/round/{roundId}`
+- Root cause:
+  - Backend treats event schedule as date-only (`LocalDate`) and round/deadline/appeal fields as date-time (`LocalDateTime`).
+  - Backend correctly expands the event range to `eventStartDate 00:00` through `eventEndDate 23:59:59...`.
+  - Frontend edit-round flow did not pass the parent `event` from `RoundCard` into `RoundForm`, so edit mode lost event boundary picker constraints and form-level event validation. The backend then became the first layer to reject invalid round dates.
+- Business-rule review:
+  - Event range is date-only and inclusive.
+  - Registration is strict internally: `registrationStart < registrationEnd`.
+  - Registration may end on the event start date; backend should compare registration end by date, not against `eventStartDate.atStartOfDay()`.
+  - Round range is strict internally: `roundStart < roundEnd`.
+  - Round must stay inside the event date-only range.
+  - Submission and judging deadlines remain inclusive inside the round.
+  - Appeal follows the contest flow: `judgingDeadline <= appealStartTime < appealEndTime <= roundEnd` when judging/round bounds exist, and appeal stays inside the event range.
+
+### 3. Event/Round Date-Time Fixes Applied
+- Backend changes:
+  - `EventServiceImplementation.java`
+    - Create event now rejects `registrationEnd.toLocalDate() > eventStartDate`.
+    - Update event now also compares registration end by date instead of rejecting same-day times after midnight.
+  - `RoundServiceImpl.java`
+    - Added explicit comment that event dates are date-only while round/appeal windows may use any minute inside those days.
+    - Enforced appeal start/end inside the event date-only range.
+    - Enforced appeal start after or equal to judging deadline when present.
+    - Enforced appeal start after or equal to round start when judging deadline is absent.
+    - Enforced appeal end before or equal to round end.
+    - Preserved strict `appealStartTime < appealEndTime`.
+- Frontend changes:
+  - `DateTimePickerField.tsx`
+    - Date-only `minDateTime` now means `00:00`.
+    - Date-only `maxDateTime` now means `23:59`.
+    - Minute precision remains unchanged.
+  - `RoundTab.tsx` and `RoundCard.tsx`
+    - Parent event is now passed into edit-round `RoundForm`, not just add-round `RoundForm`.
+  - `RoundForm.tsx`
+    - Added form-level appeal validation matching backend rules.
+    - Appeal picker bounds now account for judging deadline, round start/end, and event start/end.
+- Backend tests added/updated:
+  - `EventServiceImplementationCreateTest`
+    - Added rejection for registration ending after event start date.
+    - Preserved same-date registration end as valid.
+  - `RoundServiceValidationTest`
+    - Added rejection for appeal start before judging deadline.
+    - Added rejection for appeal end after round end.
+    - Added valid case for a round ending at the last minute of the event end date.
+
+### 4. Verification and Current Dirty State
+- Backend focused verification passed:
+  - Command: `mvn "-Dtest=RoundServiceValidationTest,EventServiceImplementationCreateTest" test`
+  - Result: exit code 0, 16 tests run, 0 failures, 0 errors.
+- Frontend TypeScript verification still fails due to unrelated pre-existing `LeaderDashboard.tsx` errors listed above.
+- Current touched files from the 2026-07-23 work:
+  - Backend:
+    - `AGENTS.md`
+    - `conversation_log.md`
+    - `src/main/java/com/fpt/swp/sealhackathonbe/event/service/impl/EventServiceImplementation.java`
+    - `src/main/java/com/fpt/swp/sealhackathonbe/round/service/impl/RoundServiceImpl.java`
+    - `src/test/java/com/fpt/swp/sealhackathonbe/event/service/impl/EventServiceImplementationCreateTest.java`
+    - `src/test/java/com/fpt/swp/sealhackathonbe/round/service/impl/RoundServiceValidationTest.java`
+  - Frontend:
+    - `src/pages/admin/components/AdminUsersView.tsx`
+    - `src/features/events/components/round/RoundCard.tsx`
+    - `src/features/events/components/round/RoundForm.tsx`
+    - `src/features/events/components/round/RoundTab.tsx`
+    - `src/features/events/shared/ui/DateTimePickerField.tsx`
+- `mvnw.cmd` remains a dirty backend file from earlier work and was not part of the documentation update request.
+
+### 5. AGENTS.md Updates Added
+- Added Radix Select modal layering guidance:
+  - Radix `SelectContent` is portal-rendered and must have a z-index above modal overlays.
+  - Radix `Select` must use `SelectItem`, not native `<option>`.
+- Added event date-only / round date-time boundary guidance:
+  - Date-only event boundaries must expand to start/end of day in datetime pickers.
+  - Add and edit round forms must both receive parent event context.
+  - Documented current event, registration, round, deadline, and appeal business rules.
+
+## Summary of Recent Session (Date: 2026-07-23) — Submission-level GitHub Repository Metadata
+
+### 1. Database Clarification
+- Confirmed the project runs on **Microsoft SQL Server (local dev)**, migrated off Azure SQL after the budget ran out. "msql" means MSSQL, not MySQL. No driver/dialect change — only `DB_URL` points at the local server; migrations stay T-SQL.
+- Updated `AGENTS.md` Project Facts accordingly.
+
+### 2. Audit Before Implementation (Phase 0–3)
+- Verified clean baseline better than the previous log implied: backend `compile` + `test-compile` both exit 0, frontend `tsc --noEmit` exit 0. Earlier blockers (`RepositoryIntegrationServiceTest` missing import, `LeaderDashboard` missing `SubmissionRepositoryField`/`useAuth`) were already resolved.
+- Found the feature ~70% done on backend (Step 2/3 complete, Step 4 running but flawed) and almost nothing on frontend (only API service methods, no UI components).
+- Identified the key gaps: over-broad authorization (`eventRepository.findAll()` let any event creator view/resync ANY submission), GitHub call inside the submit transaction, fetch errors swallowed instead of persisted, no concurrency guard, no Organizer overview/export.
+
+### 3. Backend Changes
+- `SubmissionRepositoryService.java`: rewrote authorization to scope Organizer to the submission's OWN event (`EventRepository.existsByEventIdAndCreatedBy_UserId`); team member or assigned judge (view-only) also allowed; judge cannot resync. Added Organizer event overview + CSV export (CSV-injection-safe, UTF-8 BOM), atomic `RUNNING` sync lock with 409 `REPOSITORY_SYNC_ALREADY_RUNNING` and a 2-minute stale takeover, and `RepositoryMetadataFetchResult` so failed fetches persist `FAILED` + safe error code.
+- `SubmissionCommandServiceImpl.submitWork`: GitHub fetch now runs OUTSIDE the DB transaction; a `TransactionTemplate` commits SP upsert + history + metadata atomically. Deadline re-checked inside the transaction.
+- `SubmissionQueryServiceImpl`: list endpoints use a batched `findBySubmission_SubmissionIdIn` to avoid N+1.
+- `GlobalExceptionHandler`: added a handler for `RepositoryMetadataException` (was falling through to 500) and the missing `SUBMISSION_*` status mappings.
+- New files: `RepositoryMetadataFetchResult`, `EventSubmissionRepositoryItemResponse`, `EventSubmissionRepositoryController`. Entity/mapper/response gained `starCount`/`forkCount`/`openIssuesCount`.
+- New migration `20260723_submission_repositories_counts.sql` (adds the three count columns).
+
+### 4. Frontend Changes
+- New shared `SubmissionRepositoryField` + `RepositoryMetadataCard` (`src/features/submissions/components/`). Team form sends only `repositoryUrl` (backend always re-fetches); preview clears on URL change; refresh only when submission editable.
+- Judge: read-only `RepositoryMetadataCard` in `JudgeScoringView` with the "metadata does not determine score" disclaimer, no edit/resync controls.
+- Organizer: new `AdminSubmissionRepositoriesView` (nav key `submission-repositories`) with Team/Round/Category/Language/Status filters, per-row resync, CSV export, and a neutral "last push after deadline" indicator. Legacy PAT view relabeled "Repository Integrations (Legacy)".
+- `submissionService.ts`, `navigation.ts`, `permissions.ts`, `AdminDashboard.tsx` wired up.
+
+### 5. Verification
+- Backend: `sh ./mvnw test` → 130 tests, 0 failures (fixed one new test that leaked a mocked `SecurityContext` by using `createEmptyContext`). New `SubmissionRepositoryServiceTest` covers authz (member/organizer-same-event/organizer-other-event/assigned-judge/judge-resync-denied), persistence (create/update-no-duplicate/failed-keeps-metadata), and 409 conflict.
+- Frontend: `npx.cmd tsc --noEmit` exit 0; `npm.cmd run build` exit 0 (pre-existing chunk-size warning only).
+
+### 6. Cleanup
+- Removed the untracked `powershell.bat` shim in both repos and reverted the local `mvnw.cmd` edits (the patch was backed up to the session scratchpad). Build still works via `sh ./mvnw`.
+
+### 7. Remaining Limitations
+- No manual end-to-end UI pass yet (needs the app + a migrated local DB). GitLab stays enum-only (future-compatible). Export is CSV-only. Migrations `20260722_submission_repositories.sql` + `20260723_submission_repositories_counts.sql` must be run manually on the local DB.

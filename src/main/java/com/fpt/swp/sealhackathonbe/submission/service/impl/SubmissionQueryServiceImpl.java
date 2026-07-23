@@ -59,6 +59,34 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         return response;
     }
 
+    // Enrich cho danh sach: MOT query batch lay het metadata theo submissionIds
+    // thay vi N query rieng le (N+1) nhu enrichResponse tung item.
+    private List<SubmissionResponse> enrichResponses(List<Submissions> submissions) {
+        List<SubmissionResponse> responses = submissions.stream()
+                .map(SubmissionMapper::toSubmissionResponse)
+                .toList();
+
+        List<UUID> ids = responses.stream()
+                .map(SubmissionResponse::getSubmissionId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return responses;
+        }
+
+        var reposBySubmissionId = submissionRepositoryEntityRepository.findBySubmission_SubmissionIdIn(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        repo -> repo.getSubmission().getSubmissionId(),
+                        repo -> repo));
+        responses.forEach(response -> {
+            var repoEntity = reposBySubmissionId.get(response.getSubmissionId());
+            if (repoEntity != null) {
+                response.setRepository(submissionRepositoryService.mapToResponse(repoEntity));
+            }
+        });
+        return responses;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public SubmissionResponse getSubmissionById(UUID submissionId) {
@@ -85,34 +113,25 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getSubmissionsByRound(UUID roundId) {
         // Tra ve tat ca submission trong mot round cho man hinh danh sach/review.
-        return submissionsRepository.findByRoundId(roundId)
-                .stream()
-                .map(this::enrichResponse)
-                .toList();
+        return enrichResponses(submissionsRepository.findByRoundId(roundId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SubmissionResponse> getUnreviewSubmissionByRound(UUID roundId) {
         // Unreview o day la cac submission chua bi cham diem xong va khong bi loai.
-        return submissionsRepository
+        return enrichResponses(submissionsRepository
                 .findByRoundIdAndSubmissionStatusIdNotIn(
                         roundId,
                         List.of(SUBMISSION_STATUS_SCORED, SUBMISSION_STATUS_DISQUALIFIED)
-                )
-                .stream()
-                .map(this::enrichResponse)
-                .toList();
+                ));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<SubmissionResponse> findByEventId(UUID eventId) {
         // Luong du lieu: EventID -> Team.EventID -> Submissions -> SubmissionResponse.
-        return submissionsRepository.findByEventId(eventId)
-                .stream()
-                .map(this::enrichResponse)
-                .toList();
+        return enrichResponses(submissionsRepository.findByEventId(eventId));
     }
 
     @Override

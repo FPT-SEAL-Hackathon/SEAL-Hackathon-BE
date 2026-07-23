@@ -83,6 +83,15 @@ public class SubmissionRepositoryEntity {
     @Column(name = "ErrorMessage", length = 1000)
     private String errorMessage;
 
+    @Column(name = "StarCount")
+    private Integer starCount;
+
+    @Column(name = "ForkCount")
+    private Integer forkCount;
+
+    @Column(name = "OpenIssuesCount")
+    private Integer openIssuesCount;
+
     @Column(name = "CreatedAt", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

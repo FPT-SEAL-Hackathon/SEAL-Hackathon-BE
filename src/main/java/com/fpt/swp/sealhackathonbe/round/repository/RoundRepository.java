@@ -34,4 +34,12 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     @Query("SELECT COUNT(r) FROM Round r WHERE r.category.event.eventId = :eventId")
     long countByEventId(@Param("eventId") UUID eventId);
 
+    @Query(value = "SELECT COUNT(*) FROM dbo.CalibrationSamples WHERE RoundID = :roundId", nativeQuery = true)
+    long countCalibrationSamplesByRoundId(@Param("roundId") UUID roundId);
+
+    // Repository metadata: tra eventId truc tiep bang JPQL de tranh LazyInitializationException
+    // khi caller (orchestration ngoai transaction) can xac dinh event cua submission qua round.
+    @Query("SELECT r.category.event.eventId FROM Round r WHERE r.roundId = :roundId")
+    Optional<UUID> findEventIdByRoundId(@Param("roundId") UUID roundId);
+
 }

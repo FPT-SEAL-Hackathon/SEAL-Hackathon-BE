@@ -22,7 +22,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -45,6 +47,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final RoundRankingRepository roundRankingRepository;
     private final EntityManager entityManager;
     private final com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService;
+    private final TransactionTemplate transactionTemplate;
 
     public SubmissionCommandServiceImpl(
             SubmissionsRepository submissionsRepository,
@@ -55,7 +58,8 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             RoundRankingRepository roundRankingRepository,
             EntityManager entityManager,
             EventParticipantService eventParticipantService,
-            com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService) {
+            com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService,
+            PlatformTransactionManager transactionManager) {
         this.submissionsRepository = submissionsRepository;
         this.submissionHistoryRepository = submissionHistoryRepository;
         this.teamsRepository = teamsRepository;
@@ -64,39 +68,51 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         this.roundRankingRepository = roundRankingRepository;
         this.entityManager = entityManager;
         this.submissionRepositoryService = submissionRepositoryService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Override
-    @Transactional
     public SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId) {
         // Luong ghi:
         // 1. Kiem tra user hien tai la leader active cua team.
         // 2. Kiem tra team da duoc organizer approve va khong bi reject/disqualify.
         // 3. Kiem tra round chua qua deadline nop bai.
-        // 4. Giao viec tao moi/cap nhat cho sp_UpsertSubmission.
-        // 5. Reload entity va map sang response DTO.
+        // 4. Fetch metadata GitHub NGOAI transaction (goi HTTP co the mat 15s,
+        //    khong duoc giu ket noi/transaction DB trong luc do).
+        // 5. Mo MOT transaction ngan: sp_UpsertSubmission + history + metadata repository
+        //    duoc commit atomic — khong bao gio commit Submission ma thieu SubmissionRepository.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(team);
         Round round = validateTeamCanSubmitToRound(team, request.getRoundId());
         validateRoundAcceptsTeamSubmission(round);
 
-        callUpsertSubmissionProcedure(request, currentUserId);
+        // Buoc HTTP cham nam o day — sau khi da xac thuc quyen, truoc khi mo transaction.
+        final com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadataFetchResult fetchResult =
+                (request.getRepositoryUrl() != null && !request.getRepositoryUrl().trim().isEmpty())
+                        ? submissionRepositoryService.fetchMetadataOutsideTx(request.getRepositoryUrl())
+                        : null;
 
-        Submissions submission = submissionsRepository
-                .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
-                .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
+        return transactionTemplate.execute(status -> {
+            // Deadline co the vua troi qua trong luc goi GitHub: kiem tra lai trong transaction.
+            validateRoundAcceptsTeamSubmission(round);
 
-        recordSubmissionHistory(submission);
+            callUpsertSubmissionProcedure(request, currentUserId);
 
-        SubmissionResponse response = SubmissionMapper.toSubmissionResponse(submission);
-        if (request.getRepositoryUrl() != null && !request.getRepositoryUrl().trim().isEmpty()) {
-            com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata metadata = 
-                    submissionRepositoryService.fetchMetadataOutsideTx(request.getRepositoryUrl());
-            com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse repoResp = 
-                    submissionRepositoryService.saveOrUpdateSubmissionRepository(submission.getSubmissionId(), request.getRepositoryUrl(), metadata);
-            response.setRepository(repoResp);
-        }
-        return response;
+            Submissions submission = submissionsRepository
+                    .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
+                    .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
+
+            recordSubmissionHistory(submission);
+
+            SubmissionResponse response = SubmissionMapper.toSubmissionResponse(submission);
+            if (fetchResult != null) {
+                com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse repoResp =
+                        submissionRepositoryService.saveOrUpdateSubmissionRepository(
+                                submission.getSubmissionId(), request.getRepositoryUrl(), fetchResult);
+                response.setRepository(repoResp);
+            }
+            return response;
+        });
     }
 
     @Override

@@ -115,6 +115,18 @@ class EventServiceImplementationCreateTest {
     }
 
     @Test
+    void createEventRegistrationEndAfterEventStartDateReturnsBadRequest() {
+        CreateEventRequest request = validRequest();
+        request.setRegistrationEnd(LocalDateTime.of(2030, 7, 1, 9, 0));
+        request.setEventStartDate(LocalDate.of(2030, 6, 30));
+        mockDraftStatus();
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
+
+        assertEquals("Registration end date must be on or before event start date", exception.getMessage());
+    }
+
+    @Test
     void createEventRegistrationEndSameDateAsEventStartWithTimeIsValid() {
         CreateEventRequest request = validRequest();
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 30, 9, 0));

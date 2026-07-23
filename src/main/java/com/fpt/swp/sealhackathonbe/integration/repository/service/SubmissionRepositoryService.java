@@ -4,16 +4,22 @@ import com.fpt.swp.sealhackathonbe.core.exception.RepositoryIntegrationException
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.integration.repository.client.GitRepositoryMetadataClient;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadataFetchResult;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.response.EventSubmissionRepositoryItemResponse;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse;
-import com.fpt.swp.sealhackathonbe.integration.repository.entity.RepositoryProvider;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.RepositorySyncStatus;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.SubmissionRepositoryEntity;
+import com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataException;
 import com.fpt.swp.sealhackathonbe.integration.repository.mapper.SubmissionRepositoryMapper;
 import com.fpt.swp.sealhackathonbe.integration.repository.repository.SubmissionRepositoryEntityRepository;
+import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
+import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,18 +32,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SubmissionRepositoryService {
 
+    // Mot phien RUNNING giu lock qua lau (request truoc chet giua chung) thi cho phep
+    // request sau lay lai lock. 2 phut > connect(5s)+read(10s) timeout cua GitHub client.
+    private static final int SYNC_STALE_MINUTES = 2;
+
     private final SubmissionRepositoryEntityRepository submissionRepositoryRepository;
     private final SubmissionsRepository submissionsRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final TeamsRepository teamsRepository;
     private final EventRepository eventRepository;
+    private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
     private final UserRepository userRepository;
     private final List<GitRepositoryMetadataClient> gitRepositoryMetadataClients;
@@ -46,11 +61,11 @@ public class SubmissionRepositoryService {
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
-            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.EVENT_REPOSITORY_ACCESS_DENIED, "User not authenticated");
+            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "User not authenticated");
         }
         User user = userRepository.findByEmail(authentication.getName());
         if (user == null) {
-            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.EVENT_REPOSITORY_ACCESS_DENIED, "User not found");
+            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "User not found");
         }
         return user;
     }
@@ -65,30 +80,50 @@ public class SubmissionRepositoryService {
                 .orElseThrow(() -> new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.INVALID_GITHUB_REPOSITORY_URL, "Unsupported repository URL provider"));
     }
 
+    /**
+     * Preview cho Team truoc khi submit: goi GitHub nhung KHONG persist.
+     * Loi (URL sai, repo private, 404...) duoc nem nguyen RepositoryMetadataException
+     * de GlobalExceptionHandler map sang HTTP status + error code an toan cho FE.
+     */
     public SubmissionRepositoryResponse validateRepositoryUrl(String repositoryUrl) {
         GitRepositoryMetadataClient client = selectClient(repositoryUrl);
         RepositoryMetadata metadata = client.fetchPublicMetadata(repositoryUrl);
         return mapMetadataToResponse(metadata);
     }
 
-    public RepositoryMetadata fetchMetadataOutsideTx(String repositoryUrl) {
+    /**
+     * Goi GitHub NGOAI transaction DB (khong duoc goi tu trong @Transactional).
+     * Khong nem exception: that bai duoc dong goi thanh FetchResult.failure de
+     * caller van persist duoc trang thai FAILED + error code an toan.
+     */
+    public RepositoryMetadataFetchResult fetchMetadataOutsideTx(String repositoryUrl) {
         if (repositoryUrl == null || repositoryUrl.trim().isEmpty()) {
             return null;
         }
         try {
             GitRepositoryMetadataClient client = selectClient(repositoryUrl);
-            return client.fetchPublicMetadata(repositoryUrl);
+            return RepositoryMetadataFetchResult.success(client.fetchPublicMetadata(repositoryUrl));
+        } catch (RepositoryMetadataException rme) {
+            log.warn("Repository metadata fetch failed for URL {}: {} - {}", repositoryUrl, rme.getErrorCode(), rme.getMessage());
+            return RepositoryMetadataFetchResult.failure(
+                    rme.getErrorCode() != null ? rme.getErrorCode().name() : "GITHUB_UPSTREAM_ERROR",
+                    rme.getMessage());
+        } catch (RepositoryIntegrationException rie) {
+            log.warn("Repository metadata fetch rejected for URL {}: {}", repositoryUrl, rie.getMessage());
+            return RepositoryMetadataFetchResult.failure(rie.getErrorCode().name(), rie.getMessage());
         } catch (Exception e) {
-            log.warn("Failed to fetch repository metadata for URL {}: {}", repositoryUrl, e.getMessage());
-            return RepositoryMetadata.builder()
-                    .provider(RepositoryProvider.GITHUB)
-                    .repositoryUrl(repositoryUrl)
-                    .build();
+            log.warn("Unexpected repository metadata fetch failure for URL {}", repositoryUrl, e);
+            return RepositoryMetadataFetchResult.failure("GITHUB_UPSTREAM_ERROR", "Unexpected error while fetching repository metadata");
         }
     }
 
+    /**
+     * Persist metadata trong MOT transaction ngan: cap nhat/tao ban ghi SubmissionRepositories
+     * (unique theo SubmissionID) va dong bo nguoc Submissions.RepositoryURL de tuong thich code cu.
+     * GitHub PHAI duoc goi truoc do bang fetchMetadataOutsideTx.
+     */
     @Transactional
-    public SubmissionRepositoryResponse saveOrUpdateSubmissionRepository(UUID submissionId, String repositoryUrl, RepositoryMetadata fetchedMetadata) {
+    public SubmissionRepositoryResponse saveOrUpdateSubmissionRepository(UUID submissionId, String repositoryUrl, RepositoryMetadataFetchResult fetchResult) {
         if (repositoryUrl == null || repositoryUrl.trim().isEmpty()) {
             return null;
         }
@@ -104,50 +139,77 @@ public class SubmissionRepositoryService {
                 });
 
         repoEntity.setRepositoryUrl(repositoryUrl);
-        submissionRepositoryMapper.applyMetadata(fetchedMetadata, repoEntity);
+        submissionRepositoryMapper.applyFetchResult(fetchResult, repoEntity);
+
+        // Metadata thanh cong co the tra ve URL da chuan hoa (bo .git, bo "/" cuoi):
+        // dung URL chuan hoa lam nguon dong bo cho ca hai bang.
+        String canonicalUrl = repoEntity.getRepositoryUrl() != null ? repoEntity.getRepositoryUrl() : repositoryUrl;
 
         repoEntity = submissionRepositoryRepository.save(repoEntity);
 
-        // Synchronize Submissions.RepositoryURL for backward compatibility
-        if (!repositoryUrl.equals(submission.getRepositoryUrl())) {
-            submission.setRepositoryUrl(repositoryUrl);
+        if (!canonicalUrl.equals(submission.getRepositoryUrl())) {
+            submission.setRepositoryUrl(canonicalUrl);
             submissionsRepository.save(submission);
         }
 
         return mapToResponse(repoEntity);
     }
 
-    @Transactional(readOnly = true)
-    public void authorizeView(Submissions submission, UUID currentUserId) {
+    /**
+     * Xac dinh event chua submission: team.eventId cho submission cua team,
+     * round -> category -> event cho sample submission (teamId null).
+     * Dung query theo ID de an toan khi duoc goi ngoai transaction (khong cham lazy proxy).
+     */
+    private UUID resolveEventId(Submissions submission) {
         if (submission.getTeamId() != null) {
-            boolean isTeamMember = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(submission.getTeamId(), currentUserId).isPresent();
-            if (isTeamMember) return;
+            return teamsRepository.findById(submission.getTeamId())
+                    .map(Teams::getEventId)
+                    .orElse(null);
         }
+        return roundRepository.findEventIdByRoundId(submission.getRoundId()).orElse(null);
+    }
 
-        // Event Organizer check
-        boolean isOrganizer = eventRepository.findAll().stream()
-                .anyMatch(e -> e.getCreatedBy() != null && e.getCreatedBy().getUserId().equals(currentUserId));
-        if (isOrganizer) return;
+    private boolean isEventOrganizer(UUID eventId, UUID userId) {
+        return eventId != null && eventRepository.existsByEventIdAndCreatedBy_UserId(eventId, userId);
+    }
 
-        // Judge check
-        boolean isJudge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(currentUserId, submission.getRoundId()).isPresent();
-        if (isJudge) return;
+    private boolean isActiveTeamMember(Submissions submission, UUID userId) {
+        return submission.getTeamId() != null
+                && teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(submission.getTeamId(), userId).isPresent();
+    }
 
+    /**
+     * Xem metadata: thanh vien team cua submission, Organizer cua DUNG event chua submission,
+     * hoac Judge duoc phan cong vao round cua submission. Moi vai tro khac bi 403.
+     */
+    void authorizeView(Submissions submission, UUID currentUserId) {
+        if (isActiveTeamMember(submission, currentUserId)) {
+            return;
+        }
+        if (isEventOrganizer(resolveEventId(submission), currentUserId)) {
+            return;
+        }
+        boolean isAssignedJudge = roundJudgeRepository
+                .findByJudge_UserIdAndRound_RoundId(currentUserId, submission.getRoundId())
+                .isPresent();
+        if (isAssignedJudge) {
+            return;
+        }
         throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "Access denied to submission repository metadata");
     }
 
-    @Transactional(readOnly = true)
-    public void authorizeResync(Submissions submission, UUID currentUserId) {
-        if (submission.getTeamId() != null) {
-            boolean isTeamMember = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(submission.getTeamId(), currentUserId).isPresent();
-            if (isTeamMember) return;
+    /**
+     * Resync: chi thanh vien team hoac Organizer cua dung event. Judge KHONG duoc resync
+     * (metadata la du lieu tham khao, judge chi doc).
+     */
+    void authorizeResync(Submissions submission, UUID currentUserId) {
+        if (isActiveTeamMember(submission, currentUserId)) {
+            return;
         }
-
-        boolean isOrganizer = eventRepository.findAll().stream()
-                .anyMatch(e -> e.getCreatedBy() != null && e.getCreatedBy().getUserId().equals(currentUserId));
-        if (isOrganizer) return;
-
-        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members or event organizers may resynchronize repository metadata");
+        if (isEventOrganizer(resolveEventId(submission), currentUserId)) {
+            return;
+        }
+        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members or the event organizer may resynchronize repository metadata");
     }
 
     @Transactional(readOnly = true)
@@ -163,6 +225,11 @@ public class SubmissionRepositoryService {
                 .orElse(null);
     }
 
+    /**
+     * Resync thu cong. Khong co @Transactional o day la CHU DICH:
+     * buoc goi GitHub (cham, co the 15s) phai nam ngoai transaction DB;
+     * chi markSyncRunning va saveOrUpdate... mo transaction ngan.
+     */
     public SubmissionRepositoryResponse syncSubmissionRepository(UUID submissionId) {
         User currentUser = getCurrentUser();
         Submissions submission = submissionsRepository.findById(submissionId)
@@ -175,8 +242,168 @@ public class SubmissionRepositoryService {
             throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_NOT_FOUND, "Submission has no repository URL attached");
         }
 
-        RepositoryMetadata fetched = fetchMetadataOutsideTx(repoUrl);
-        return saveOrUpdateSubmissionRepository(submissionId, repoUrl, fetched);
+        // Chong resync dong thoi: chi ap dung khi da co ban ghi metadata (lan dau sync thi
+        // unique constraint tren SubmissionID la lop bao ve cuoi cung chong ghi trung).
+        boolean hasExistingRecord = submissionRepositoryRepository.findBySubmission_SubmissionId(submissionId).isPresent();
+        if (hasExistingRecord) {
+            LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+            int locked = submissionRepositoryRepository.markSyncRunning(
+                    submissionId, now, now.minusMinutes(SYNC_STALE_MINUTES), RepositorySyncStatus.RUNNING);
+            if (locked == 0) {
+                throw new RepositoryIntegrationException(
+                        RepositoryIntegrationException.ErrorCode.REPOSITORY_SYNC_ALREADY_RUNNING,
+                        "A repository synchronization is already running for this submission");
+            }
+        }
+
+        try {
+            RepositoryMetadataFetchResult fetched = fetchMetadataOutsideTx(repoUrl);
+            return saveOrUpdateSubmissionRepository(submissionId, repoUrl, fetched);
+        } catch (RuntimeException e) {
+            // Tra lock ve FAILED de submission khong ket o RUNNING den het stale timeout.
+            if (hasExistingRecord) {
+                try {
+                    submissionRepositoryRepository.failRunningSync(
+                            submissionId, "GITHUB_UPSTREAM_ERROR", LocalDateTime.now(ZoneOffset.UTC),
+                            RepositorySyncStatus.RUNNING, RepositorySyncStatus.FAILED);
+                } catch (Exception releaseError) {
+                    log.warn("Failed to release RUNNING sync lock for submission {}", submissionId, releaseError);
+                }
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Organizer overview: toan bo repository cua cac submission trong event.
+     * Creator-only (giong quyen cua legacy Event-level integration).
+     * Doc trong mot transaction readOnly, batch fetch de tranh N+1.
+     */
+    @Transactional(readOnly = true)
+    public List<EventSubmissionRepositoryItemResponse> getEventSubmissionRepositories(UUID eventId) {
+        User currentUser = getCurrentUser();
+        if (!isEventOrganizer(eventId, currentUser.getUserId())) {
+            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "Only the event creator may view submission repositories of this event");
+        }
+
+        List<Submissions> submissions = submissionsRepository.findByEventId(eventId);
+        if (submissions.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> submissionIds = submissions.stream().map(Submissions::getSubmissionId).toList();
+        Map<UUID, SubmissionRepositoryEntity> reposBySubmission = submissionRepositoryRepository
+                .findBySubmission_SubmissionIdIn(submissionIds).stream()
+                .collect(Collectors.toMap(r -> r.getSubmission().getSubmissionId(), Function.identity()));
+
+        List<UUID> teamIds = submissions.stream().map(Submissions::getTeamId).filter(java.util.Objects::nonNull).distinct().toList();
+        Map<UUID, Teams> teamsById = teamsRepository.findAllById(teamIds).stream()
+                .collect(Collectors.toMap(Teams::getTeamId, Function.identity()));
+
+        List<UUID> roundIds = submissions.stream().map(Submissions::getRoundId).distinct().toList();
+        Map<UUID, Round> roundsById = roundRepository.findAllById(roundIds).stream()
+                .collect(Collectors.toMap(Round::getRoundId, Function.identity()));
+
+        return submissions.stream()
+                .map(submission -> toEventItem(submission,
+                        reposBySubmission.get(submission.getSubmissionId()),
+                        submission.getTeamId() != null ? teamsById.get(submission.getTeamId()) : null,
+                        roundsById.get(submission.getRoundId())))
+                .toList();
+    }
+
+    private EventSubmissionRepositoryItemResponse toEventItem(Submissions submission,
+                                                              SubmissionRepositoryEntity repoEntity,
+                                                              Teams team,
+                                                              Round round) {
+        LocalDateTime submissionDeadline = round != null ? round.getSubmissionDeadline() : null;
+        LocalDateTime lastPushedAt = repoEntity != null ? repoEntity.getLastPushedAt() : null;
+        // Chi bao review trung lap, khong phai ket luan: null khi thieu du lieu so sanh.
+        Boolean lastPushAfterDeadline = (submissionDeadline != null && lastPushedAt != null)
+                ? lastPushedAt.isAfter(submissionDeadline)
+                : null;
+
+        String categoryName = null;
+        if (round != null && round.getCategory() != null) {
+            categoryName = round.getCategory().getCategoryName();
+        }
+
+        return EventSubmissionRepositoryItemResponse.builder()
+                .submissionId(submission.getSubmissionId())
+                .teamId(submission.getTeamId())
+                .teamName(team != null ? team.getTeamName() : null)
+                .categoryName(categoryName)
+                .roundName(round != null ? round.getRoundName() : null)
+                .submittedAt(submission.getSubmittedAt())
+                .submissionDeadline(submissionDeadline)
+                .repositoryUrl(submission.getRepositoryUrl())
+                .repository(repoEntity != null ? mapToResponse(repoEntity) : null)
+                .lastPushAfterDeadline(lastPushAfterDeadline)
+                .build();
+    }
+
+    /**
+     * Export CSV cho Organizer. Dung lai getEventSubmissionRepositories (da check quyen creator).
+     * Moi gia tri deu duoc escape chong CSV injection: gia tri bat dau bang = + - @
+     * bi prefix dau nhay don de Excel khong thuc thi nhu formula.
+     */
+    @Transactional(readOnly = true)
+    public String exportEventSubmissionRepositoriesCsv(UUID eventId) {
+        List<EventSubmissionRepositoryItemResponse> items = getEventSubmissionRepositories(eventId);
+        String eventName = eventRepository.findById(eventId)
+                .map(e -> e.getEventName())
+                .orElse("");
+
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",",
+                "Event", "Round", "Category", "Team", "SubmissionID",
+                "Provider", "FullName", "RepositoryUrl", "Visibility", "PrimaryLanguage", "DefaultBranch",
+                "RepositoryCreatedAt", "RepositoryUpdatedAt", "LastPushedAt", "LastSynchronizedAt",
+                "SyncStatus", "ErrorCode", "StarCount", "ForkCount", "OpenIssuesCount",
+                "SubmittedAt", "LastPushAfterDeadline")).append("\r\n");
+
+        for (EventSubmissionRepositoryItemResponse item : items) {
+            SubmissionRepositoryResponse repo = item.getRepository();
+            csv.append(String.join(",",
+                    csvCell(eventName),
+                    csvCell(item.getRoundName()),
+                    csvCell(item.getCategoryName()),
+                    csvCell(item.getTeamName()),
+                    csvCell(item.getSubmissionId()),
+                    csvCell(repo != null ? repo.getProvider() : null),
+                    csvCell(repo != null ? repo.getFullName() : null),
+                    csvCell(repo != null ? repo.getRepositoryUrl() : item.getRepositoryUrl()),
+                    csvCell(repo != null ? repo.getVisibility() : null),
+                    csvCell(repo != null ? repo.getPrimaryLanguage() : null),
+                    csvCell(repo != null ? repo.getDefaultBranch() : null),
+                    csvCell(repo != null ? repo.getRepositoryCreatedAt() : null),
+                    csvCell(repo != null ? repo.getRepositoryUpdatedAt() : null),
+                    csvCell(repo != null ? repo.getLastPushedAt() : null),
+                    csvCell(repo != null ? repo.getLastSynchronizedAt() : null),
+                    csvCell(repo != null ? repo.getLastSyncStatus() : "MISSING"),
+                    csvCell(repo != null ? repo.getErrorCode() : null),
+                    csvCell(repo != null ? repo.getStarCount() : null),
+                    csvCell(repo != null ? repo.getForkCount() : null),
+                    csvCell(repo != null ? repo.getOpenIssuesCount() : null),
+                    csvCell(item.getSubmittedAt()),
+                    csvCell(item.getLastPushAfterDeadline()))).append("\r\n");
+        }
+        return csv.toString();
+    }
+
+    private String csvCell(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value);
+        // Chong CSV injection: khong de Excel/Sheets hieu gia tri la formula.
+        if (!text.isEmpty() && (text.charAt(0) == '=' || text.charAt(0) == '+' || text.charAt(0) == '-' || text.charAt(0) == '@')) {
+            text = "'" + text;
+        }
+        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r")) {
+            text = "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
     }
 
     public SubmissionRepositoryResponse mapToResponse(SubmissionRepositoryEntity entity) {
@@ -202,6 +429,9 @@ public class SubmissionRepositoryService {
                 .lastSynchronizedAt(entity.getLastSynchronizedAt())
                 .errorCode(entity.getErrorCode())
                 .errorMessage(entity.getErrorMessage())
+                .starCount(entity.getStarCount())
+                .forkCount(entity.getForkCount())
+                .openIssuesCount(entity.getOpenIssuesCount())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
@@ -224,6 +454,9 @@ public class SubmissionRepositoryService {
                 .repositoryCreatedAt(metadata.getRepositoryCreatedAt())
                 .repositoryUpdatedAt(metadata.getRepositoryUpdatedAt())
                 .lastPushedAt(metadata.getLastPushedAt())
+                .starCount(metadata.getStarCount())
+                .forkCount(metadata.getForkCount())
+                .openIssuesCount(metadata.getOpenIssuesCount())
                 .lastSyncStatus(RepositorySyncStatus.SUCCESS.name())
                 .build();
     }

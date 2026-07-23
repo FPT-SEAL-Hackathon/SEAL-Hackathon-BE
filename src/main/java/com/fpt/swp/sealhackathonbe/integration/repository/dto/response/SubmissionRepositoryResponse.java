@@ -33,6 +33,9 @@ public class SubmissionRepositoryResponse {
     private LocalDateTime lastSynchronizedAt;
     private String errorCode;
     private String errorMessage;
+    private Integer starCount;
+    private Integer forkCount;
+    private Integer openIssuesCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

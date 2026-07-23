@@ -114,7 +114,13 @@ public class GlobalExceptionHandler {
                 break;
             case GITHUB_REPOSITORY_NOT_FOUND:
             case REPOSITORY_INTEGRATION_NOT_FOUND:
+            case SUBMISSION_NOT_FOUND:
+            case SUBMISSION_REPOSITORY_NOT_FOUND:
                 status = HttpStatus.NOT_FOUND;
+                break;
+            case SUBMISSION_REPOSITORY_ACCESS_DENIED:
+            case SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED:
+                status = HttpStatus.FORBIDDEN;
                 break;
             case REPOSITORY_ALREADY_CONNECTED:
                 status = HttpStatus.CONFLICT;
@@ -148,6 +154,49 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage() != null ? ex.getMessage() : "Repository integration error")
                 .path(currentPath())
                 .build());
+    }
+
+    /**
+     * Loi tu GitHub metadata client (validate/preview, resync). Truoc day khong co handler
+     * nen moi loi (repo private, 404, rate limit...) deu roi xuong handler generic thanh 500.
+     * Message cua RepositoryMetadataException da la thong tin an toan (khong chua raw
+     * response GitHub hay token) nen tra truc tiep cho FE.
+     */
+    @ExceptionHandler(com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataException.class)
+    public ResponseEntity<ErrorResponse> handleRepositoryMetadataException(
+            com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataException ex) {
+        HttpStatus status;
+        switch (ex.getErrorCode()) {
+            case INVALID_GITHUB_REPOSITORY_URL:
+                status = HttpStatus.BAD_REQUEST;
+                break;
+            case GITHUB_REPOSITORY_NOT_FOUND:
+                status = HttpStatus.NOT_FOUND;
+                break;
+            case GITHUB_REPOSITORY_INACCESSIBLE:
+            case PRIVATE_REPOSITORY_NOT_SUPPORTED:
+                // Nghiep vu MVP chi ho tro repo public: private/inaccessible tra 422 de FE
+                // phan biet voi loi phan quyen noi bo (403) cua chinh he thong.
+                status = HttpStatus.UNPROCESSABLE_ENTITY;
+                break;
+            case GITHUB_RATE_LIMITED:
+                status = HttpStatus.TOO_MANY_REQUESTS;
+                break;
+            case GITHUB_TIMEOUT:
+                status = HttpStatus.GATEWAY_TIMEOUT;
+                break;
+            case GITHUB_UPSTREAM_ERROR:
+            case GITHUB_INVALID_RESPONSE:
+            default:
+                status = HttpStatus.BAD_GATEWAY;
+                break;
+        }
+        return build(
+                status,
+                ex.getErrorCode().name(),
+                ex.getMessage() != null ? ex.getMessage() : "Repository metadata error",
+                null
+        );
     }
 
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class, IllegalStateException.class})

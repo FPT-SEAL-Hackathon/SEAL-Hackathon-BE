@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.integration.repository.mapper;
 
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadataFetchResult;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.RepositoryProvider;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.RepositorySyncStatus;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.SubmissionRepositoryEntity;
@@ -35,13 +36,48 @@ public class SubmissionRepositoryMapper {
             entity.setRepositoryCreatedAt(metadata.getRepositoryCreatedAt());
             entity.setRepositoryUpdatedAt(metadata.getRepositoryUpdatedAt());
             entity.setLastPushedAt(metadata.getLastPushedAt());
+            entity.setStarCount(metadata.getStarCount());
+            entity.setForkCount(metadata.getForkCount());
+            entity.setOpenIssuesCount(metadata.getOpenIssuesCount());
             entity.setLastSyncStatus(RepositorySyncStatus.SUCCESS);
             entity.setLastSynchronizedAt(LocalDateTime.now(ZoneOffset.UTC));
+            // Sync thanh cong phai xoa loi cua lan sync truoc de Organizer khong thay loi cu.
             entity.setErrorCode(null);
             entity.setErrorMessage(null);
         } else {
             entity.setLastSyncStatus(RepositorySyncStatus.NOT_SYNCHRONIZED);
         }
+    }
+
+    /**
+     * Ap ket qua fetch (co the that bai) vao entity:
+     * - Thanh cong: ghi de metadata + SUCCESS + xoa loi cu.
+     * - That bai: GIU nguyen metadata cu (neu co) de nguoi xem van thay lan sync tot
+     *   gan nhat, chi cap nhat trang thai FAILED + errorCode/errorMessage an toan.
+     */
+    public void applyFetchResult(RepositoryMetadataFetchResult fetchResult, SubmissionRepositoryEntity entity) {
+        if (entity == null) {
+            return;
+        }
+        if (fetchResult == null) {
+            entity.setLastSyncStatus(RepositorySyncStatus.NOT_SYNCHRONIZED);
+            return;
+        }
+        if (fetchResult.isSuccess()) {
+            applyMetadata(fetchResult.getMetadata(), entity);
+            return;
+        }
+        entity.setLastSyncStatus(RepositorySyncStatus.FAILED);
+        entity.setLastSynchronizedAt(LocalDateTime.now(ZoneOffset.UTC));
+        entity.setErrorCode(truncate(fetchResult.getErrorCode(), 100));
+        entity.setErrorMessage(truncate(fetchResult.getErrorMessage(), 1000));
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     public SubmissionRepositoryEntity toEntity(RepositoryMetadata metadata, Submissions submission) {

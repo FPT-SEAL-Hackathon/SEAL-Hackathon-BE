@@ -160,6 +160,10 @@ public class EventServiceImplementation implements EventService {
             throw new BadRequestException("Event start date must be before or equal to event end date");
         }
 
+        if (registrationEnd.toLocalDate().isAfter(eventStartDate)) {
+            throw new BadRequestException("Registration end date must be on or before event start date");
+        }
+
     }
 
     private void validateTeamSize(Integer minTeamSize, Integer maxTeamSize) {
@@ -252,7 +256,7 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (request.getRegistrationEnd()!=null && request.getEventStartDate()!=null) {
-            if (request.getRegistrationEnd().isAfter(request.getEventStartDate().atStartOfDay())) {
+            if (request.getRegistrationEnd().toLocalDate().isAfter(request.getEventStartDate())) {
                 throw new IllegalArgumentException("Registration end date must be on or before event start date");
             }
         }
