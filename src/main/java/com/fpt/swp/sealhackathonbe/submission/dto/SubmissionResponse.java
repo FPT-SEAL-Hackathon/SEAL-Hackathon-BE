@@ -26,6 +26,8 @@ public class SubmissionResponse {
     private Integer repoStarCount;
     private Integer repoForkCount;
 
+    private com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse repository;
+
     private LocalDateTime submittedAt;
     private LocalDateTime lastUpdatedAt;
     private UUID submittedByUserId;

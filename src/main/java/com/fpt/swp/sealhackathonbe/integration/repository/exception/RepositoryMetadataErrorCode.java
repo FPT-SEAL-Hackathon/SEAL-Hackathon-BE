@@ -1,0 +1,12 @@
+package com.fpt.swp.sealhackathonbe.integration.repository.exception;
+
+public enum RepositoryMetadataErrorCode {
+    INVALID_GITHUB_REPOSITORY_URL,
+    GITHUB_REPOSITORY_NOT_FOUND,
+    GITHUB_REPOSITORY_INACCESSIBLE,
+    PRIVATE_REPOSITORY_NOT_SUPPORTED,
+    GITHUB_RATE_LIMITED,
+    GITHUB_TIMEOUT,
+    GITHUB_UPSTREAM_ERROR,
+    GITHUB_INVALID_RESPONSE
+}

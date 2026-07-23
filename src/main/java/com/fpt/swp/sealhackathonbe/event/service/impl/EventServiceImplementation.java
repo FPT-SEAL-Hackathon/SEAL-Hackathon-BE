@@ -152,8 +152,8 @@ public class EventServiceImplementation implements EventService {
             LocalDate eventStartDate,
             LocalDate eventEndDate
     ) {
-        if (registrationStart.isAfter(registrationEnd)) {
-            throw new BadRequestException("Registration start time must be before or equal to registration end time");
+        if (!registrationStart.isBefore(registrationEnd)) {
+            throw new BadRequestException("Registration start time must be strictly before registration end time");
         }
 
         if (eventStartDate.isAfter(eventEndDate)) {
@@ -163,6 +163,7 @@ public class EventServiceImplementation implements EventService {
         if (registrationEnd.toLocalDate().isAfter(eventStartDate)) {
             throw new BadRequestException("Registration end date must be on or before event start date");
         }
+
     }
 
     private void validateTeamSize(Integer minTeamSize, Integer maxTeamSize) {
@@ -233,8 +234,8 @@ public class EventServiceImplementation implements EventService {
             }
         }
         if (request.getRegistrationStart()!=null && request.getRegistrationEnd()!=null) {
-            if(request.getRegistrationStart().isAfter(request.getRegistrationEnd())) {
-                throw new IllegalArgumentException("Registration start date must be before end date");
+            if(!request.getRegistrationStart().isBefore(request.getRegistrationEnd())) {
+                throw new IllegalArgumentException("Registration start date must be strictly before end date");
             }
         }
 
@@ -255,7 +256,7 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (request.getRegistrationEnd()!=null && request.getEventStartDate()!=null) {
-            if (request.getRegistrationEnd().isAfter(request.getEventStartDate().atStartOfDay())) {
+            if (request.getRegistrationEnd().toLocalDate().isAfter(request.getEventStartDate())) {
                 throw new IllegalArgumentException("Registration end date must be on or before event start date");
             }
         }
