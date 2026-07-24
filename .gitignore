@@ -36,5 +36,4 @@ build/
 .claude/
 CLAUDE.md
 AGENTS.md
-"conversation_log.md"
-.docs/
+"conversation_log.md" 
