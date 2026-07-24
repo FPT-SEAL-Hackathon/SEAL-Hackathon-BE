@@ -14,6 +14,9 @@ public class AppealRequestDTO {
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
     
+    @NotNull(message = "Round ID is required")
+    private UUID roundId;
+    
     @NotNull(message = "Team ID is required")
     private UUID teamId;
     

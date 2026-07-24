@@ -38,6 +38,10 @@ public class Appeals {
     @JoinColumn(name = "CategoryID", nullable = false)
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "RoundID")
+    private com.fpt.swp.sealhackathonbe.round.entity.Round round;
+
     @Column(name = "Title", nullable = false)
     private String title;
 

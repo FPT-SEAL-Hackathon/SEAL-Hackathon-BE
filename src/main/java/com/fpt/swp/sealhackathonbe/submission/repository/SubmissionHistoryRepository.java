@@ -13,4 +13,6 @@ public interface SubmissionHistoryRepository extends JpaRepository<SubmissionHis
     List<SubmissionHistory> findByTeamIdAndRoundIdOrderByVersionNumberDesc(UUID teamId, UUID roundId);
 
     Optional<SubmissionHistory> findFirstBySubmissionIdOrderByVersionNumberDesc(UUID submissionId);
+
+    boolean existsByRoundId(UUID roundId);
 }
