@@ -55,6 +55,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     List<User> findAllByEmailIgnoreCase(String email);
 
+    // Scan chuẩn hóa hồ sơ: lấy mọi account còn sống để lọc ra account chưa chuẩn.
+    List<User> findAllByIsDeletedFalse();
+
     // Hard delete user: gỡ tham chiếu "người duyệt" trên các user khác
     // (ApprovedByUserID nullable) trước khi xóa user.
     @Modifying

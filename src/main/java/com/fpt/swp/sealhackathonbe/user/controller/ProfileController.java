@@ -50,11 +50,49 @@ public class ProfileController {
 
         if (request.getPhone() != null) {
             String phone = request.getPhone().trim();
-            // basic validation: allow blank (clear phone) or valid format
-            if (!phone.isEmpty() && !phone.matches("^[0-9+()\\-\\s]{7,20}$")) {
-                throw new BadRequestException("Invalid phone number.");
+            String newPhone = phone.isEmpty() ? null : phone;
+            // Enforce-on-change: chỉ validate SĐT VN khi đổi giá trị (grandfather dữ liệu cũ).
+            if (newPhone != null && !newPhone.equals(user.getPhone())
+                    && !com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isValidVietnamesePhone(newPhone)) {
+                throw new BadRequestException(
+                        com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.MSG_PHONE);
             }
-            user.setPhone(phone.isEmpty() ? null : phone);
+            user.setPhone(newPhone);
+        }
+
+        // Học sinh tự sửa mã SV (chuẩn hóa). Chỉ áp đúng loại theo role, enforce-on-change + check trùng.
+        boolean isFptStudent = user.getUserType() != null
+                && "FPT Student".equalsIgnoreCase(user.getUserType().getTypeName());
+        boolean isExternalStudentRole = user.getUserType() != null
+                && "External Student".equalsIgnoreCase(user.getUserType().getTypeName());
+
+        if (isFptStudent && request.getFptStudentCode() != null) {
+            String code = request.getFptStudentCode().trim();
+            String newCode = code.isEmpty() ? null : code;
+            if (newCode != null && !newCode.equals(user.getFptStudentCode())) {
+                if (!com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isValidFptStudentCode(newCode)) {
+                    throw new BadRequestException(
+                            com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.MSG_FPT_CODE);
+                }
+                if (userRepository.existsByFptStudentCodeAndIsDeletedFalseAndUserIdNot(newCode, user.getUserId())) {
+                    throw new BadRequestException("FPT student code already exists.");
+                }
+                user.setFptStudentCode(newCode);
+            }
+        }
+        if (isExternalStudentRole && request.getExternalStudentCode() != null) {
+            String code = request.getExternalStudentCode().trim();
+            String newCode = code.isEmpty() ? null : code;
+            if (newCode != null && !newCode.equals(user.getExternalStudentCode())) {
+                if (!com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isValidExternalStudentCode(newCode)) {
+                    throw new BadRequestException(
+                            com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.MSG_EXTERNAL_CODE);
+                }
+                if (userRepository.existsByExternalStudentCodeAndIsDeletedFalseAndUserIdNot(newCode, user.getUserId())) {
+                    throw new BadRequestException("External student code already exists.");
+                }
+                user.setExternalStudentCode(newCode);
+            }
         }
 
         if (request.getUniversityName() != null) {
@@ -91,6 +129,8 @@ public class ProfileController {
                 .accountStatus(toApiName(statusName))
                 .accountStatusName(statusName)
                 .createdAt(user.getCreatedAt())
+                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
+                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
                 .build();
     }
 

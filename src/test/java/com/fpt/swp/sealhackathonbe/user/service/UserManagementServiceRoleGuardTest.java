@@ -51,9 +51,30 @@ class UserManagementServiceRoleGuardTest {
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
     private UserService userService;
+    @Mock
+    private com.fpt.swp.sealhackathonbe.team.service.TeamService teamService;
+    @Mock
+    private com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository roundJudgeRepository;
+    @Mock
+    private com.fpt.swp.sealhackathonbe.event.repository.EventRepository eventRepository;
+    @Mock
+    private com.fpt.swp.sealhackathonbe.category.repository.CategoryMentorRepository categoryMentorRepository;
 
     @InjectMocks
     private UserManagementService service;
+
+    private User userWithRole(UUID userId, String roleName) {
+        AccountStatus status = new AccountStatus();
+        status.setStatusName("Active");
+        User user = new User();
+        user.setUserId(userId);
+        user.setEmail("u@test.com");
+        user.setFullName("U");
+        user.setUserType(type(roleName));
+        user.setAccountStatus(status);
+        user.setIsDeleted(false);
+        return user;
+    }
 
     private UserType type(String name) {
         UserType type = new UserType();
@@ -147,5 +168,76 @@ class UserManagementServiceRoleGuardTest {
         assertDoesNotThrow(() -> service.updateRole(targetId, request, actorId));
         assertEquals("Mentor", target.getUserType().getTypeName());
         verify(userRepository).save(target);
+    }
+
+    @Test
+    void changeRoleBlockedWhenStudentStillInTeam() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User student = userWithRole(targetId, "FPT Student");
+        stubUserLookup(student);
+        stubRoleLookup();
+        when(teamMembersRepository.findAllByUserIdAndActiveTrue(targetId))
+                .thenReturn(List.of(new com.fpt.swp.sealhackathonbe.team.entity.TeamMembers()));
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("MENTOR");
+
+        assertThrows(com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException.class,
+                () -> service.updateRole(targetId, request, actorId));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changeRoleBlockedWhenJudgeHasAssignments() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User judge = userWithRole(targetId, "Internal Judge");
+        stubUserLookup(judge);
+        stubRoleLookup();
+        when(roundJudgeRepository.existsByJudge_UserId(targetId)).thenReturn(true);
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("MENTOR");
+
+        assertThrows(com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException.class,
+                () -> service.updateRole(targetId, request, actorId));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changeRoleBlockedWhenMentorHasAssignments() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User mentor = userWithRole(targetId, "Mentor");
+        stubUserLookup(mentor);
+        stubRoleLookup();
+        when(categoryMentorRepository.existsByMentor_UserId(targetId)).thenReturn(true);
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("ORGANIZER");
+
+        assertThrows(com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException.class,
+                () -> service.updateRole(targetId, request, actorId));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changeRoleAllowedWhenStudentHasNoTeam() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User student = userWithRole(targetId, "FPT Student");
+        stubUserLookup(student);
+        stubRoleLookup();
+        when(teamMembersRepository.findAllByUserIdAndActiveTrue(targetId)).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenReturn(student);
+        when(teamMembersRepository.findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(targetId))
+                .thenReturn(Optional.empty());
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("MENTOR");
+
+        assertDoesNotThrow(() -> service.updateRole(targetId, request, actorId));
+        assertEquals("Mentor", student.getUserType().getTypeName());
     }
 }
