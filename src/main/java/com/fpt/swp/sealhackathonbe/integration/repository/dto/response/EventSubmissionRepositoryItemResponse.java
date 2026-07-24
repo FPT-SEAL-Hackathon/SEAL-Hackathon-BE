@@ -20,6 +20,8 @@ public class EventSubmissionRepositoryItemResponse {
     private UUID submissionId;
     private UUID teamId;
     private String teamName;
+    // true = bài mẫu của calibration round (Organizer tạo, TeamID null) — để FE gắn nhãn phân biệt.
+    private boolean sampleSubmission;
     private String categoryName;
     private String roundName;
     private LocalDateTime submittedAt;
