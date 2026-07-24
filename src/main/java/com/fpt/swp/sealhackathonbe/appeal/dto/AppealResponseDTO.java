@@ -17,6 +17,8 @@ public class AppealResponseDTO {
     private String eventName;
     private UUID categoryId;
     private String categoryName;
+    private UUID roundId;
+    private String roundName;
     private String title;
     private String reason;
     private com.fpt.swp.sealhackathonbe.appeal.entity.AppealType appealType;

@@ -14,7 +14,7 @@ public interface RankingService {
      * @return List of computed round rankings.
      */
     List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId);
-    void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId);
+    void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId, Integer appealDurationMinutes);
     void approveRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId);
 
     /**
