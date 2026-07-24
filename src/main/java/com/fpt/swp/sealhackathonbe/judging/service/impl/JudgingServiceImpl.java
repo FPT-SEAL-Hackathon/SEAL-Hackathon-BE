@@ -48,6 +48,15 @@ public class JudgingServiceImpl implements JudgingService {
     private final RoundJudgeRepository roundJudgeRepository;
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRankingRepository roundRankingRepository;
+    private final com.fpt.swp.sealhackathonbe.round.repository.RoundRepository roundRepository;
+
+    // Event context của một submission suy từ ROUND (round -> category -> event) để hoạt động
+    // cả với sample submission (calibration) vốn có TeamID = null (không lấy được qua team).
+    private Event resolveEvent(Submissions submission) {
+        return roundRepository.findById(submission.getRoundId())
+                .map(r -> r.getCategory() != null ? r.getCategory().getEvent() : null)
+                .orElse(null);
+    }
 
 
     @Override
@@ -107,7 +116,7 @@ public class JudgingServiceImpl implements JudgingService {
 
         // 5. Extract Team and Event from the submission hierarchy
         Teams team = submission.getTeam();
-        Event event = (team != null) ? team.getEvent() : null;
+        Event event = resolveEvent(submission);
         if (event == null) {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
@@ -267,7 +276,7 @@ public class JudgingServiceImpl implements JudgingService {
             // 6. Extract Team and Event
             Submissions submission = existingJudging.getSubmission();
             Teams team = submission.getTeam();
-            Event event = (team != null) ? team.getEvent() : null;
+            Event event = resolveEvent(submission);
 
             if (event == null) {
                 throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
@@ -361,6 +370,12 @@ public class JudgingServiceImpl implements JudgingService {
         Submissions submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
 
+        // Sample submission (calibration) không thuộc team nào → không có bảng xếp hạng công bố.
+        if (submission.getTeam() == null) {
+            throw new com.fpt.swp.sealhackathonbe.core.exception.BadRequestException(
+                    "Published scores are not available for sample (calibration) submissions.");
+        }
+
         UUID teamId = submission.getTeam().getTeamId();
         UUID roundId = submission.getRoundId();
         UUID categoryId = submission.getTeam().getCategoryId();
@@ -453,7 +468,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
 
         Teams team = submission.getTeam();
-        Event event = (team != null) ? team.getEvent() : null;
+        Event event = resolveEvent(submission);
 
         // Fetch active judging records
         List<Judging> activeJudgings = judgingRepository.findBySubmission_SubmissionId(submissionId)
@@ -508,7 +523,7 @@ public class JudgingServiceImpl implements JudgingService {
         }
 
         Teams team = submission.getTeam();
-        Event event = (team != null) ? team.getEvent() : null;
+        Event event = resolveEvent(submission);
         if (event == null) {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
