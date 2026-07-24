@@ -99,7 +99,7 @@ class EventServiceImplementationCreateTest {
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
-        assertEquals("Registration start time must be before or equal to registration end time", exception.getMessage());
+        assertEquals("Registration start time must be strictly before registration end time", exception.getMessage());
     }
 
     @Test
@@ -112,6 +112,18 @@ class EventServiceImplementationCreateTest {
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
         assertEquals("Event start date must be before or equal to event end date", exception.getMessage());
+    }
+
+    @Test
+    void createEventRegistrationEndAfterEventStartDateReturnsBadRequest() {
+        CreateEventRequest request = validRequest();
+        request.setRegistrationEnd(LocalDateTime.of(2030, 7, 1, 9, 0));
+        request.setEventStartDate(LocalDate.of(2030, 6, 30));
+        mockDraftStatus();
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
+
+        assertEquals("Registration end date must be on or before event start date", exception.getMessage());
     }
 
     @Test
