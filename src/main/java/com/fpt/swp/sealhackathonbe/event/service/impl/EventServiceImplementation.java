@@ -23,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -373,6 +374,29 @@ public class EventServiceImplementation implements EventService {
                 && !(authentication instanceof AnonymousAuthenticationToken)
                 && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority()));
+    }
+
+    @Override
+    public List<EventResponse> getAllEventsForOrganizer() {
+        List<Event> events = eventRepository.findAllByIsDeletedFalse();
+
+        Map<UUID, EventParticipant> participantsByEvent = getCurrentUserParticipationByEventId(events);
+
+        return events.stream()
+                .map(event -> {
+                    EventResponse response = eventMapper.toEventResponse(
+                            event,
+                            participantsByEvent.get(event.getEventId())
+                    );
+                    response.setTeamCount(
+                            (int) teamsRepository.countByEventId(event.getEventId())
+                    );
+                    response.setRoundCount(
+                            (int) roundRepository.countByEventId(event.getEventId())
+                    );
+                    return response;
+                })
+                .toList();
     }
 
 }
