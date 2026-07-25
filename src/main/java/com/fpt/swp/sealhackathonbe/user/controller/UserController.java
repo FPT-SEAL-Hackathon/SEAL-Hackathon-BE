@@ -183,13 +183,27 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Scan accounts with non-standard profile and notify them to update (no blocking)")
+    @PostMapping("/notify-noncompliant")
+    public ResponseEntity<Map<String, Object>> notifyNonCompliant() {
+        int notified = userManagementService.notifyNonCompliantUsers(currentUserId());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "notifiedCount", notified,
+                "message", "Notified " + notified + " account(s) to update their profile."
+        ));
+    }
+
     @Operation(summary = "Deactivate user")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> delete(@PathVariable UUID userId) {
-        userManagementService.delete(userId, currentUserId());
+        com.fpt.swp.sealhackathonbe.user.dto.DeactivateUserResult result =
+                userManagementService.delete(userId, currentUserId());
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "User deactivated successfully"
+                "message", "User deactivated successfully",
+                "transferredTeams", result.getTransferredTeams(),
+                "warnings", result.getWarnings()
         ));
     }
 

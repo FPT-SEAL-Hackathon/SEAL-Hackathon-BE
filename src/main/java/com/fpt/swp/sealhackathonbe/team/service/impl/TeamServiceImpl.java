@@ -40,6 +40,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class TeamServiceImpl implements TeamService {
     private static final int TEAM_NAME_MAX_LENGTH = 300;
     private static final String REJECTED_TEAM_NAME_SUFFIX_PREFIX = " [rejected:";
@@ -425,6 +426,69 @@ public class TeamServiceImpl implements TeamService {
         teamJoinRequestsRepository.deleteByTeamId(teamId);
         teamMembersRepository.deleteByTeamId(teamId);
         teamsRepository.delete(team);
+    }
+
+    @Override
+    @Transactional
+    public com.fpt.swp.sealhackathonbe.team.dto.LeadershipReassignmentResult reassignLeadershipForDeactivatedUser(
+            UUID userId, UUID actorUserId) {
+        // Deactivate GIỮ ghế của user (không giảm sĩ số) — chỉ chuyển quyền leader nếu cần,
+        // để team không bị đóng băng (chỉ leader mới nộp bài được). KHÔNG gọi assertRosterEditable
+        // vì việc này phải chạy được cả khi roster đã khóa giữa event.
+        var result = com.fpt.swp.sealhackathonbe.team.dto.LeadershipReassignmentResult.builder().build();
+
+        List<TeamMembers> memberships = teamMembersRepository.findAllByUserIdAndActiveTrue(userId);
+        for (TeamMembers membership : memberships) {
+            Teams team = teamsRepository.findByIdForUpdate(membership.getTeamId()).orElse(null);
+            if (team == null || !team.getLeaderUserId().equals(userId)) {
+                continue; // user chỉ là thành viên thường → không đụng
+            }
+
+            List<TeamMembers> others = teamMembersRepository
+                    .findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(team.getTeamId())
+                    .stream()
+                    .filter(m -> !m.getUserId().equals(userId))
+                    .toList();
+
+            if (others.isEmpty()) {
+                // Leader kiêm thành viên duy nhất — KHÔNG giải tán (deactivate đảo ngược được),
+                // giữ nguyên team (tự đóng băng) và cảnh báo để organizer xử lý.
+                result.getFrozenTeams().add(team.getTeamName());
+                continue;
+            }
+
+            TeamMembers newLeader = others.get(0);
+            team.setLeaderUserId(newLeader.getUserId());
+            team.setUpdatedAt(LocalDateTime.now());
+            teamsRepository.save(team);
+
+            String newLeaderName = newLeader.getUser() != null ? newLeader.getUser().getFullName() : null;
+            result.getTransfers().add(
+                    com.fpt.swp.sealhackathonbe.team.dto.LeadershipReassignmentResult.TransferInfo.builder()
+                            .teamName(team.getTeamName())
+                            .newLeaderName(newLeaderName)
+                            .build());
+
+            for (TeamMembers member : others) {
+                try {
+                    notificationService.sendNotification(
+                            member.getUserId(),
+                            actorUserId,
+                            team.getEventId(),
+                            "Team Leader Changed",
+                            "Trưởng nhóm của team " + team.getTeamName()
+                                    + " đã bị vô hiệu hóa. "
+                                    + (newLeaderName != null ? newLeaderName : "Một thành viên")
+                                    + " nay là trưởng nhóm mới.");
+                } catch (RuntimeException ex) {
+                    // Thông báo là best-effort: lỗi gửi không được làm rollback việc chuyển quyền.
+                    log.warn("Failed to notify member {} of leader change in team {}",
+                            member.getUserId(), team.getTeamId(), ex);
+                }
+            }
+        }
+
+        return result;
     }
 
     @Override

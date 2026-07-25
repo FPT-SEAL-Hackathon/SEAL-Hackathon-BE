@@ -286,7 +286,8 @@ public class SubmissionRepositoryService {
             throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "Only the event creator may view submission repositories of this event");
         }
 
-        List<Submissions> submissions = submissionsRepository.findByEventId(eventId);
+        // Bao gồm cả sample submission (bài mẫu calibration, TeamID null) — Organizer cần thấy.
+        List<Submissions> submissions = submissionsRepository.findByEventIdIncludingSamples(eventId);
         if (submissions.isEmpty()) {
             return List.of();
         }
@@ -332,6 +333,7 @@ public class SubmissionRepositoryService {
                 .submissionId(submission.getSubmissionId())
                 .teamId(submission.getTeamId())
                 .teamName(team != null ? team.getTeamName() : null)
+                .sampleSubmission(Boolean.TRUE.equals(submission.getIsSampleSubmission()))
                 .categoryName(categoryName)
                 .roundName(round != null ? round.getRoundName() : null)
                 .submittedAt(submission.getSubmittedAt())

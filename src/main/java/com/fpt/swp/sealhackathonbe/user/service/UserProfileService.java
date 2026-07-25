@@ -10,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.AccountStatusRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
+import com.fpt.swp.sealhackathonbe.user.util.ProfileValidation;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,8 +87,15 @@ public class UserProfileService {
                     "External student code and university name are required for External Student."
             );
         }
-        if (phone != null && !phone.matches("^[0-9+()\\-\\s]{7,20}$")) {
-            throw new BadRequestException("Invalid phone number.");
+        // Hoàn thiện hồ sơ lần đầu → áp định dạng chuẩn ngay (không có gì để grandfather).
+        if (phone != null && !ProfileValidation.isValidVietnamesePhone(phone)) {
+            throw new BadRequestException(ProfileValidation.MSG_PHONE);
+        }
+        if (fptStudentCode != null && !ProfileValidation.isValidFptStudentCode(fptStudentCode)) {
+            throw new BadRequestException(ProfileValidation.MSG_FPT_CODE);
+        }
+        if (externalStudentCode != null && !ProfileValidation.isValidExternalStudentCode(externalStudentCode)) {
+            throw new BadRequestException(ProfileValidation.MSG_EXTERNAL_CODE);
         }
 
         // Phát hiện trùng hồ sơ với tài khoản KHÁC; nếu trùng thì không cập nhật.
@@ -196,6 +204,21 @@ public class UserProfileService {
 
         String fptStudentCode = isFpt ? trimToNull(request.getFptStudentCode()) : null;
         String externalStudentCode = !isFpt ? trimToNull(request.getExternalStudentCode()) : null;
+
+        // Enforce định dạng chuẩn CHỈ khi field thực sự thay đổi (grandfather dữ liệu cũ:
+        // user chưa sửa thì không bị chặn, nhưng đã sửa thì giá trị mới phải đúng chuẩn).
+        if (phone != null && !phone.equals(currentUser.getPhone())
+                && !ProfileValidation.isValidVietnamesePhone(phone)) {
+            throw new BadRequestException(ProfileValidation.MSG_PHONE);
+        }
+        if (fptStudentCode != null && !fptStudentCode.equals(currentUser.getFptStudentCode())
+                && !ProfileValidation.isValidFptStudentCode(fptStudentCode)) {
+            throw new BadRequestException(ProfileValidation.MSG_FPT_CODE);
+        }
+        if (externalStudentCode != null && !externalStudentCode.equals(currentUser.getExternalStudentCode())
+                && !ProfileValidation.isValidExternalStudentCode(externalStudentCode)) {
+            throw new BadRequestException(ProfileValidation.MSG_EXTERNAL_CODE);
+        }
 
         // Check conflicts for existing phone or student codes
         List<String> conflictFields = new ArrayList<>();

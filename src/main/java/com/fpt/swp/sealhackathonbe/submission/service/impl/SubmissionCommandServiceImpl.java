@@ -116,30 +116,47 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     @Override
-    @Transactional
     public SubmissionResponse submitSampleWork(CreateSampleSubmissionRequest request, UUID currentUserId) {
+        // Sample submission (bài mẫu của calibration round) cần metadata repository GIỐNG bài
+        // thật để judge chấm calibration thấy được RepositoryMetadataCard. Fetch GitHub NGOÀI
+        // transaction rồi persist atomic bằng transactionTemplate — cùng pattern với submitWork.
         Round round = findRound(request.getRoundId());
         validateCalibrationRound(round);
         validateRoundAcceptsSampleSubmission(round);
 
-        Submissions sampleSubmission = new Submissions();
-        sampleSubmission.setRoundId(request.getRoundId());
-        sampleSubmission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
-        sampleSubmission.setRepositoryUrl(request.getRepositoryUrl());
-        sampleSubmission.setDemoUrl(request.getDemoUrl());
-        sampleSubmission.setReportUrl(request.getReportUrl());
-        sampleSubmission.setSlideUrl(request.getSlideUrl());
-        sampleSubmission.setNotes(request.getNotes());
-        sampleSubmission.setSubmittedAt(LocalDateTime.now());
-        sampleSubmission.setLastUpdatedAt(LocalDateTime.now());
-        sampleSubmission.setSubmittedByUserId(currentUserId);
-        sampleSubmission.setIsScoreApproved(false);
-        sampleSubmission.setIsSampleSubmission(true);
+        // Buoc HTTP cham nam ngoai transaction.
+        final com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadataFetchResult fetchResult =
+                (request.getRepositoryUrl() != null && !request.getRepositoryUrl().trim().isEmpty())
+                        ? submissionRepositoryService.fetchMetadataOutsideTx(request.getRepositoryUrl())
+                        : null;
 
-        Submissions saved = submissionsRepository.save(sampleSubmission);
-        recordSubmissionHistory(saved);
+        return transactionTemplate.execute(status -> {
+            Submissions sampleSubmission = new Submissions();
+            sampleSubmission.setRoundId(request.getRoundId());
+            sampleSubmission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+            sampleSubmission.setRepositoryUrl(request.getRepositoryUrl());
+            sampleSubmission.setDemoUrl(request.getDemoUrl());
+            sampleSubmission.setReportUrl(request.getReportUrl());
+            sampleSubmission.setSlideUrl(request.getSlideUrl());
+            sampleSubmission.setNotes(request.getNotes());
+            sampleSubmission.setSubmittedAt(LocalDateTime.now());
+            sampleSubmission.setLastUpdatedAt(LocalDateTime.now());
+            sampleSubmission.setSubmittedByUserId(currentUserId);
+            sampleSubmission.setIsScoreApproved(false);
+            sampleSubmission.setIsSampleSubmission(true);
 
-        return SubmissionMapper.toSubmissionResponse(saved);
+            Submissions saved = submissionsRepository.save(sampleSubmission);
+            recordSubmissionHistory(saved);
+
+            SubmissionResponse response = SubmissionMapper.toSubmissionResponse(saved);
+            if (fetchResult != null) {
+                com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse repoResp =
+                        submissionRepositoryService.saveOrUpdateSubmissionRepository(
+                                saved.getSubmissionId(), request.getRepositoryUrl(), fetchResult);
+                response.setRepository(repoResp);
+            }
+            return response;
+        });
     }
 
     private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
