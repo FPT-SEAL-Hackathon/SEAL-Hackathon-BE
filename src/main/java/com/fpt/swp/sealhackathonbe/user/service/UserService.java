@@ -204,6 +204,8 @@ public class UserService {
                 .accountStatus(toApiName(accountStatusName))
                 .accountStatusName(accountStatusName)
                 .createdAt(user.getCreatedAt())
+                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
+                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
                 .build();
     }
 
