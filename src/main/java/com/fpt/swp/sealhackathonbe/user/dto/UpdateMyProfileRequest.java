@@ -20,4 +20,12 @@ public class UpdateMyProfileRequest {
     /** Chỉ áp dụng cho External Student. */
     @Size(max = 200, message = "University name must not exceed 200 characters")
     private String universityName;
+
+    // Học sinh tự sửa mã SV của mình để chuẩn hóa (SE/SS/SA + 6 số cho FPT).
+    // Chỉ nhận đúng loại theo role; validate + check trùng ở controller.
+    @Size(max = 20, message = "FPT student code must not exceed 20 characters")
+    private String fptStudentCode;
+
+    @Size(max = 50, message = "External student code must not exceed 50 characters")
+    private String externalStudentCode;
 }
