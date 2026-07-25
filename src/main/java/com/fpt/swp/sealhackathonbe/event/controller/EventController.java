@@ -65,4 +65,13 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAllEventsForOrganizer());
     }
 
+    @PostMapping("/event/publish/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<EventResponse> publishEvent(@PathVariable UUID id) {
+        return ResponseEntity.ok(eventService.publishEvent(id));
+    }
+
+
+
+
 }

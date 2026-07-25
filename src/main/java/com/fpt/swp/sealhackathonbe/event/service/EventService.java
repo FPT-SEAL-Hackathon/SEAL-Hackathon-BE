@@ -21,5 +21,6 @@ public interface EventService {
     List<EventResponse> getAllEventsForOrganizer();
     EventResponse updateStatus(UUID eventId, UpdateEventStatusRequest request);
     void delete(UUID eventId);
-
+    void updateEventStatuses();
+    EventResponse publishEvent(UUID eventId);
 }
