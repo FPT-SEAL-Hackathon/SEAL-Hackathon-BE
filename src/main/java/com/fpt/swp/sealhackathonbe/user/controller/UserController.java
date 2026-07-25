@@ -186,10 +186,13 @@ public class UserController {
     @Operation(summary = "Deactivate user")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> delete(@PathVariable UUID userId) {
-        userManagementService.delete(userId, currentUserId());
+        com.fpt.swp.sealhackathonbe.user.dto.DeactivateUserResult result =
+                userManagementService.delete(userId, currentUserId());
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "User deactivated successfully"
+                "message", "User deactivated successfully",
+                "transferredTeams", result.getTransferredTeams(),
+                "warnings", result.getWarnings()
         ));
     }
 
