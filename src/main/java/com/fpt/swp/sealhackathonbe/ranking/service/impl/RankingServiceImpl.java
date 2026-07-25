@@ -3,6 +3,8 @@ package com.fpt.swp.sealhackathonbe.ranking.service.impl;
 import com.fpt.swp.sealhackathonbe.core.constant.RankingStatusConstants;
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 
+import com.fpt.swp.sealhackathonbe.appeal.entity.AppealStatus;
+import com.fpt.swp.sealhackathonbe.appeal.repository.AppealRepository;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judging.entity.Judging;
@@ -60,6 +62,7 @@ public class RankingServiceImpl implements RankingService {
     private final CategoryRepository categoryRepository;
     private final NotificationService notificationService;
     private final TeamMembersRepository teamMembersRepository;
+    private final AppealRepository appealRepository;
 
 
     @Override
@@ -84,6 +87,9 @@ public class RankingServiceImpl implements RankingService {
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
                 .toList();
+
+        // KIỂM TRA ĐIỂM ĐÃ ĐƯỢC DUYỆT (FINALIZED)
+        validateScoresFinalizedForRound(roundId, "compute");
 
         Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
                 SubmissionResponse::getSubmissionId,
@@ -240,6 +246,8 @@ public class RankingServiceImpl implements RankingService {
             throw new IllegalStateException("Rankings must be computed before publishing.");
         }
         
+        validateScoresFinalizedForRound(roundId, "publish");
+        
         // Update appeal window for the round
         com.fpt.swp.sealhackathonbe.round.entity.Round round = existingRankings.get(0).getRound();
         round.setAppealStartTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
@@ -282,6 +290,20 @@ public class RankingServiceImpl implements RankingService {
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Rankings must be computed before approving.");
         }
+        
+        com.fpt.swp.sealhackathonbe.round.entity.Round round = existingRankings.get(0).getRound();
+        
+        // Kiểm tra thời gian appeal đã đóng chưa
+        if (round.getAppealEndTime() != null && java.time.LocalDateTime.now().isBefore(round.getAppealEndTime())) {
+            throw new IllegalStateException("Cannot approve rankings while the appeal window is still open.");
+        }
+        
+        // Kiểm tra còn appeal nào đang pending không
+        if (appealRepository.existsByRound_RoundIdAndStatus(roundId, AppealStatus.PENDING)) {
+            throw new IllegalStateException("Cannot approve rankings because there are still pending appeals for this round.");
+        }
+        
+        validateScoresFinalizedForRound(roundId, "approve");
         for (RoundRanking r : existingRankings) {
             r.setIsApproved(true);
         }
@@ -350,6 +372,14 @@ public class RankingServiceImpl implements RankingService {
         }
 
         List<RoundRanking> allRoundRankings = roundRankingRepository.findByCategory_CategoryId(categoryId);
+
+        // KIỂM TRA TẤT CẢ RANKING CỦA CÁC VÒNG ĐÃ ĐƯỢC DUYỆT CHƯA
+        boolean allRoundsApproved = allRoundRankings.stream()
+                .allMatch(r -> Boolean.TRUE.equals(r.getIsApproved()));
+        if (!allRoundRankings.isEmpty() && !allRoundsApproved) {
+            throw new IllegalStateException("Cannot compute event rankings because not all round rankings in this category have been approved.");
+        }
+
         allRoundRankings.sort(java.util.Comparator.comparing(r -> r.getRound().getRoundOrder()));
         
         Map<UUID, BigDecimal> dScores = new java.util.HashMap<>();
@@ -617,5 +647,20 @@ public class RankingServiceImpl implements RankingService {
                 .isApproved(r.getIsApproved())
                 .build()
         ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
+    }
+
+    private void validateScoresFinalizedForRound(UUID roundId, String action) {
+        List<com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
+        List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
+                .map(com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse::getSubmissionId)
+                .toList();
+
+        boolean allScoresApproved = submissionsList.stream()
+                .filter(sub -> !disqualifiedSubIds.contains(sub.getSubmissionId()))
+                .allMatch(sub -> Boolean.TRUE.equals(sub.getIsScoreApproved()));
+
+        if (!submissionsList.isEmpty() && !allScoresApproved) {
+            throw new IllegalStateException(String.format("Cannot %s rankings because not all valid submissions have their scores finalized and approved.", action));
+        }
     }
 }
