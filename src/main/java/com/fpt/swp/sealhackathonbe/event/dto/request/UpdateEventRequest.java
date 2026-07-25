@@ -24,9 +24,6 @@ public class UpdateEventRequest {
     @URL(message = "Invalid banner image URL")
     private String bannerImageUrl;
 
-    @NotNull(message = "Event status is required")
-    private UUID eventStatusId;
-
     private LocalDateTime registrationStart;
     private LocalDateTime registrationEnd;
 

@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.event.service.impl;
 
+import com.fpt.swp.sealhackathonbe.auth.service.mapper.AuthenticationService;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.event.dto.request.CreateEventRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.response.EventResponse;
@@ -55,6 +56,9 @@ class EventServiceImplementationCreateTest {
     @Mock
     private RoundRepository roundRepository;
 
+    @Mock
+    private AuthenticationService authenticationService;
+
     private EventServiceImplementation eventService;
 
     @BeforeEach
@@ -66,7 +70,8 @@ class EventServiceImplementationCreateTest {
                 userRepository,
                 eventParticipantRepository,
                 teamsRepository,
-                roundRepository
+                roundRepository,
+                authenticationService
         );
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("organizer@example.com", "password")
@@ -166,7 +171,7 @@ class EventServiceImplementationCreateTest {
         request.setDescription("Build software products");
         request.setLocation("FPT University HCMC");
         request.setBannerImageUrl("https://example.com/banner.png");
-        request.setEventStatusId(DRAFT_STATUS_ID);
+        //request.setEventStatusId(DRAFT_STATUS_ID);
         request.setRegistrationStart(LocalDateTime.of(2030, 6, 1, 8, 0));
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 30, 9, 0));
         request.setEventStartDate(LocalDate.of(2030, 6, 30));
