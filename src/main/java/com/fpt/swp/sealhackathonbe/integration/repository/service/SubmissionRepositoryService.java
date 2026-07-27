@@ -222,7 +222,8 @@ public class SubmissionRepositoryService {
     }
 
     /**
-     * Resync: thanh vien team, Organizer cua dung event, HOAC judge duoc phan cong vao round.
+     * Resync: thanh vien team, bat ky tai khoan co ROLE_ORGANIZER (theo dev - Organizer
+     * hien khong duoc gioi han theo tung event), HOAC judge duoc phan cong vao round.
      * Judge duoc phep resync de tu nap ban MOI NHAT cua repo khi cham (chi lam moi metadata
      * public tu GitHub — khong sua repo, rui ro thap).
      */
@@ -230,7 +231,10 @@ public class SubmissionRepositoryService {
         if (isActiveTeamMember(submission, currentUserId)) {
             return;
         }
-        if (isEventOrganizer(resolveEventId(submission), currentUserId)) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasOrganizerRole = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        if (hasOrganizerRole) {
             return;
         }
         boolean isAssignedJudge = roundJudgeRepository
@@ -239,7 +243,7 @@ public class SubmissionRepositoryService {
         if (isAssignedJudge) {
             return;
         }
-        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members, the event organizer, or an assigned judge may resynchronize repository metadata");
+        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members, organizers, or an assigned judge may resynchronize repository metadata");
     }
 
     /**
@@ -334,14 +338,17 @@ public class SubmissionRepositoryService {
 
     /**
      * Organizer overview: toan bo repository cua cac submission trong event.
-     * Creator-only (giong quyen cua legacy Event-level integration).
+     * Cho phep bat ky tai khoan co ROLE_ORGANIZER xem, khong gioi han chi creator.
      * Doc trong mot transaction readOnly, batch fetch de tranh N+1.
      */
     @Transactional(readOnly = true)
     public List<EventSubmissionRepositoryItemResponse> getEventSubmissionRepositories(UUID eventId) {
-        User currentUser = getCurrentUser();
-        if (!isEventOrganizer(eventId, currentUser.getUserId())) {
-            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "Only the event creator may view submission repositories of this event");
+        getCurrentUser(); // Xac thuc user dang nhap hop le
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasOrganizerRole = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        if (!hasOrganizerRole) {
+            throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_ACCESS_DENIED, "Only organizers may view submission repositories of this event");
         }
 
         // Bao gồm cả sample submission (bài mẫu calibration, TeamID null) — Organizer cần thấy.

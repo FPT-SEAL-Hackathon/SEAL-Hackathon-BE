@@ -21,7 +21,9 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -67,16 +69,28 @@ public class ResearchDataServiceImpl implements ResearchDataService {
         };
     }
 
+    private String getPseudoId(Map<UUID, String> map, UUID id, String prefix) {
+        if (id == null) return "";
+        return map.computeIfAbsent(id, k -> prefix + "_" + (map.size() + 1));
+    }
+
     private ExportContent buildDashboardExport(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
         List<String[]> rows = new ArrayList<>();
+        Map<UUID, String> roundMap = new HashMap<>();
+        Map<UUID, String> categoryMap = new HashMap<>();
+        Map<UUID, String> submissionMap = new HashMap<>();
+        Map<UUID, String> teamMap = new HashMap<>();
+        Map<UUID, String> criterionMap = new HashMap<>();
+        Map<UUID, String> judgeMap = new HashMap<>();
+
         for (VarianceReportResponse item : researchDashboardService.getVarianceReport(eventId, roundId, categoryId)) {
             rows.add(new String[]{
                     "variance-report",
-                    valueOf(item.roundId()),
-                    valueOf(item.categoryId()),
-                    valueOf(item.submissionId()),
-                    valueOf(item.teamId()),
-                    valueOf(item.roundCriterionId()),
+                    getPseudoId(roundMap, item.roundId(), "ROUND"),
+                    getPseudoId(categoryMap, item.categoryId(), "TRACK"),
+                    getPseudoId(submissionMap, item.submissionId(), "SUBMISSION"),
+                    getPseudoId(teamMap, item.teamId(), "TEAM"),
+                    getPseudoId(criterionMap, item.roundCriterionId(), "CRITERION"),
                     valueOf(item.judgeCount()),
                     valueOf(item.meanScore()),
                     valueOf(item.standardDeviation()),
@@ -102,8 +116,8 @@ public class ResearchDataServiceImpl implements ResearchDataService {
         for (ReliabilityMetricResponse item : researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId)) {
             rows.add(new String[]{
                     "reliability-metrics",
-                    valueOf(item.judgeUserId()),
-                    valueOf(item.judgeName()),
+                    getPseudoId(judgeMap, item.judgeUserId(), "JUDGE"),
+                    getPseudoId(judgeMap, item.judgeUserId(), "JUDGE"),
                     "",
                     "",
                     "",
@@ -114,6 +128,29 @@ public class ResearchDataServiceImpl implements ResearchDataService {
                     valueOf(item.rootMeanSquareDeviation())
             });
         }
+
+        // Add notes section for context and definitions
+        rows.add(new String[]{"", "", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"NOTES & DEFINITIONS", "", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"Data Anonymization", "All identifying UUIDs and names have been replaced with pseudo-IDs (e.g., TEAM_1, JUDGE_1) for research purposes.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"variance-report", "Analyzes the spread of scores for a single submission across different judges.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Count: Number of judges who scored this criterion for this submission.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric1 (MeanScore): Average score given by all judges for this criterion.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric2 (StdDev): Standard deviation indicating how spread out the scores are.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric3 (ScoreRange): Difference between highest and lowest score.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric4 (Variance): The variance of the scores, indicating judge agreement.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"score-distribution", "Shows how many scores fall into specific score buckets.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Count: Number of scores in this bucket.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric1 (BucketStart): Start of the score bucket.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric2 (BucketEnd): End of the score bucket.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric3 (Percentage): Percentage of total scores in this bucket.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"reliability-metrics", "Evaluates individual judge performance compared to their peers.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Count: Number of items scored by this judge.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric1 (AverageScore): The judge's average score across all their gradings.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric2 (BiasFromPeerMean): How much higher/lower this judge scores compared to the average of other judges.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric3 (AAD): Average Absolute Deviation from the peer mean.", "", "", "", "", "", "", "", "", ""});
+        rows.add(new String[]{"", "- Metric4 (RMSD): Root Mean Square Deviation from the peer mean (penalizes large outliers more).", "", "", "", "", "", "", "", "", ""});
+
         return new ExportContent(
                 new String[]{"Section", "RefID1", "RefID2", "SubmissionID", "TeamID", "CriterionID", "Count", "Metric1", "Metric2", "Metric3", "Metric4"},
                 rows

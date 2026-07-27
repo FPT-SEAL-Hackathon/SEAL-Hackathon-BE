@@ -3136,7 +3136,6 @@ VALUES
     );
 END
 GO
-
 -- Create Appeals table
 CREATE TABLE Appeals (
     AppealID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
