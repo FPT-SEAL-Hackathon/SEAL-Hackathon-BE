@@ -3,6 +3,7 @@ package com.fpt.swp.sealhackathonbe.integration.repository.service;
 import com.fpt.swp.sealhackathonbe.core.exception.RepositoryIntegrationException;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.integration.repository.client.GitRepositoryMetadataClient;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryActivity;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadataFetchResult;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.response.EventSubmissionRepositoryItemResponse;
@@ -46,6 +47,11 @@ public class SubmissionRepositoryService {
     // Mot phien RUNNING giu lock qua lau (request truoc chet giua chung) thi cho phep
     // request sau lay lai lock. 2 phut > connect(5s)+read(10s) timeout cua GitHub client.
     private static final int SYNC_STALE_MINUTES = 2;
+
+    // Cooldown giua 2 lan resync-THAT (goi GitHub) tren cung submission. Trong khoang nay,
+    // resync tra ve snapshot hien tai (khong goi GitHub) de chong spam nut Resync + bao ve
+    // rate-limit GitHub (dung chung theo IP server).
+    private static final int RESYNC_COOLDOWN_SECONDS = 30;
 
     private final SubmissionRepositoryEntityRepository submissionRepositoryRepository;
     private final SubmissionsRepository submissionsRepository;
@@ -102,7 +108,24 @@ public class SubmissionRepositoryService {
         }
         try {
             GitRepositoryMetadataClient client = selectClient(repositoryUrl);
-            return RepositoryMetadataFetchResult.success(client.fetchPublicMetadata(repositoryUrl));
+            RepositoryMetadata core = client.fetchPublicMetadata(repositoryUrl);
+            // Activity (languages/contributors/commits) la best-effort — khong bao gio nem loi,
+            // fail chi khien field null. Gop vao metadata core de persist mot the.
+            RepositoryActivity activity;
+            try {
+                activity = client.fetchActivity(repositoryUrl);
+            } catch (Exception e) {
+                log.debug("fetchActivity unexpected failure for {}: {}", repositoryUrl, e.getMessage());
+                activity = RepositoryActivity.builder().build();
+            }
+            RepositoryMetadata full = core.toBuilder()
+                    .languagesJson(activity.getLanguagesJson())
+                    .contributorCount(activity.getContributorCount())
+                    .topContributorsJson(activity.getTopContributorsJson())
+                    .commitCount(activity.getCommitCount())
+                    .lastCommitSha(activity.getLastCommitSha())
+                    .build();
+            return RepositoryMetadataFetchResult.success(full);
         } catch (RepositoryMetadataException rme) {
             log.warn("Repository metadata fetch failed for URL {}: {} - {}", repositoryUrl, rme.getErrorCode(), rme.getMessage());
             return RepositoryMetadataFetchResult.failure(
@@ -199,8 +222,10 @@ public class SubmissionRepositoryService {
     }
 
     /**
-     * Resync: thanh vien team hoac bat ky tai khoan co ROLE_ORGANIZER. Judge KHONG duoc resync
-     * (metadata la du lieu tham khao, judge chi doc).
+     * Resync: thanh vien team, bat ky tai khoan co ROLE_ORGANIZER (theo dev - Organizer
+     * hien khong duoc gioi han theo tung event), HOAC judge duoc phan cong vao round.
+     * Judge duoc phep resync de tu nap ban MOI NHAT cua repo khi cham (chi lam moi metadata
+     * public tu GitHub — khong sua repo, rui ro thap).
      */
     void authorizeResync(Submissions submission, UUID currentUserId) {
         if (isActiveTeamMember(submission, currentUserId)) {
@@ -212,7 +237,30 @@ public class SubmissionRepositoryService {
         if (hasOrganizerRole) {
             return;
         }
-        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members or organizers may resynchronize repository metadata");
+        boolean isAssignedJudge = roundJudgeRepository
+                .findByJudge_UserIdAndRound_RoundId(currentUserId, submission.getRoundId())
+                .isPresent();
+        if (isAssignedJudge) {
+            return;
+        }
+        throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, "Only team members, organizers, or an assigned judge may resynchronize repository metadata");
+    }
+
+    /**
+     * README (raw markdown) — lazy, goi GitHub khi nguoi xem mo. Cung pham vi quyen nhu xem
+     * metadata (team member / organizer / assigned judge). KHONG @Transactional vi co goi mang.
+     */
+    public String getReadme(UUID submissionId) {
+        User currentUser = getCurrentUser();
+        Submissions submission = submissionsRepository.findById(submissionId)
+                .orElseThrow(() -> new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_NOT_FOUND, "Submission not found"));
+        authorizeView(submission, currentUser.getUserId());
+
+        String repoUrl = submission.getRepositoryUrl();
+        if (repoUrl == null || repoUrl.trim().isEmpty()) {
+            return null;
+        }
+        return selectClient(repoUrl).fetchReadme(repoUrl);
     }
 
     @Transactional(readOnly = true)
@@ -245,9 +293,20 @@ public class SubmissionRepositoryService {
             throw new RepositoryIntegrationException(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_NOT_FOUND, "Submission has no repository URL attached");
         }
 
+        Optional<SubmissionRepositoryEntity> existing = submissionRepositoryRepository.findBySubmission_SubmissionId(submissionId);
+
+        // Cooldown chong spam: vua dong bo trong RESYNC_COOLDOWN_SECONDS thi tra snapshot hien tai,
+        // KHONG goi GitHub. Judge co bam lien tuc thi cung chi doc DB, khong dot rate-limit GitHub.
+        if (existing.isPresent()) {
+            LocalDateTime lastSync = existing.get().getLastSynchronizedAt();
+            if (lastSync != null && lastSync.isAfter(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(RESYNC_COOLDOWN_SECONDS))) {
+                return mapToResponse(existing.get());
+            }
+        }
+
         // Chong resync dong thoi: chi ap dung khi da co ban ghi metadata (lan dau sync thi
         // unique constraint tren SubmissionID la lop bao ve cuoi cung chong ghi trung).
-        boolean hasExistingRecord = submissionRepositoryRepository.findBySubmission_SubmissionId(submissionId).isPresent();
+        boolean hasExistingRecord = existing.isPresent();
         if (hasExistingRecord) {
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
             int locked = submissionRepositoryRepository.markSyncRunning(
@@ -368,6 +427,7 @@ public class SubmissionRepositoryService {
                 "Provider", "FullName", "RepositoryUrl", "Visibility", "PrimaryLanguage", "DefaultBranch",
                 "RepositoryCreatedAt", "RepositoryUpdatedAt", "LastPushedAt", "LastSynchronizedAt",
                 "SyncStatus", "ErrorCode", "StarCount", "ForkCount", "OpenIssuesCount",
+                "CommitCount", "ContributorCount",
                 "SubmittedAt", "LastPushAfterDeadline")).append("\r\n");
 
         for (EventSubmissionRepositoryItemResponse item : items) {
@@ -393,6 +453,8 @@ public class SubmissionRepositoryService {
                     csvCell(repo != null ? repo.getStarCount() : null),
                     csvCell(repo != null ? repo.getForkCount() : null),
                     csvCell(repo != null ? repo.getOpenIssuesCount() : null),
+                    csvCell(repo != null ? repo.getCommitCount() : null),
+                    csvCell(repo != null ? repo.getContributorCount() : null),
                     csvCell(item.getSubmittedAt()),
                     csvCell(item.getLastPushAfterDeadline()))).append("\r\n");
         }
@@ -440,6 +502,14 @@ public class SubmissionRepositoryService {
                 .starCount(entity.getStarCount())
                 .forkCount(entity.getForkCount())
                 .openIssuesCount(entity.getOpenIssuesCount())
+                .languagesJson(entity.getLanguagesJson())
+                .contributorCount(entity.getContributorCount())
+                .topContributorsJson(entity.getTopContributorsJson())
+                .commitCount(entity.getCommitCount())
+                .lastCommitSha(entity.getLastCommitSha())
+                .pinnedCommitSha(entity.getPinnedCommitSha())
+                .pinnedAt(entity.getPinnedAt())
+                .pinnedByUserId(entity.getPinnedByUserId())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

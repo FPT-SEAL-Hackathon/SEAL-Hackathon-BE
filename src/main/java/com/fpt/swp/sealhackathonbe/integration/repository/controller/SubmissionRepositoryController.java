@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.integration.repository.controller;
 
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.request.ValidateRepositoryRequest;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.response.RepositoryReadmeResponse;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.response.SubmissionRepositoryResponse;
 import com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService;
 import jakarta.validation.Valid;
@@ -36,5 +37,13 @@ public class SubmissionRepositoryController {
             @PathVariable UUID submissionId) {
         SubmissionRepositoryResponse response = submissionRepositoryService.syncSubmissionRepository(submissionId);
         return ResponseEntity.ok(response);
+    }
+
+    // README (raw markdown), lazy — chi goi khi nguoi xem mo trong UI.
+    @GetMapping("/{submissionId}/repository/readme")
+    public ResponseEntity<RepositoryReadmeResponse> getReadme(
+            @PathVariable UUID submissionId) {
+        String content = submissionRepositoryService.getReadme(submissionId);
+        return ResponseEntity.ok(new RepositoryReadmeResponse(content));
     }
 }

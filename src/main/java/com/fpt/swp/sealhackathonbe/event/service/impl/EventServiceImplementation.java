@@ -350,13 +350,16 @@ public class EventServiceImplementation implements EventService {
         return user != null ? user.getUserId() : null;
     }
 
+    // Quyet dinh hinh dang danh sach event tra ve (staff thay day du, nguoi khac thay ban rut gon).
+    // ADMIN cung la staff: chi XEM de phuc vu bao cao, khong tao/sua event.
     private boolean isCurrentUserOrganizer() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)
                 && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority()));
+                .anyMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority())
+                        || "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
     @Override
