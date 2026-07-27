@@ -115,8 +115,8 @@ public class JudgingController {
 
     @GetMapping("/judging/audit-logs/event/{eventId}")
     // RBAC:
-    // Chỉ ORGANIZER được xem audit log điểm của event.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    // ORGANIZER (vận hành) và ADMIN (giám sát hệ thống) được xem audit log điểm của event.
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get evaluation audit logs by event ID", description = "Retrieves audit logs for score changes in an event")
     public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {
         List<EvaluationAuditLogDTO> logs = judgingService.getEvaluationAuditLogsByEvent(eventId);

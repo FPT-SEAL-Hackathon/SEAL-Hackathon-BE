@@ -39,6 +39,13 @@ public class SubmissionRepositoryMapper {
             entity.setStarCount(metadata.getStarCount());
             entity.setForkCount(metadata.getForkCount());
             entity.setOpenIssuesCount(metadata.getOpenIssuesCount());
+            // Activity la best-effort: chi ghi de khi lay duoc, giu gia tri tot gan nhat khi
+            // call phu that bai (rate-limit) de khong xoa mat du lieu da co.
+            if (metadata.getLanguagesJson() != null) entity.setLanguagesJson(metadata.getLanguagesJson());
+            if (metadata.getContributorCount() != null) entity.setContributorCount(metadata.getContributorCount());
+            if (metadata.getTopContributorsJson() != null) entity.setTopContributorsJson(metadata.getTopContributorsJson());
+            if (metadata.getCommitCount() != null) entity.setCommitCount(metadata.getCommitCount());
+            if (metadata.getLastCommitSha() != null) entity.setLastCommitSha(metadata.getLastCommitSha());
             entity.setLastSyncStatus(RepositorySyncStatus.SUCCESS);
             entity.setLastSynchronizedAt(LocalDateTime.now(ZoneOffset.UTC));
             // Sync thanh cong phai xoa loi cua lan sync truoc de Organizer khong thay loi cu.

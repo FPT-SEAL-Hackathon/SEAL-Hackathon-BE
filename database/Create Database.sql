@@ -16,9 +16,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Events](
 	[EventID] [uniqueidentifier] NOT NULL,
-	[EventName] [varchar](255) NULL,
-	[Description] [varchar](255) NULL,
-	[Location] [varchar](255) NULL,
+	[EventName] [nvarchar](255) NULL,
+	[Description] [nvarchar](max) NULL,
+	[Location] [nvarchar](255) NULL,
 	[BannerImageURL] [varchar](255) NULL,
 	[EventStatusID] [uniqueidentifier] NOT NULL,
 	[RegistrationStart] [datetime2](7) NULL,

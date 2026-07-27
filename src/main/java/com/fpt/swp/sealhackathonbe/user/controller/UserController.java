@@ -37,11 +37,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Tag(name = "User Management", description = "Organizer APIs for managing user accounts")
+@Tag(name = "User Management", description = "Admin APIs for managing user accounts")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+// Quan ly nguoi dung la quan tri HE THONG -> chuyen tu ORGANIZER sang ADMIN.
+// Organizer chi van hanh cuoc thi (event/round/cham diem), khong dung vao tai khoan.
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class UserController {
     private static final Map<String, String> SORT_FIELDS = Map.of(
             "fullName", "fullName",

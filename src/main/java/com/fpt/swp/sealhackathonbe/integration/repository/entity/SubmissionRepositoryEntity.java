@@ -92,6 +92,32 @@ public class SubmissionRepositoryEntity {
     @Column(name = "OpenIssuesCount")
     private Integer openIssuesCount;
 
+    // ---- Activity (best-effort, phuc vu cham diem/quan ly; khong dung tinh diem) ----
+    @Column(name = "LanguagesJson", columnDefinition = "NVARCHAR(MAX)")
+    private String languagesJson;
+
+    @Column(name = "ContributorCount")
+    private Integer contributorCount;
+
+    @Column(name = "TopContributorsJson", columnDefinition = "NVARCHAR(MAX)")
+    private String topContributorsJson;
+
+    @Column(name = "CommitCount")
+    private Integer commitCount;
+
+    @Column(name = "LastCommitSha", length = 64)
+    private String lastCommitSha;
+
+    // ---- Ghim phien ban de cham (auto-pin luc nop; Organizer co the ghim lai) ----
+    @Column(name = "PinnedCommitSha", length = 64)
+    private String pinnedCommitSha;
+
+    @Column(name = "PinnedAt")
+    private LocalDateTime pinnedAt;
+
+    @Column(name = "PinnedByUserID")
+    private UUID pinnedByUserId;
+
     @Column(name = "CreatedAt", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

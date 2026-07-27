@@ -13,4 +13,5 @@ public interface AppealRepository extends JpaRepository<Appeals, UUID> {
     List<Appeals> findByEvent_EventIdOrderByCreatedAtDesc(UUID eventId);
     List<Appeals> findByTeam_TeamIdOrderByCreatedAtDesc(UUID teamId);
     boolean existsByTeam_TeamIdAndStatus(UUID teamId, AppealStatus status);
+    boolean existsByRound_RoundIdAndStatus(UUID roundId, AppealStatus status);
 }

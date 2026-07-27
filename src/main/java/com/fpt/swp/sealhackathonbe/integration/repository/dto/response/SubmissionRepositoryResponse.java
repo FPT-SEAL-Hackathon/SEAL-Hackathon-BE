@@ -36,6 +36,16 @@ public class SubmissionRepositoryResponse {
     private Integer starCount;
     private Integer forkCount;
     private Integer openIssuesCount;
+    // Activity (co the null neu call phu that bai)
+    private String languagesJson;
+    private Integer contributorCount;
+    private String topContributorsJson;
+    private Integer commitCount;
+    private String lastCommitSha;
+    // Ghim phien ban de cham
+    private String pinnedCommitSha;
+    private LocalDateTime pinnedAt;
+    private UUID pinnedByUserId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
