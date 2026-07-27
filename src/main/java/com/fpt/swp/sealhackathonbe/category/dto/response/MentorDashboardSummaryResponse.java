@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.category.dto.response;
 
+import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import lombok.*;
 import java.util.List;
 
