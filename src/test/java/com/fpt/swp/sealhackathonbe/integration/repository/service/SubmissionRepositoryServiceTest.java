@@ -138,16 +138,28 @@ class SubmissionRepositoryServiceTest {
     }
 
     @Test
-    void authorizeResync_deniesJudge() {
-        // Judge duoc xem nhung KHONG duoc resync: authorizeResync khong co nhanh judge.
+    void authorizeResync_allowsAssignedJudge() {
+        // Yeu cau moi: judge duoc phep resync de tu nap ban MOI NHAT cua repo khi cham.
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)).thenReturn(Optional.empty());
         stubEventLookup();
         when(eventRepository.existsByEventIdAndCreatedBy_UserId(eventId, userId)).thenReturn(false);
+        when(roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(userId, roundId))
+                .thenReturn(Optional.of(new RoundJudge()));
+
+        assertDoesNotThrow(() -> service.authorizeResync(submission, userId));
+    }
+
+    @Test
+    void authorizeResync_deniesNonParticipant() {
+        // Nguoi khong phai team member / organizer / judge duoc phan cong -> 403.
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)).thenReturn(Optional.empty());
+        stubEventLookup();
+        when(eventRepository.existsByEventIdAndCreatedBy_UserId(eventId, userId)).thenReturn(false);
+        when(roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(userId, roundId)).thenReturn(Optional.empty());
 
         RepositoryIntegrationException ex = assertThrows(RepositoryIntegrationException.class,
                 () -> service.authorizeResync(submission, userId));
         assertEquals(RepositoryIntegrationException.ErrorCode.SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED, ex.getErrorCode());
-        verifyNoInteractions(roundJudgeRepository);
     }
 
     // ── Persistence ─────────────────────────────────────────────────────────

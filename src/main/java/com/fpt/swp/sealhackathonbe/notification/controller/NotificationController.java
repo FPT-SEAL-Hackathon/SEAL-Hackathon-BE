@@ -119,7 +119,7 @@ public class NotificationController {
     @PostMapping("/sendNotificationToUser")
     // RBAC:
     // Chỉ ORGANIZER được gửi thông báo trực tiếp để tránh spam giữa user.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> sendNotificationToUser(
             @Valid @RequestBody CreateNotificationRequest request,
             Authentication authentication
@@ -144,7 +144,7 @@ public class NotificationController {
     @PostMapping("/sendNotificationToEmail")
     // RBAC:
     // Chỉ ORGANIZER được gửi thông báo qua email để bảo vệ người nhận.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> sendNotificationToEmail(
             @Valid @RequestBody CreateNotificationByEmailRequest request,
             Authentication authentication
@@ -169,7 +169,7 @@ public class NotificationController {
     @PostMapping("/sendBroadcastNotification")
     // RBAC:
     // Chỉ ORGANIZER được broadcast vì ảnh hưởng nhiều người dùng.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> sendBroadcastNotification(
             @Valid @RequestBody BroadcastNotificationRequest request,
             Authentication authentication

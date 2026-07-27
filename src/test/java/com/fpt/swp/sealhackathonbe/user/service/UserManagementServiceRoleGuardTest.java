@@ -240,4 +240,43 @@ class UserManagementServiceRoleGuardTest {
         assertDoesNotThrow(() -> service.updateRole(targetId, request, actorId));
         assertEquals("Mentor", student.getUserType().getTypeName());
     }
+
+    // Ha cap Admin cuoi cung => khong con ai vao duoc User Management de cap lai quyen.
+    @Test
+    void updateRoleRejectsDemotingLastActiveAdmin() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User admin = userWithRole(targetId, "Admin");
+        stubUserLookup(admin);
+        when(userTypeRepository.findAll()).thenReturn(List.of(type("Admin"), type("Organizer")));
+        when(userRepository.countActiveByRoleName("Admin")).thenReturn(1L);
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("ORGANIZER");
+
+        assertThrows(com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException.class,
+                () -> service.updateRole(targetId, request, actorId));
+        verify(userRepository, never()).save(any(User.class));
+        assertEquals("Admin", admin.getUserType().getTypeName());
+    }
+
+    @Test
+    void updateRoleAllowsDemotingAdminWhenAnotherAdminRemains() {
+        UUID actorId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        User admin = userWithRole(targetId, "Admin");
+        stubUserLookup(admin);
+        when(userTypeRepository.findAll()).thenReturn(List.of(type("Admin"), type("Organizer")));
+        when(userRepository.countActiveByRoleName("Admin")).thenReturn(2L);
+        when(teamMembersRepository.findAllByUserIdAndActiveTrue(targetId)).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenReturn(admin);
+        when(teamMembersRepository.findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(targetId))
+                .thenReturn(Optional.empty());
+
+        UpdateUserRoleRequest request = new UpdateUserRoleRequest();
+        request.setRole("ORGANIZER");
+
+        assertDoesNotThrow(() -> service.updateRole(targetId, request, actorId));
+        assertEquals("Organizer", admin.getUserType().getTypeName());
+    }
 }

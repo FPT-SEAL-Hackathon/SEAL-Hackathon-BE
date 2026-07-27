@@ -21,13 +21,13 @@ public class SystemSettingController {
     private final SystemSettingService systemSettingService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ORGANIZER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SystemSettingsResponse> getSettings() {
         return ResponseEntity.ok(systemSettingService.getSettings());
     }
 
     @PutMapping
-    @PreAuthorize("hasRole('ORGANIZER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SystemSettingsResponse> updateSettings(
             @RequestBody SystemSettingsRequest request) {
         return ResponseEntity.ok(systemSettingService.updateSettings(request));

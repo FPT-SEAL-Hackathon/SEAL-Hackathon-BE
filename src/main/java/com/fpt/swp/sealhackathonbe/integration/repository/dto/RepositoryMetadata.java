@@ -7,7 +7,7 @@ import lombok.Value;
 import java.time.LocalDateTime;
 
 @Value
-@Builder
+@Builder(toBuilder = true)
 public class RepositoryMetadata {
     RepositoryProvider provider;
     String externalRepositoryId;
@@ -26,4 +26,11 @@ public class RepositoryMetadata {
     Integer starCount;
     Integer forkCount;
     Integer openIssuesCount;
+
+    // Activity (best-effort, co the null) — gan boi service sau khi goi client.fetchActivity.
+    String languagesJson;
+    Integer contributorCount;
+    String topContributorsJson;
+    Integer commitCount;
+    String lastCommitSha;
 }

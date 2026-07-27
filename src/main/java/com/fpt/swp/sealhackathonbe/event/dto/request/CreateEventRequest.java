@@ -20,6 +20,9 @@ public class CreateEventRequest {
 
     private String description;
 
+    // Bat buoc: EventServiceImplementation.create() goi location.trim() -> thieu se NPE (500)
+    // thay vi 400 co thong bao ro rang.
+    @NotBlank(message = "Location is required")
     private String location;
 
     @URL(message = "Invalid banner image URL")
@@ -35,9 +38,11 @@ public class CreateEventRequest {
 
     private LocalDate eventEndDate;
 
+    @NotNull(message = "Max team size is required")
     @Min(value = 1, message = "Max team size must be greater than 0")
     private Integer maxTeamSize;
 
+    @NotNull(message = "Min team size is required")
     @Min(value = 1, message = "Min team size must be greater than 0")
     private Integer minTeamSize;
 

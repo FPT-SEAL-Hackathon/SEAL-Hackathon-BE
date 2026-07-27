@@ -59,8 +59,10 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
+    // CHI DOC: Admin can danh sach event de chon khi xem bao cao/analytics.
+    // Cac thao tac tao/sua/xoa/publish event van la ORGANIZER-only.
     @GetMapping("/event/organizer")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<EventResponse>> getAllEventsForOrganizer() {
         return ResponseEntity.ok(eventService.getAllEventsForOrganizer());
     }

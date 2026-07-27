@@ -2,6 +2,9 @@ package com.fpt.swp.sealhackathonbe.integration.repository.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryActivity;
 import com.fpt.swp.sealhackathonbe.integration.repository.dto.RepositoryMetadata;
 import com.fpt.swp.sealhackathonbe.integration.repository.entity.RepositoryProvider;
 import com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataErrorCode;
@@ -208,6 +211,145 @@ public class GitHubRepositoryMetadataClient implements GitRepositoryMetadataClie
                     coords.getOwner() + "/" + coords.getRepository()
             );
         }
+    }
+
+    private static final ObjectMapper ACTIVITY_MAPPER = new ObjectMapper();
+    // Link header cua GitHub: <...&page=13>; rel="last"  → so trang cuoi = tong so item khi per_page=1.
+    private static final java.util.regex.Pattern LINK_LAST_PAGE =
+            java.util.regex.Pattern.compile("[?&]page=(\\d+)>\\s*;\\s*rel=\"last\"");
+
+    /**
+     * Best-effort: goi cac API phu (languages / contributors / commits). Moi call tu bao ve
+     * bang try/catch — loi (rate-limit, mang...) chi khien field tuong ung null, KHONG nem
+     * exception, KHONG chan luong submit. Toi da 3 request phu.
+     */
+    @Override
+    public RepositoryActivity fetchActivity(String repositoryUrl) {
+        RepositoryActivity.RepositoryActivityBuilder builder = RepositoryActivity.builder();
+        GitHubRepositoryCoordinates coords;
+        try {
+            coords = GitHubRepositoryUrlParser.parse(repositoryUrl);
+        } catch (Exception e) {
+            return builder.build();
+        }
+        if (coords == null) {
+            return builder.build();
+        }
+        String owner = URLEncoder.encode(coords.getOwner(), StandardCharsets.UTF_8);
+        String repo = URLEncoder.encode(coords.getRepository(), StandardCharsets.UTF_8);
+        String base = String.format("/repos/%s/%s", owner, repo);
+        String fullName = coords.getOwner() + "/" + coords.getRepository();
+
+        // 1) Languages: {"Java": 12345, "TypeScript": 6789} (bytes)
+        try {
+            String body = restClient.get().uri(base + "/languages").retrieve().toEntity(String.class).getBody();
+            if (body != null && !body.isBlank()) {
+                JsonNode node = ACTIVITY_MAPPER.readTree(body);
+                if (node.isObject() && node.size() > 0) {
+                    builder.languagesJson(node.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("fetchActivity[languages] failed for {}: {}", fullName, e.getMessage());
+        }
+
+        // 2) Contributors (per_page=100 du cho doi hackathon; contributorCount = so phan tu, top 10)
+        try {
+            String body = restClient.get().uri(base + "/contributors?per_page=100&anon=0")
+                    .retrieve().toEntity(String.class).getBody();
+            if (body != null && !body.isBlank()) {
+                JsonNode arr = ACTIVITY_MAPPER.readTree(body);
+                if (arr.isArray()) {
+                    builder.contributorCount(arr.size());
+                    ArrayNode top = ACTIVITY_MAPPER.createArrayNode();
+                    for (int i = 0; i < arr.size() && i < 10; i++) {
+                        JsonNode c = arr.get(i);
+                        ObjectNode o = ACTIVITY_MAPPER.createObjectNode();
+                        o.put("login", c.path("login").asText(null));
+                        o.put("contributions", c.path("contributions").asInt(0));
+                        o.put("avatarUrl", c.path("avatar_url").asText(null));
+                        top.add(o);
+                    }
+                    builder.topContributorsJson(top.toString());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("fetchActivity[contributors] failed for {}: {}", fullName, e.getMessage());
+        }
+
+        // 3) Commits: SHA moi nhat + tong so commit (uoc luong qua Link header khi per_page=1)
+        try {
+            ResponseEntity<String> res = restClient.get().uri(base + "/commits?per_page=1")
+                    .retrieve().toEntity(String.class);
+            String body = res.getBody();
+            if (body != null && !body.isBlank()) {
+                JsonNode arr = ACTIVITY_MAPPER.readTree(body);
+                if (arr.isArray() && arr.size() > 0) {
+                    String sha = arr.get(0).path("sha").asText(null);
+                    if (sha != null && !sha.isBlank()) {
+                        builder.lastCommitSha(sha);
+                    }
+                    Integer lastPage = lastPageFromLink(res.getHeaders());
+                    builder.commitCount(lastPage != null ? lastPage : arr.size());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("fetchActivity[commits] failed for {}: {}", fullName, e.getMessage());
+        }
+
+        return builder.build();
+    }
+
+    private static final int README_MAX_CHARS = 100_000;
+
+    /**
+     * README raw markdown (Accept: application/vnd.github.raw). Best-effort: 404/loi → null.
+     * Cat bot neu qua dai de tranh payload khong lo.
+     */
+    @Override
+    public String fetchReadme(String repositoryUrl) {
+        GitHubRepositoryCoordinates coords;
+        try {
+            coords = GitHubRepositoryUrlParser.parse(repositoryUrl);
+        } catch (Exception e) {
+            return null;
+        }
+        if (coords == null) {
+            return null;
+        }
+        String path = String.format("/repos/%s/%s/readme",
+                URLEncoder.encode(coords.getOwner(), StandardCharsets.UTF_8),
+                URLEncoder.encode(coords.getRepository(), StandardCharsets.UTF_8));
+        try {
+            String body = restClient.get()
+                    .uri(path)
+                    .header(HttpHeaders.ACCEPT, "application/vnd.github.raw")
+                    .retrieve()
+                    .body(String.class);
+            if (body == null) {
+                return null;
+            }
+            return body.length() > README_MAX_CHARS ? body.substring(0, README_MAX_CHARS) : body;
+        } catch (Exception e) {
+            log.debug("fetchReadme failed for {}/{}: {}", coords.getOwner(), coords.getRepository(), e.getMessage());
+            return null;
+        }
+    }
+
+    private Integer lastPageFromLink(HttpHeaders headers) {
+        String link = extractHeader(headers, "Link");
+        if (link == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = LINK_LAST_PAGE.matcher(link);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private RepositoryMetadataException handleHttpStatusError(
