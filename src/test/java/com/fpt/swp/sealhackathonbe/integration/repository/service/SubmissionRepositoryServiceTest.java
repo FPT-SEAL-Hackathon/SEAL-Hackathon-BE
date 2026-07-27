@@ -140,9 +140,9 @@ class SubmissionRepositoryServiceTest {
     @Test
     void authorizeResync_allowsAssignedJudge() {
         // Yeu cau moi: judge duoc phep resync de tu nap ban MOI NHAT cua repo khi cham.
+        // authorizeResync kiem ROLE_ORGANIZER qua SecurityContext (khong co auth trong test)
+        // roi moi den nhanh judge -> khong can stub eventRepository.
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)).thenReturn(Optional.empty());
-        stubEventLookup();
-        when(eventRepository.existsByEventIdAndCreatedBy_UserId(eventId, userId)).thenReturn(false);
         when(roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(userId, roundId))
                 .thenReturn(Optional.of(new RoundJudge()));
 
@@ -151,10 +151,8 @@ class SubmissionRepositoryServiceTest {
 
     @Test
     void authorizeResync_deniesNonParticipant() {
-        // Nguoi khong phai team member / organizer / judge duoc phan cong -> 403.
+        // Nguoi khong phai team member / khong co ROLE_ORGANIZER / khong duoc phan cong judge -> 403.
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)).thenReturn(Optional.empty());
-        stubEventLookup();
-        when(eventRepository.existsByEventIdAndCreatedBy_UserId(eventId, userId)).thenReturn(false);
         when(roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(userId, roundId)).thenReturn(Optional.empty());
 
         RepositoryIntegrationException ex = assertThrows(RepositoryIntegrationException.class,
