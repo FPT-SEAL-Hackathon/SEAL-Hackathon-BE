@@ -20,6 +20,14 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Service xử lý tính năng Export và Download dữ liệu sinh viên/dự án.
+ * 
+ * Kiến trúc & Security:
+ * - Streaming: Hỗ trợ tạo CSV, ZIP động (in-memory hoặc streaming) để tránh tràn RAM khi export data lớn.
+ * - Format: Dữ liệu được escape cẩn thận trong CSV để chống CSV Injection.
+ * - Access Control: Được bảo vệ bởi SecurityConfig, chỉ Admin/Organizer hoặc Mentor được cấp quyền mới có thể tải dữ liệu liên quan.
+ */
 @Service
 @RequiredArgsConstructor
 public class StudentDownloadServiceImpl implements StudentDownloadService {

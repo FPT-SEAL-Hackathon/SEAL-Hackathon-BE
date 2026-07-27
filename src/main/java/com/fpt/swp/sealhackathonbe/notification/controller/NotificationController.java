@@ -81,6 +81,7 @@ public class NotificationController {
         response.put("totalPages", notification.getTotalPages());
         response.put("totalElements", notification.getTotalElements());
         response.put("currentPage", notification.getNumber());
+        response.put("unreadCount", notificationService.countUnread(userId));
         response.put("message", "Notifications retrieved successfully");
         response.put("statusCode", 200);
 

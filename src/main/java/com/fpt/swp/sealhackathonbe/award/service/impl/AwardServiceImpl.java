@@ -51,6 +51,15 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Service quản lý toàn bộ hệ thống giải thưởng (Award).
+ * 
+ * Logic & Tính năng chính:
+ * - Hall of Fame: Lấy danh sách các đội chiến thắng từ các sự kiện để vinh danh trên Landing Page.
+ * - Quản lý cấu hình giải (Award Pattern / Tier): Dễ dàng tái sử dụng pattern giải thưởng giữa các vòng.
+ * - Tính toán tổng tiền thưởng (Prize Pool): Đếm tổng tiền các giải để show ra dashboard.
+ * - Gán giải (Award Eligibility): Kiểm tra điều kiện xếp hạng của đội so với yêu cầu của giải.
+ */
 @Service
 @RequiredArgsConstructor
 public class AwardServiceImpl implements AwardService {

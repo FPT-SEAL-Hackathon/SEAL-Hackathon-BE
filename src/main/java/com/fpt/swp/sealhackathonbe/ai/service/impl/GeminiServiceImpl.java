@@ -17,6 +17,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service implementation cho AI Gemini Integration.
+ * Xử lý luồng kết nối trực tiếp với Google Gemini API thông qua RestTemplate.
+ * 
+ * Kiến trúc & Security:
+ * - Sử dụng RAG (Retrieval-Augmented Generation) để đưa Knowledge Base vào System Prompt.
+ * - Anti-Prompt Injection: Giới hạn cứng hành vi của AI trong system prompt, 
+ *   buộc AI chỉ được phép trả lời các câu hỏi khớp với Knowledge Base.
+ * - Trả về "UNKNOWN" nếu câu hỏi nằm ngoài phạm vi, giúp kích hoạt fallback human mentor.
+ */
 @Service
 @Slf4j
 public class GeminiServiceImpl implements GeminiService {
@@ -24,7 +34,7 @@ public class GeminiServiceImpl implements GeminiService {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent}")
+    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent}")
     private String apiUrl;
 
     private final RestTemplate restTemplate;

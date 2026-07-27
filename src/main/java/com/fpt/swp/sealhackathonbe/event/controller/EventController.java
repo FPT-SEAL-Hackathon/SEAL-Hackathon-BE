@@ -22,7 +22,7 @@ public class EventController {
 
     private final EventService eventService;
 
-    @GetMapping("/event/{id}")
+    @GetMapping("/event/getById/{id}")
     public ResponseEntity<EventResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.getById(id));
     }
@@ -59,7 +59,7 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/events/organizer")
+    @GetMapping("/event/organizer")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<EventResponse>> getAllEventsForOrganizer() {
         return ResponseEntity.ok(eventService.getAllEventsForOrganizer());
