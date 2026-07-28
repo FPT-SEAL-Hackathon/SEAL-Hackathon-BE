@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +25,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Advice DUY NHAT cua he thong: moi exception phai di qua day de client luon nhan
+ * cung mot hinh dang ErrorResponse (JSON).
+ *
+ * @Order(HIGHEST_PRECEDENCE): truoc day co mot @ControllerAdvice thu hai
+ * (GlobalExceptionHandlerLogging o package goc) cung bat Exception.class va tra
+ * PLAIN TEXT 500. Hai advice khong co @Order nen thu tu do bean-name quyet dinh —
+ * khi no thang thi BadRequestException (dung ra 400) bien thanh 500 text, FE parse
+ * JSON that bai va chi hien "Request failed (500)". File do da bi xoa; gan @Order
+ * de khong bao gio bi advice khac chen vao nua.
+ */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
 public class GlobalExceptionHandler {
 
@@ -76,15 +90,49 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", errors);
     }
 
+    /**
+     * Truoc day MOI AuthenticationException deu bi ghi de thanh "Invalid email or password",
+     * nen 4 ly do refresh that bai khac nhau (token khong ton tai / bi revoke / het han /
+     * tai khoan bi khoa) va ca truong hop tai khoan bi suspend deu ra cung mot cau vo nghia.
+     * Nay tra ERROR CODE rieng de frontend chon dung thong bao (xem errorMessages.ts):
+     *   - ACCOUNT_DISABLED   : tai khoan bi khoa/vo hieu -> khong phai sai mat khau
+     *   - SESSION_EXPIRED    : refresh token het han -> moi lai dang nhap
+     *   - INVALID_CREDENTIALS: sai email/mat khau (mac dinh, khong tiet lo email co ton tai)
+     */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
         String path = currentPath();
-        String message = path != null
+        if (path != null
                 && (path.matches("/api/v1/events/[^/]+/participants/register")
-                || path.matches("/api/v1/events/[^/]+/register"))
-                ? "Authentication is required to register for an event."
-                : "Invalid email or password";
-        return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", message, null);
+                || path.matches("/api/v1/events/[^/]+/register"))) {
+            return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                    "Authentication is required to register for an event.", null);
+        }
+
+        if (ex instanceof org.springframework.security.authentication.DisabledException
+                || ex instanceof org.springframework.security.authentication.LockedException) {
+            return build(HttpStatus.UNAUTHORIZED, "ACCOUNT_DISABLED",
+                    "This account has been deactivated.", null);
+        }
+
+        // Moi that bai tren /auth/refresh deu la "phien khong con dung duoc" — noi
+        // "sai email hoac mat khau" o day la vo nghia vi nguoi dung khong he nhap gi.
+        boolean isRefreshCall = path != null && path.endsWith("/auth/refresh");
+        if (isRefreshCall
+                || ex instanceof org.springframework.security.authentication.CredentialsExpiredException) {
+            return build(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED",
+                    "Your session has expired. Please sign in again.", null);
+        }
+
+        // Cac truong hop con lai (sai mat khau, email khong ton tai, token khong hop le):
+        // co y dung CUNG mot thong bao de khong tiet lo email nao dang ton tai.
+        return build(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
+                "Incorrect email or password.", null);
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotVerified(EmailNotVerifiedException ex) {
+        return build(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED", ex.getMessage(), null);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
@@ -331,18 +379,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Luoi cuoi cho moi loi KHONG duoc phan loai. Response CO Y khong mang chi tiet ky thuat:
+     * truoc day cho ex.getMessage() + details{exceptionClass} vao body, nghia la gui thang
+     * ra browser nhung thu nhu "org.hibernate.exception.SQLGrammarException" kem message
+     * JDBC (thuong chua ten bang/cot va manh SQL) — la mot lo ro ri thong tin.
+     * Chi tiet day du van co trong log.error ben duoi de dev tra cuu.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at path {}", request.getRequestURI(), ex);
-        String message = ex.getMessage() != null && !ex.getMessage().isBlank()
-                ? ex.getMessage()
-                : "An unknown error occurred";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error("INTERNAL_SERVER_ERROR")
-                .message(message)
+                .message("Something went wrong on our side. Please try again later.")
                 .path(request.getRequestURI())
-                .details(Map.of("exceptionClass", ex.getClass().getName()))
                 .build());
     }
 

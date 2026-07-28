@@ -1032,13 +1032,16 @@ PRIMARY KEY CLUSTERED
 )WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
--- Base lookup/config seed only; demo users, events, teams, submissions, judging and audit data are intentionally omitted.
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000002', N'Active')
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000001', N'Pending Approval')
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000003', N'Rejected')
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000004', N'Suspended')
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000005', N'Temporary')
 INSERT [dbo].[AccountStatus] ([StatusID], [StatusName]) VALUES (N'20000000-0000-0000-0000-000000000006', N'Unverified')
+GO
+GO
+GO
+GO
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000005', N'Best Innovation')
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000006', N'Best Presentation')
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000001', N'First Place')
@@ -1046,41 +1049,68 @@ INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-000
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000002', N'Second Place')
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000007', N'Special Award')
 INSERT [dbo].[AwardTier] ([TierID], [TierName]) VALUES (N'70000000-0000-0000-0000-000000000003', N'Third Place')
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
 INSERT [dbo].[EventStatus] ([StatusID], [StatusName]) VALUES (N'30000000-0000-0000-0000-000000000005', N'Cancelled')
 INSERT [dbo].[EventStatus] ([StatusID], [StatusName]) VALUES (N'30000000-0000-0000-0000-000000000004', N'Completed')
 INSERT [dbo].[EventStatus] ([StatusID], [StatusName]) VALUES (N'30000000-0000-0000-0000-000000000001', N'Draft')
 INSERT [dbo].[EventStatus] ([StatusID], [StatusName]) VALUES (N'30000000-0000-0000-0000-000000000003', N'Ongoing')
 INSERT [dbo].[EventStatus] ([StatusID], [StatusName]) VALUES (N'30000000-0000-0000-0000-000000000002', N'Registration Open')
+GO
+GO
+GO
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000002', N'ACTIVE')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000001', N'PENDING')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000003', N'REJECTED')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000004', N'SUSPENDED')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000005', N'TEMPORARY')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000006', N'UNVERIFIED')
+GO
+GO
+GO
+GO
+GO
+GO
+GO
+GO
 INSERT [dbo].[RoundStatus] ([StatusID], [StatusName]) VALUES (N'40000000-0000-0000-0000-000000000004', N'Completed')
 INSERT [dbo].[RoundStatus] ([StatusID], [StatusName]) VALUES (N'40000000-0000-0000-0000-000000000003', N'Judging')
 INSERT [dbo].[RoundStatus] ([StatusID], [StatusName]) VALUES (N'40000000-0000-0000-0000-000000000002', N'Submission Open')
 INSERT [dbo].[RoundStatus] ([StatusID], [StatusName]) VALUES (N'40000000-0000-0000-0000-000000000001', N'Upcoming')
+GO
+GO
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000004', N'Disqualified')
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000001', N'Draft')
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000006', N'In Progress')
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000005', N'Scored')
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000002', N'Submitted')
 INSERT [dbo].[SubmissionStatus] ([StatusID], [StatusName]) VALUES (N'50000000-0000-0000-0000-000000000003', N'Under Review')
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'allowLateSubmissions', N'true', N'BOOLEAN', N'Allow submissions after deadline', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'contactEmail', N'seal@fpt.edu.vn', N'STRING', N'Platform support contact email', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'enablePublicLeaderboard', N'true', N'BOOLEAN', N'Show leaderboard to public', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'maxTeamSize', N'5', N'INTEGER', N'Maximum allowed team members', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'minTeamSize', N'2', N'INTEGER', N'Minimum required team members', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'platformName', N'SEAL FPT Hackathon Platform', N'STRING', N'Display name of the platform', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'requireEmailVerification', N'true', N'BOOLEAN', N'Require email verification on register', NULL)
-INSERT [dbo].[SystemSettings] ([SettingKey], [SettingValue], [SettingType], [Description], [UpdatedAt]) VALUES (N'submissionGracePeriod', N'30', N'INTEGER', N'Grace period in minutes after deadline', NULL)
+GO
+GO
+GO
+GO
+GO
+GO
+GO
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000002', N'Active')
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000003', N'Disqualified')
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000001', N'Forming')
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000004', N'Withdrawn')
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000005', N'Pending')
 INSERT [dbo].[TeamStatus] ([StatusID], [StatusName]) VALUES (N'60000000-0000-0000-0000-000000000006', N'Rejected')
+GO
+GO
+GO
 INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'11111111-1111-1111-1111-111111111111', N'Admin')
 INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'55555555-5555-5555-5555-555555555555', N'Competitor')
 INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'33333333-3333-3333-3333-333333333333', N'Expert')
@@ -1092,6 +1122,10 @@ INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'44444444-4444-4444-
 INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'10000000-0000-0000-0000-000000000007', N'Mentor')
 INSERT [dbo].[UserType] ([UserTypeID], [TypeName]) VALUES (N'10000000-0000-0000-0000-000000000003', N'Organizer')
 GO
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UKon5lvd4jlhyt5pyp5npbj6cv9]    Script Date: 7/14/2026 9:01:57 PM ******/
 ALTER TABLE [dbo].[AccountStatus] ADD  CONSTRAINT [UKon5lvd4jlhyt5pyp5npbj6cv9] UNIQUE NONCLUSTERED 
 (
 	[StatusName] ASC
@@ -1984,8 +2018,6 @@ WHERE UserID = @UserID
   AND AccountStatusID = '20000000-0000-0000-0000-000000000001'
   AND IsDeleted = 0;
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID, NewValueJSON)
-VALUES (N'ACCOUNT_APPROVED', N'Users', @UserID, @ApproverID, N'{"status":"Active"}');
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_ComputeEventRankings]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2011,14 +2043,6 @@ DELETE FROM EventRankings WHERE EventID = @EventID AND CategoryID = @CategoryID;
       AND rr.CategoryID = @CategoryID
     GROUP BY rr.TeamID
 )
- INSERT INTO EventRankings (EventID, CategoryID, TeamID, FinalScore, RankPosition)
-SELECT
-    @EventID,
-    @CategoryID,
-    TeamID,
-    FinalScore,
-    RANK() OVER (ORDER BY FinalScore DESC)
-FROM FinalScores;
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_ComputeRoundRankings]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2057,19 +2081,6 @@ DELETE FROM RoundRankings WHERE RoundID = @RoundID AND CategoryID = @CategoryID;
  SELECT *, RANK() OVER (ORDER BY WeightedTotal DESC) AS RankPosition
  FROM ScoreSummary
      )
- INSERT INTO RoundRankings (RoundID, CategoryID, TeamID, SubmissionID, TotalScore, AverageScore, RankPosition, IsAdvanced)
-SELECT
-    @RoundID,
-    @CategoryID,
-    r.TeamID,
-    r.SubmissionID,
-    r.WeightedTotal,
-    r.AverageScore,
-    r.RankPosition,
-    CASE WHEN rnd.AdvancementTopN IS NOT NULL AND r.RankPosition <= rnd.AdvancementTopN THEN 1 ELSE 0 END
-FROM Ranked r
-         CROSS JOIN Rounds rnd
-WHERE rnd.RoundID = @RoundID;
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_CreateGuestJudge]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2090,14 +2101,7 @@ BEGIN
 
     SET @NewUserID = NEWID();
 
-INSERT INTO Users (UserID, Email, PasswordHash, FullName, UserTypeID, AccountStatusID, AccountExpiresAt)
-VALUES (@NewUserID, @Email, @PasswordHash, @FullName,
-        '10000000-0000-0000-0000-000000000005',
-        '20000000-0000-0000-0000-000000000005',
-        @ExpiresAt);
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID, NewValueJSON)
-VALUES (N'GUEST_JUDGE_CREATED', N'Users', @NewUserID, @CreatedByID, N'{"type":"GuestJudge"}');
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_DisqualifySubmission]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2125,16 +2129,8 @@ SET SubmissionStatusID = '50000000-0000-0000-0000-000000000004',
     LastUpdatedAt = GETUTCDATE()
 WHERE SubmissionID = @SubmissionID;
 
-INSERT INTO Disqualifications (SubmissionID, Reason, DisqualifiedByID)
-VALUES (@SubmissionID, @Reason, @DisqualifiedByID);
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID, NewValueJSON)
-VALUES (N'SUBMISSION_DISQUALIFIED', N'Submissions', @SubmissionID, @DisqualifiedByID,
-        N'{"reason":"' + REPLACE(@Reason, '"', '\"') + N'"}');
 
-INSERT INTO EvaluationAuditLogs (EventID, ActionType, ActorUserID, SubmissionID, NewValue, Reason)
-VALUES (@EventID, N'SUBMISSION_DISQUALIFIED', @DisqualifiedByID, @SubmissionID,
-        N'{"status":"Disqualified"}', @Reason);
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_DisqualifyTeam]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2163,16 +2159,8 @@ SET SubmissionStatusID = '50000000-0000-0000-0000-000000000004',
     LastUpdatedAt = GETUTCDATE()
 WHERE TeamID = @TeamID;
 
-INSERT INTO Disqualifications (TeamID, Reason, DisqualifiedByID)
-VALUES (@TeamID, @Reason, @DisqualifiedByID);
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID, NewValueJSON)
-VALUES (N'TEAM_DISQUALIFIED', N'Teams', @TeamID, @DisqualifiedByID,
-        N'{"reason":"' + REPLACE(@Reason, '"', '\"') + N'"}');
 
-INSERT INTO EvaluationAuditLogs (EventID, ActionType, ActorUserID, TeamID, NewValue, Reason)
-VALUES (@EventID, N'TEAM_DISQUALIFIED', @DisqualifiedByID, @TeamID,
-        N'{"status":"Disqualified"}', @Reason);
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_RecordScore]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2235,8 +2223,6 @@ BEGIN
         SET @JudgingID = NEWID();
         SET @ActionType = N'SCORE_CREATED';
 
-INSERT INTO Judging (JudgingID, SubmissionID, RoundJudgeID, RoundCriterionID, ScoreValue, Comment, IsCalibration)
-VALUES (@JudgingID, @SubmissionID, @RoundJudgeID, @RoundCriterionID, @ScoreValue, @Comment, @IsCalibration);
 END
 ELSE
 BEGIN
@@ -2250,15 +2236,7 @@ WHERE JudgingID = @JudgingID;
 END
 
     -- 4. Ghi Audit Logs
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID, NewValueJSON)
-VALUES (N'SCORE_RECORDED', N'Judging', @JudgingID, @JudgeUserID,
-        N'{"round_criterion":"' + CAST(@RoundCriterionID AS NVARCHAR(36)) +
-        N'","score":' + CAST(@ScoreValue AS NVARCHAR(30)) + N'}');
 
-INSERT INTO EvaluationAuditLogs (EventID, ActionType, ActorUserID, JudgingID, SubmissionID, OldValue, NewValue, Reason)
-VALUES (@EventID, @ActionType, @JudgeUserID, @JudgingID, @SubmissionID, @OldValue,
-        N'{"score":' + CAST(@ScoreValue AS NVARCHAR(30)) + N'}',
-        N'Giám khảo đã ghi nhận/cập nhật điểm');
 END;
 GO
 /****** Object:  StoredProcedure [dbo].[sp_UpsertSubmission]    Script Date: 7/14/2026 9:01:57 PM ******/
@@ -2320,26 +2298,12 @@ WHERE TeamID = @TeamID AND RoundID = @RoundID;
 
 SELECT @SubID = SubmissionID FROM Submissions WHERE TeamID = @TeamID AND RoundID = @RoundID;
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID)
-VALUES (N'SUBMISSION_UPDATED', N'Submissions', @SubID, @SubmittedByUserID);
 END
 ELSE
 BEGIN
         SET @SubID = NEWID();
 
-INSERT INTO Submissions (
-    SubmissionID, TeamID, RoundID, RepositoryURL, DemoURL, ReportURL, SlideURL,
-    Notes, RepoMetadataJSON, RepoLastCommitAt, RepoStarCount, RepoForkCount,
-    SubmissionStatusID, SubmittedAt, SubmittedByUserID
-)
-VALUES (
-           @SubID, @TeamID, @RoundID, @RepositoryURL, @DemoURL, @ReportURL, @SlideURL,
-           @Notes, @RepoMetadataJSON, @RepoLastCommitAt, @RepoStarCount, @RepoForkCount,
-           '50000000-0000-0000-0000-000000000002', GETUTCDATE(), @SubmittedByUserID
-       );
 
-INSERT INTO AuditLog (ActionType, EntityType, EntityID, ActorUserID)
-VALUES (N'SUBMISSION_CREATED', N'Submissions', @SubID, @SubmittedByUserID);
 END;
 END;
 GO

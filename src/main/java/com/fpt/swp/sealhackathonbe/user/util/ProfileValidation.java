@@ -24,10 +24,13 @@ public final class ProfileValidation {
     private static final String ROLE_FPT_STUDENT = "FPT Student";
     private static final String ROLE_EXTERNAL_STUDENT = "External Student";
 
-    public static final String MSG_FPT_CODE = "Mã sinh viên FPT phải có dạng SE/SS/SA + 6 số (ví dụ SE123456).";
-    public static final String MSG_EXTERNAL_CODE = "Mã sinh viên (ngoài trường) chưa hợp lệ (3–50 ký tự chữ/số, cho . _ -).";
-    public static final String MSG_UNIVERSITY = "Sinh viên ngoài trường cần điền tên trường đại học.";
-    public static final String MSG_PHONE = "Số điện thoại phải là số di động Việt Nam hợp lệ (vd 0912345678).";
+    // Cac message nay di THANG ra UI: profileIssues(User) duoc FE render nguyen van trong
+    // banner cua MyProfileSection. Phai giu DONG BO tung chu voi
+    // SEAL-Hackathon-FE/src/features/users/utils/profileValidation.ts
+    public static final String MSG_FPT_CODE = "FPT student code must be SE/SS/SA followed by 6 digits (e.g. SE123456).";
+    public static final String MSG_EXTERNAL_CODE = "External student code is invalid (3–50 letters/digits, dot, underscore or hyphen).";
+    public static final String MSG_UNIVERSITY = "External students must provide their university name.";
+    public static final String MSG_PHONE = "Enter a valid Vietnamese mobile number (e.g. 0912345678).";
 
     public static boolean isValidFptStudentCode(String value) {
         return value != null && FPT_CODE.matcher(value.trim()).matches();
