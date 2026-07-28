@@ -24,7 +24,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+/**
+ * Service xử lý logic hệ thống thông báo (Notification).
+ * 
+ * Tính năng & Tối ưu:
+ * - Realtime Push: Tích hợp với Server-Sent Events (SSE) để push thông báo realtime ngay khi được tạo.
+ * - Aggregate API: Gộp chung việc lấy danh sách (getNotifications) và số lượng chưa đọc (unreadCount)
+ *   vào trong một response, loại bỏ 1 call API thừa (N+1 call) từ phía client.
+ * - Fallback Email: Hỗ trợ tự động fallback sang gửi mail nếu người dùng offline (tùy cấu hình).
+ */
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {

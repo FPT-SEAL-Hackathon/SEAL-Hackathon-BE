@@ -12,6 +12,14 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+/**
+ * Service quản lý luồng gửi Email thông báo.
+ * 
+ * Kiến trúc & Tối ưu:
+ * - Template Engine: Sử dụng Thymeleaf để parse HTML template từ src/main/resources/templates.
+ * - Asynchronous: Các method gửi mail được đánh dấu @Async để không block luồng xử lý chính của ứng dụng.
+ * - Feature Flag: Hỗ trợ cấu hình `app.notification.mail.enabled` để bật/tắt gửi mail tuỳ môi trường (dev/prod).
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
