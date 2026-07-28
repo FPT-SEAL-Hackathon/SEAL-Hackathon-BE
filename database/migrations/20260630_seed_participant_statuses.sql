@@ -1,6 +1,7 @@
 IF OBJECT_ID(N'dbo.ParticipantStatus', N'U') IS NOT NULL
 BEGIN
     DECLARE @ConstraintName sysname;
+    DECLARE @DropConstraintSql nvarchar(max);
 
     SELECT @ConstraintName = cc.name
     FROM sys.check_constraints cc
@@ -8,7 +9,11 @@ BEGIN
       AND cc.name = N'CK_ParticipantStatus_Name';
 
     IF @ConstraintName IS NOT NULL
-        EXEC(N'ALTER TABLE dbo.ParticipantStatus DROP CONSTRAINT ' + QUOTENAME(@ConstraintName));
+    BEGIN
+        SET @DropConstraintSql = N'ALTER TABLE dbo.ParticipantStatus DROP CONSTRAINT '
+            + QUOTENAME(@ConstraintName);
+        EXEC sp_executesql @DropConstraintSql;
+    END
 
     IF EXISTS (
         SELECT 1
@@ -69,23 +74,14 @@ BEGIN
         WHERE StatusID = '80000000-0000-0000-0000-000000000005'
     )
         UPDATE dbo.ParticipantStatus
-        SET StatusName = N'TEMPORARY'
+        SET StatusName = N'WITHDRAWN'
         WHERE StatusID = '80000000-0000-0000-0000-000000000005';
-    ELSE IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'TEMPORARY')
+    ELSE IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'WITHDRAWN')
         INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
-        VALUES ('80000000-0000-0000-0000-000000000005', N'TEMPORARY');
+        VALUES ('80000000-0000-0000-0000-000000000005', N'WITHDRAWN');
 
-    IF EXISTS (
-        SELECT 1
-        FROM dbo.ParticipantStatus
-        WHERE StatusID = '80000000-0000-0000-0000-000000000006'
-    )
-        UPDATE dbo.ParticipantStatus
-        SET StatusName = N'UNVERIFIED'
-        WHERE StatusID = '80000000-0000-0000-0000-000000000006';
-    ELSE IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'UNVERIFIED')
-        INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
-        VALUES ('80000000-0000-0000-0000-000000000006', N'UNVERIFIED');
+    DELETE FROM dbo.ParticipantStatus
+    WHERE StatusName IN (N'TEMPORARY', N'UNVERIFIED');
 
     ALTER TABLE dbo.ParticipantStatus
     ADD CONSTRAINT CK_ParticipantStatus_Name CHECK (
@@ -94,8 +90,7 @@ BEGIN
             N'ACTIVE',
             N'REJECTED',
             N'SUSPENDED',
-            N'TEMPORARY',
-            N'UNVERIFIED'
+            N'WITHDRAWN'
         )
     );
 END;

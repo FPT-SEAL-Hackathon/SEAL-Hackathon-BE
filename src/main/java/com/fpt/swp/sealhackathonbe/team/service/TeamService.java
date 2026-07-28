@@ -30,7 +30,11 @@ public interface TeamService {
     TeamResponse rejectTeam(UUID teamId, String note, UUID adminUserId);
 
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
-    TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
+    TeamMemberDetailResponse getTeamMemberDetail(
+            UUID teamId,
+            UUID userId,
+            UUID currentUserId,
+            boolean organizerViewer);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
     void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason);

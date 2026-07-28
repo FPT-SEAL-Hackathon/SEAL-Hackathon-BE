@@ -392,10 +392,36 @@ class TeamServiceImplLeadershipTest {
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
                 .thenReturn(Optional.of(member));
 
-        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, leaderId);
+        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, leaderId, false);
 
         assertEquals("Suspended", response.getParticipantStatus());
         assertEquals("Suspended", response.getParticipantStatusName());
+    }
+
+    @Test
+    void organizerCanViewTeamMemberDetailWithoutBelongingToTeam() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        UUID organizerId = UUID.randomUUID();
+        Teams team = team(teamId, leaderId);
+        TeamMembers member = member(team, memberId);
+        User user = new User();
+        user.setUserId(memberId);
+        user.setFullName("Member One");
+        member.setUser(user);
+
+        when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
+                .thenReturn(Optional.of(member));
+        when(eventParticipantRepository.findByEventIdAndUserId(team.getEventId(), memberId))
+                .thenReturn(Optional.empty());
+
+        TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, organizerId, true);
+
+        assertEquals(memberId, response.getUserId());
+        assertEquals("Member One", response.getFullName());
+        verify(teamMembersRepository, never()).findByTeamIdAndUserIdAndActiveTrue(teamId, organizerId);
     }
 
     @Test

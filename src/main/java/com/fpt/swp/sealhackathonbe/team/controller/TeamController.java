@@ -2,21 +2,25 @@ package com.fpt.swp.sealhackathonbe.team.controller;
 
 import com.fpt.swp.sealhackathonbe.eventparticipant.dto.EventParticipantResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.HandleTeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.RemoveTeamMemberRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamWithdrawalRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TransferTeamLeadershipRequest;
 import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamJoinRequestService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamDisqualificationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
+import com.fpt.swp.sealhackathonbe.team.service.TeamWithdrawalRequestService;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
 import jakarta.validation.Valid;
@@ -49,6 +53,7 @@ public class TeamController {
     private final TeamJoinRequestService teamJoinRequestService;
     private final TeamDisqualificationService teamDisqualificationService;
     private final TeamEventRegistrationService teamEventRegistrationService;
+    private final TeamWithdrawalRequestService teamWithdrawalRequestService;
     private final UserRepository userRepository;
 
     // Quyen hien tai: moi tai khoan co JWT hop le deu co the tao team.
@@ -123,9 +128,9 @@ public class TeamController {
                 throw new RuntimeException("Rejection reason is required");
             }
 
-            TeamResponse team = teamService.rejectTeam(teamId, request.getNote(), currentUserId(authentication));
             // Từ chối team = từ chối toàn bộ participant PENDING của thành viên.
             teamEventRegistrationService.applyTeamDecision(teamId, false, request.getNote(), currentUserId(authentication));
+            TeamResponse team = teamService.rejectTeam(teamId, request.getNote(), currentUserId(authentication));
             response.setTeam(team);
             response.setMessage("Team registration request rejected");
         }
@@ -165,6 +170,46 @@ public class TeamController {
         ));
     }
 
+    @Operation(summary = "Request active team withdrawal (leader only)")
+    @PostMapping("/teams/{teamId}/withdrawal-requests")
+    public ResponseEntity<TeamWithdrawalRequestResponse> requestTeamWithdrawal(
+            @PathVariable UUID teamId,
+            @Valid @RequestBody CreateTeamWithdrawalRequest request,
+            Authentication authentication
+    ) {
+        TeamWithdrawalRequestResponse response = teamWithdrawalRequestService.requestWithdrawal(
+                teamId,
+                request,
+                currentUserId(authentication)
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "List pending team withdrawal requests by event")
+    @GetMapping("/admin/events/{eventId}/team-withdrawal-requests")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getPendingTeamWithdrawalRequests(
+            @PathVariable UUID eventId
+    ) {
+        return ResponseEntity.ok(teamWithdrawalRequestService.getPendingWithdrawalRequests(eventId));
+    }
+
+    @Operation(summary = "Approve or reject a team withdrawal request")
+    @PutMapping("/admin/team-withdrawal-requests/{requestId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<TeamWithdrawalRequestResponse> handleTeamWithdrawalRequest(
+            @PathVariable UUID requestId,
+            @Valid @RequestBody HandleTeamWithdrawalRequest request,
+            Authentication authentication
+    ) {
+        TeamWithdrawalRequestResponse response = teamWithdrawalRequestService.handleWithdrawalRequest(
+                requestId,
+                request,
+                currentUserId(authentication)
+        );
+        return ResponseEntity.ok(response);
+    }
+
     // Quyen hien tai: chi tai khoan dang la member active cua teamId.
     // userId duoc xem cung phai la member active cua chinh team do.
     // Seed test Alpha: dang nhap api.alpha.leader@seal.test hoac api.alpha.member@seal.test.
@@ -181,7 +226,8 @@ public class TeamController {
         TeamMemberDetailResponse response = teamService.getTeamMemberDetail(
                 teamId,
                 userId,
-                currentUserId(authentication)
+                currentUserId(authentication),
+                hasAuthority(authentication, "ROLE_ORGANIZER")
         );
         return ResponseEntity.ok(response);
     }
@@ -266,6 +312,16 @@ public class TeamController {
         );
     }
 
+    @Operation(summary = "List my pending team withdrawal requests")
+    @GetMapping("/teams/withdrawal-requests/mine")
+    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getMyPendingTeamWithdrawalRequests(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                teamWithdrawalRequestService.getMyPendingWithdrawalRequests(currentUserId(authentication))
+        );
+    }
+
     // Leader giai tan team dang FORMING trong mot thao tac (thay vi kick tung nguoi):
     // go dang ky event PENDING cua tung thanh vien roi xoa team + request + membership.
     @Operation(summary = "Disband a forming team (leader only)")
@@ -343,5 +399,12 @@ public class TeamController {
         }
 
         return user.getUserId();
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        return authentication != null
+                && authentication.getAuthorities() != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(grantedAuthority -> authority.equals(grantedAuthority.getAuthority()));
     }
 }

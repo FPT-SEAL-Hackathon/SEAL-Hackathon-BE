@@ -16,7 +16,7 @@ public class EventParticipantBulkStatusUpdateRequest {
     private List<UUID> participantIds;
 
     @NotBlank(message = "Status is required")
-    @Pattern(regexp = "PENDING|ACTIVE|REJECTED", message = "Invalid participant status. Allowed values are: PENDING, ACTIVE, REJECTED.")
+    @Pattern(regexp = "PENDING|ACTIVE|REJECTED|SUSPENDED|WITHDRAWN", message = "Invalid participant status. Allowed values are: PENDING, ACTIVE, REJECTED, SUSPENDED, WITHDRAWN.")
     @Getter
     @Setter
     private String status;
