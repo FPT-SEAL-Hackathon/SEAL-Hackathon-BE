@@ -100,6 +100,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MentorProfileResponse> getMentorsOfCategory(UUID categoryId) {
         return categoryMentorRepository.findByCategory_CategoryId(categoryId).stream()
                 .map(MentorProfileResponse::from)
@@ -107,6 +108,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AssignedCategoryResponse> getAssignedCategoriesForMentor(User mentor) {
         List<ConsultationStatus> openStatuses = List.of(
                 ConsultationStatus.PENDING,
@@ -131,6 +133,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<TeamSummaryForMentorResponse> getTeamsForMentorCategory(User mentor, UUID categoryId) {
         // Xác nhận mentor được assign vào category này
         categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(categoryId, mentor.getUserId())
@@ -153,6 +156,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ConsultationRequestResponse> getMentorRequests(User mentor, UUID categoryId, UUID teamId, String status,
             String priority, Pageable pageable) {
         // Basic implementation, filters can be extended with specifications
