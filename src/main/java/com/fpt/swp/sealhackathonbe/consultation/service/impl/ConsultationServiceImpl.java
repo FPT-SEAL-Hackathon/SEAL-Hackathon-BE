@@ -393,6 +393,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public java.util.List<TeamMentorNoteResponse> getMyTeamMentorNotes(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
@@ -430,6 +431,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MentorProfileResponse> getMyMentors(User user) {
         Teams team = getActiveTeamForUser(user);
         List<CategoryMentor> mentors = categoryMentorRepository
@@ -499,6 +501,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ConsultationRequestResponse> getMyTeamRequests(User user, String status, Pageable pageable) {
         Teams team = getActiveTeamForUser(user);
         Page<ConsultationRequest> requests = requestRepository.findByTeam_TeamId(team.getTeamId(), pageable);
@@ -527,6 +530,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ConsultationRequestResponse getConsultationRequestDetail(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -535,6 +539,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ConsultationMessageResponse> getConsultationMessages(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
