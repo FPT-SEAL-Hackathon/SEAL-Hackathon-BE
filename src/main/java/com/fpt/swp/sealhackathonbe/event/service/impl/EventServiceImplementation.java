@@ -57,6 +57,7 @@ public class EventServiceImplementation implements EventService {
     private final AuthenticationService authenticationService;
 
     @Override
+    @Transactional
     public EventResponse create(CreateEventRequest request) {
         String eventName = request.getEventName().trim();
         validateEventTimeline(request);
@@ -197,6 +198,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventResponse getPublicEventById(UUID eventId) {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(eventId, PUBLIC_EVENT_STATUSES)
@@ -208,6 +210,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional
     public EventResponse update(UUID eventId, UpdateEventRequest request) {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalse(eventId)
@@ -270,6 +273,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventResponse getById(UUID eventId) {
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalse(eventId)
@@ -285,6 +289,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional
     public EventResponse updateStatus(UUID eventId, UpdateEventStatusRequest request) {
         Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
@@ -300,6 +305,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID eventId){
         Event event = eventRepository
                 .findByEventIdAndIsDeletedFalse(eventId)
@@ -363,6 +369,7 @@ public class EventServiceImplementation implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventResponse> getAllEventsForOrganizer() {
         List<Event> events = eventRepository.findAllByIsDeletedFalse();
 

@@ -9,6 +9,7 @@ import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +34,7 @@ public class MentorDashboardServiceImpl implements MentorDashboardService {
     private final TeamService teamService;
 
     @Override
+    @Transactional(readOnly = true)
     public MentorDashboardSummaryResponse getDashboardSummary(UUID mentorId) {
         // 1. Lấy toàn bộ CategoryMentor record của mentor này — 1 query duy nhất
         List<CategoryMentor> assignments = categoryMentorRepository.findByMentor_UserId(mentorId);

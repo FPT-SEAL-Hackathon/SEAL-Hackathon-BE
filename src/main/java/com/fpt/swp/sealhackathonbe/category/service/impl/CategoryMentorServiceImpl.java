@@ -117,6 +117,8 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public List<UserResponse> getAllMentors() {
         return userRepository.findExpertsMentorsJudges()
                 .stream()
@@ -140,11 +142,11 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryMentorResponse> getMentorsByCategory(UUID categoryId) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new EntityNotFoundException("Category not found");
         }
-        ;
         return categoryMentorRepository.findByCategoryCategoryId(categoryId)
                 .stream()
                 .map(categoryMapper::toCategoryMentorResponse)
@@ -152,6 +154,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryMentorResponse> getCategoryMentors(UUID categoryId) {
         List<CategoryMentor> categoryMentors = categoryMentorRepository.findByCategory_CategoryId(categoryId);
         return categoryMentors.stream()
