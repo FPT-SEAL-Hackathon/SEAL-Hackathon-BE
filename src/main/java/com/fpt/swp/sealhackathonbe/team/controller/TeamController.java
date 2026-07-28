@@ -8,7 +8,6 @@ import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.EligibilityDecisionResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.HandleJoinRequest;
-import com.fpt.swp.sealhackathonbe.team.dto.HandleTeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.JoinTeamRequestResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.RemoveTeamMemberRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
@@ -170,7 +169,7 @@ public class TeamController {
         ));
     }
 
-    @Operation(summary = "Request active team withdrawal (leader only)")
+    @Operation(summary = "Withdraw an active team immediately (leader only)")
     @PostMapping("/teams/{teamId}/withdrawal-requests")
     public ResponseEntity<TeamWithdrawalRequestResponse> requestTeamWithdrawal(
             @PathVariable UUID teamId,
@@ -185,29 +184,13 @@ public class TeamController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "List pending team withdrawal requests by event")
+    @Operation(summary = "List team withdrawals by event")
     @GetMapping("/admin/events/{eventId}/team-withdrawal-requests")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getPendingTeamWithdrawalRequests(
+    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getTeamWithdrawalRequests(
             @PathVariable UUID eventId
     ) {
-        return ResponseEntity.ok(teamWithdrawalRequestService.getPendingWithdrawalRequests(eventId));
-    }
-
-    @Operation(summary = "Approve or reject a team withdrawal request")
-    @PutMapping("/admin/team-withdrawal-requests/{requestId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<TeamWithdrawalRequestResponse> handleTeamWithdrawalRequest(
-            @PathVariable UUID requestId,
-            @Valid @RequestBody HandleTeamWithdrawalRequest request,
-            Authentication authentication
-    ) {
-        TeamWithdrawalRequestResponse response = teamWithdrawalRequestService.handleWithdrawalRequest(
-                requestId,
-                request,
-                currentUserId(authentication)
-        );
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(teamWithdrawalRequestService.getWithdrawalRequests(eventId));
     }
 
     // Quyen hien tai: chi tai khoan dang la member active cua teamId.
@@ -312,13 +295,13 @@ public class TeamController {
         );
     }
 
-    @Operation(summary = "List my pending team withdrawal requests")
+    @Operation(summary = "List my team withdrawal requests")
     @GetMapping("/teams/withdrawal-requests/mine")
-    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getMyPendingTeamWithdrawalRequests(
+    public ResponseEntity<List<TeamWithdrawalRequestResponse>> getMyTeamWithdrawalRequests(
             Authentication authentication
     ) {
         return ResponseEntity.ok(
-                teamWithdrawalRequestService.getMyPendingWithdrawalRequests(currentUserId(authentication))
+                teamWithdrawalRequestService.getMyWithdrawalRequests(currentUserId(authentication))
         );
     }
 

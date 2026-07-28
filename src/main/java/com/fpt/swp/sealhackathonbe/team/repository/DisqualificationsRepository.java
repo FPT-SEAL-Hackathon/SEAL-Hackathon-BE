@@ -15,6 +15,24 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
 
     @Query("""
             SELECT d FROM Disqualifications d
+            WHERE d.submissionId = :submissionId AND d.reversed = false
+            ORDER BY d.disqualifiedAt DESC
+            """)
+    List<Disqualifications> findActiveBySubmissionIdOrderByDisqualifiedAtDesc(
+            @Param("submissionId") UUID submissionId
+    );
+
+    @Query("""
+            SELECT d FROM Disqualifications d
+            WHERE d.submissionId IN :submissionIds AND d.reversed = false
+            ORDER BY d.disqualifiedAt DESC
+            """)
+    List<Disqualifications> findActiveBySubmissionIdInOrderByDisqualifiedAtDesc(
+            @Param("submissionIds") List<UUID> submissionIds
+    );
+
+    @Query("""
+            SELECT d FROM Disqualifications d
             WHERE d.submission.roundId = :roundId AND d.reversed = false
             ORDER BY d.disqualifiedAt DESC
             """)

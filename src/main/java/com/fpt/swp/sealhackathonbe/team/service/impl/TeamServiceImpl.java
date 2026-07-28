@@ -156,6 +156,7 @@ public class TeamServiceImpl implements TeamService {
 
         return teamsRepository.findByEventId(eventId)
                 .stream()
+                .filter(team -> !TEAM_STATUS_REJECTED.equals(team.getTeamStatusId()))
                 .map(team -> toEligibilityReviewResponse(team, event))
                 .toList();
     }

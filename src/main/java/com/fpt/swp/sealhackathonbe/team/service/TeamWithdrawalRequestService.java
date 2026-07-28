@@ -1,7 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamWithdrawalRequest;
-import com.fpt.swp.sealhackathonbe.team.dto.HandleTeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamWithdrawalRequestResponse;
 
 import java.util.List;
@@ -14,13 +13,7 @@ public interface TeamWithdrawalRequestService {
             UUID currentUserId
     );
 
-    List<TeamWithdrawalRequestResponse> getPendingWithdrawalRequests(UUID eventId);
+    List<TeamWithdrawalRequestResponse> getWithdrawalRequests(UUID eventId);
 
-    List<TeamWithdrawalRequestResponse> getMyPendingWithdrawalRequests(UUID currentUserId);
-
-    TeamWithdrawalRequestResponse handleWithdrawalRequest(
-            UUID requestId,
-            HandleTeamWithdrawalRequest request,
-            UUID organizerUserId
-    );
+    List<TeamWithdrawalRequestResponse> getMyWithdrawalRequests(UUID currentUserId);
 }

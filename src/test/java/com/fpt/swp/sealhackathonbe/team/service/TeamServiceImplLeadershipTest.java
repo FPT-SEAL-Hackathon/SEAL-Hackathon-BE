@@ -9,6 +9,7 @@ import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.entity.ParticipantStatus;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
@@ -186,6 +187,29 @@ class TeamServiceImplLeadershipTest {
         assertFalse(oldLeader.getActive());
         verify(teamsRepository).saveAll(List.of(staleTeam));
         verify(teamMembersRepository).saveAll(List.of(oldLeader));
+    }
+
+    @Test
+    void reviewTeamsEligibilityDoesNotReturnRejectedTeams() {
+        UUID eventId = UUID.randomUUID();
+        UUID activeTeamId = UUID.randomUUID();
+        UUID rejectedTeamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        Event event = event(eventId);
+        Teams activeTeam = team(activeTeamId, leaderId);
+        activeTeam.setEventId(eventId);
+        activeTeam.setTeamName("Active Team");
+        activeTeam.setTeamStatusId(ACTIVE_STATUS);
+        Teams rejectedTeam = rejectedTeam(rejectedTeamId, eventId, UUID.randomUUID(), "Rejected Team");
+
+        when(eventRepository.findByEventIdAndIsDeletedFalse(eventId)).thenReturn(Optional.of(event));
+        when(teamsRepository.findByEventId(eventId)).thenReturn(List.of(activeTeam, rejectedTeam));
+        when(teamMembersRepository.findByTeamIdOrderByJoinedAtAsc(activeTeamId)).thenReturn(List.of());
+
+        List<TeamEligibilityReviewResponse> response = teamService.reviewTeamsEligibility(eventId);
+
+        assertEquals(1, response.size());
+        assertEquals(activeTeamId, response.get(0).getTeamId());
     }
 
     @Test
