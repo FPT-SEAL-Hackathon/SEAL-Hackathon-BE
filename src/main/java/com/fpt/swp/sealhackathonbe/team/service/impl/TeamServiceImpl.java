@@ -16,11 +16,15 @@ import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
+import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamWithdrawalRequestRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
@@ -49,6 +53,7 @@ public class TeamServiceImpl implements TeamService {
     private static final UUID TEAM_STATUS_PENDING = TeamStatusConstants.PENDING;
     private static final UUID TEAM_STATUS_ACTIVE = TeamStatusConstants.ACTIVE;
     private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.DISQUALIFIED;
+    private static final UUID TEAM_STATUS_WITHDRAWN = TeamStatusConstants.WITHDRAWN;
     private static final UUID TEAM_STATUS_REJECTED = TeamStatusConstants.REJECTED;
 
     private final EventRepository eventRepository;
@@ -62,6 +67,8 @@ public class TeamServiceImpl implements TeamService {
     private final EventParticipantRepository eventParticipantRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
+    private final DisqualificationsRepository disqualificationsRepository;
+    private final TeamWithdrawalRequestRepository teamWithdrawalRequestRepository;
 
     @Override
     @Transactional
@@ -103,6 +110,11 @@ public class TeamServiceImpl implements TeamService {
         leaderMember.setActive(true);
 
         teamMembersRepository.save(leaderMember);
+        teamEventRegistrationService.ensurePendingRegistration(
+                savedTeam.getTeamId(),
+                savedTeam.getEventId(),
+                currentUserId,
+                currentUserId);
 
         // User đã có team của riêng mình: tự hủy các request PENDING họ từng gửi
         // sang team khác trong cùng event.
@@ -150,6 +162,7 @@ public class TeamServiceImpl implements TeamService {
 
         return teamsRepository.findByEventId(eventId)
                 .stream()
+                .filter(team -> !TEAM_STATUS_REJECTED.equals(team.getTeamStatusId()))
                 .map(team -> toEligibilityReviewResponse(team, event))
                 .toList();
     }
@@ -302,6 +315,7 @@ public class TeamServiceImpl implements TeamService {
 
     private TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = TeamMapper.toTeamResponse(team, members);
+        enrichLifecycleDetail(team, response);
         if (response.getMembers() == null) {
             return response;
         }
@@ -315,17 +329,61 @@ public class TeamServiceImpl implements TeamService {
         return response;
     }
 
+    private void enrichLifecycleDetail(Teams team, TeamResponse response) {
+        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())) {
+            disqualificationsRepository
+                    .findTopByTeamIdAndReversedFalseOrderByDisqualifiedAtDesc(team.getTeamId())
+                    .ifPresent(disqualification -> applyDisqualificationDetail(response, disqualification));
+        }
+
+        if (TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+            teamWithdrawalRequestRepository
+                    .findTopByTeamIdOrderByRequestedAtDesc(team.getTeamId())
+                    .ifPresent(withdrawal -> applyWithdrawalDetail(response, withdrawal));
+        }
+    }
+
+    private void applyDisqualificationDetail(TeamResponse response, Disqualifications disqualification) {
+        response.setDisqualifiedReason(disqualification.getReason());
+        response.setDisqualifiedById(disqualification.getDisqualifiedById());
+        response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
+
+        User disqualifiedBy = disqualification.getDisqualifiedBy();
+        if (disqualifiedBy != null) {
+            response.setDisqualifiedByName(disqualifiedBy.getFullName());
+            response.setDisqualifiedByEmail(disqualifiedBy.getEmail());
+        }
+    }
+
+    private void applyWithdrawalDetail(TeamResponse response, TeamWithdrawalRequest withdrawal) {
+        response.setWithdrawnReason(withdrawal.getReason());
+        response.setWithdrawnById(withdrawal.getRequestedById());
+        response.setWithdrawnAt(withdrawal.getRequestedAt());
+
+        User requestedBy = withdrawal.getRequestedBy();
+        if (requestedBy != null) {
+            response.setWithdrawnByName(requestedBy.getFullName());
+            response.setWithdrawnByEmail(requestedBy.getEmail());
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId) {
+    public TeamMemberDetailResponse getTeamMemberDetail(
+            UUID teamId,
+            UUID userId,
+            UUID currentUserId,
+            boolean organizerViewer) {
         // Luồng xem chi tiết member: xác nhận user đang active trong team -> lấy hồ sơ
         // User
         // -> mapper ghép dữ liệu TeamMembers + User thành DTO, không trả passwordHash.
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
-        teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
-                .orElseThrow(() -> new AccessDeniedException("You do not belong to this team"));
+        if (!organizerViewer) {
+            teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
+                    .orElseThrow(() -> new AccessDeniedException("You do not belong to this team"));
+        }
 
         TeamMembers member = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Active team member not found"));
@@ -568,6 +626,10 @@ public class TeamServiceImpl implements TeamService {
             issues.add("Team registration request was rejected");
         }
 
+        if (TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+            issues.add("Team withdrew from the event");
+        }
+
         boolean teamSizeEligible = issues.stream()
                 .noneMatch(issue -> issue.contains("active members"));
         boolean membersInfoComplete = memberResponses.stream()
@@ -575,6 +637,7 @@ public class TeamServiceImpl implements TeamService {
         boolean eligibleForCompetition = teamSizeEligible
                 && membersInfoComplete
                 && !TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
+                && !TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())
                 && !TEAM_STATUS_REJECTED.equals(team.getTeamStatusId());
 
         if (!membersInfoComplete) {

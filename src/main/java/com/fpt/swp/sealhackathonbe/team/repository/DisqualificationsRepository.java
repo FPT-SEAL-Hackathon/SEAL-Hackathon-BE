@@ -1,17 +1,40 @@
 package com.fpt.swp.sealhackathonbe.team.repository;
 
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DisqualificationsRepository extends JpaRepository<Disqualifications, UUID> {
     List<Disqualifications> findByTeamId(UUID teamId);
 
     List<Disqualifications> findBySubmissionId(UUID submissionId);
+
+    @EntityGraph(attributePaths = {"disqualifiedBy"})
+    Optional<Disqualifications> findTopByTeamIdAndReversedFalseOrderByDisqualifiedAtDesc(UUID teamId);
+
+    @Query("""
+            SELECT d FROM Disqualifications d
+            WHERE d.submissionId = :submissionId AND d.reversed = false
+            ORDER BY d.disqualifiedAt DESC
+            """)
+    List<Disqualifications> findActiveBySubmissionIdOrderByDisqualifiedAtDesc(
+            @Param("submissionId") UUID submissionId
+    );
+
+    @Query("""
+            SELECT d FROM Disqualifications d
+            WHERE d.submissionId IN :submissionIds AND d.reversed = false
+            ORDER BY d.disqualifiedAt DESC
+            """)
+    List<Disqualifications> findActiveBySubmissionIdInOrderByDisqualifiedAtDesc(
+            @Param("submissionIds") List<UUID> submissionIds
+    );
 
     @Query("""
             SELECT d FROM Disqualifications d

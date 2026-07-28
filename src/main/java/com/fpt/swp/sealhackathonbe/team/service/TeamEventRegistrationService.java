@@ -27,6 +27,12 @@ public interface TeamEventRegistrationService {
     boolean hasRegistration(UUID eventId, UUID userId);
 
     /**
+     * Ensure an active team member has a PENDING participant row while the team is
+     * still forming.
+     */
+    void ensurePendingRegistration(UUID teamId, UUID eventId, UUID userId, UUID actorUserId);
+
+    /**
      * Xóa registration PENDING của member khi roster team pending thay đổi.
      * Nếu member chưa có registration thì không làm gì; nếu đã được xử lý thì giữ nguyên lịch sử.
      */
@@ -47,4 +53,10 @@ public interface TeamEventRegistrationService {
      * Team chưa đăng ký (không có participant) thì không làm gì.
      */
     void applyTeamDecision(UUID teamId, boolean approved, String note, UUID organizerUserId);
+
+    /**
+     * Team withdrawal mirrors TeamStatus.WITHDRAWN onto every active member's
+     * participant status.
+     */
+    void markTeamParticipantsWithdrawn(UUID teamId, UUID actorUserId);
 }

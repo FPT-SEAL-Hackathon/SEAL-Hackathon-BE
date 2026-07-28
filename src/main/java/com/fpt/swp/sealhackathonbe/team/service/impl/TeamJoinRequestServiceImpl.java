@@ -156,6 +156,11 @@ public class TeamJoinRequestServiceImpl implements TeamJoinRequestService {
             member.setActive(true);
 
             teamMembersRepository.save(member);
+            teamEventRegistrationService.ensurePendingRegistration(
+                    team.getTeamId(),
+                    team.getEventId(),
+                    joinRequest.getUserId(),
+                    leaderUserId);
 
             joinRequest.setRequestStatus(REQUEST_STATUS_APPROVED);
 

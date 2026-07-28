@@ -57,6 +57,7 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_REJECTED = "REJECTED";
+    private static final String STATUS_WITHDRAWN = "WITHDRAWN";
     private static final String STATUS_TEMPORARY = "TEMPORARY";
     private static final UUID TEAM_STATUS_FORMING = TeamStatusConstants.FORMING;
     private static final UUID TEAM_STATUS_PENDING = TeamStatusConstants.PENDING;
@@ -89,6 +90,38 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     @Transactional(readOnly = true)
     public boolean hasRegistration(UUID eventId, UUID userId) {
         return eventParticipantRepository.existsByEventIdAndUserId(eventId, userId);
+    }
+
+    @Override
+    @Transactional
+    public void ensurePendingRegistration(UUID teamId, UUID eventId, UUID userId, UUID actorUserId) {
+        Event event = getRegisterableEvent(eventId);
+        User user = validateStudentCanRegister(userId);
+        ParticipantStatus pendingStatus = getRegistrationPendingStatus();
+
+        EventParticipant participant = eventParticipantRepository
+                .findByEventIdAndUserId(eventId, userId)
+                .orElseGet(() -> {
+                    EventParticipant created = new EventParticipant();
+                    created.setEventId(eventId);
+                    created.setUserId(userId);
+                    created.setAppliedAt(LocalDateTime.now());
+                    return created;
+                });
+
+        if (!isPendingStatus(currentStatusName(participant))) {
+            participant.setApprovedAt(null);
+            participant.setApprovedBy(null);
+            participant.setRejectedReason(null);
+        }
+        participant.setParticipantStatusId(pendingStatus.getStatusId());
+        participant.setParticipantStatus(pendingStatus);
+
+        EventParticipant saved = saveRegistration(participant);
+        writeAuditLog("TEAM_MEMBER_PARTICIPANT_PENDING", saved, teamForAudit(teamId, event), actorUserId);
+
+        log.debug("Ensured pending participant registration: eventId={}, userId={}, user={}",
+                event.getEventId(), userId, user.getEmail());
     }
 
     @Override
@@ -230,7 +263,7 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
 
         for (EventParticipant participant : participants) {
             writeAuditLog("TEAM_EVENT_REGISTRATION_WITHDRAWN", participant, team, currentUserId);
-            eventParticipantRepository.delete(participant);
+            eventParticipantRepository.save(participant);
         }
 
         team.setTeamStatusId(TEAM_STATUS_FORMING);
@@ -287,6 +320,38 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
                     // Không rollback quyết định duyệt vì lỗi notification.
                 }
             }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void markTeamParticipantsWithdrawn(UUID teamId, UUID actorUserId) {
+        Teams team = teamsRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
+
+        ParticipantStatus withdrawnStatus = participantStatusRepository.findByStatusNameIgnoreCase(STATUS_WITHDRAWN)
+                .orElseThrow(() -> new BadRequestException(
+                        "Participant status lookup is not configured for WITHDRAWN"));
+
+        for (TeamMembers member : teamMembersRepository.findByTeamIdAndActiveTrue(teamId)) {
+            EventParticipant participant = eventParticipantRepository
+                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
+                    .orElseGet(() -> {
+                        EventParticipant created = new EventParticipant();
+                        created.setEventId(team.getEventId());
+                        created.setUserId(member.getUserId());
+                        created.setAppliedAt(LocalDateTime.now());
+                        return created;
+                    });
+
+            participant.setParticipantStatusId(withdrawnStatus.getStatusId());
+            participant.setParticipantStatus(withdrawnStatus);
+            participant.setApprovedAt(null);
+            participant.setApprovedBy(null);
+            participant.setRejectedReason(null);
+
+            EventParticipant saved = eventParticipantRepository.save(participant);
+            writeAuditLog("TEAM_PARTICIPANT_WITHDRAWN", saved, team, actorUserId);
         }
     }
 
@@ -440,6 +505,13 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
         return participantStatusRepository.findByStatusNameIgnoreCase(STATUS_PENDING)
                 .orElseThrow(() -> new BadRequestException(
                         "Participant status lookup is not configured for PENDING. Please seed participant status values: PENDING, ACTIVE, REJECTED."));
+    }
+
+    private Teams teamForAudit(UUID teamId, Event event) {
+        Teams auditTeam = new Teams();
+        auditTeam.setTeamId(teamId);
+        auditTeam.setEventId(event.getEventId());
+        return auditTeam;
     }
 
     private void writeAuditLog(String actionType, EventParticipant participant, Teams team, UUID actorUserId) {
