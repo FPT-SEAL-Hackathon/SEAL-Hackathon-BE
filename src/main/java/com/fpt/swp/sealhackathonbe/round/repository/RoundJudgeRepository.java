@@ -17,9 +17,10 @@ public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
     @Query("SELECT COUNT(rj) > 0 FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")
     boolean existsByRoundRoundId(@Param("roundId") UUID roundId);
 
-    List<RoundJudge> findByRoundRoundId(UUID roundId);
+    @Query("SELECT rj FROM RoundJudge rj JOIN FETCH rj.judge LEFT JOIN FETCH rj.assignedBy JOIN FETCH rj.round WHERE rj.round.roundId = :roundId")
+    List<RoundJudge> findByRoundRoundId(@Param("roundId") UUID roundId);
 
-    @Query("SELECT rj FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")
+    @Query("SELECT rj FROM RoundJudge rj JOIN FETCH rj.judge LEFT JOIN FETCH rj.assignedBy JOIN FETCH rj.round WHERE rj.round.roundId = :roundId AND rj.isActive = true")
     List<RoundJudge> findActiveByRoundRoundId(@Param("roundId") UUID roundId);
 
     @Query("SELECT rj.judge FROM RoundJudge rj WHERE rj.round.roundId = :roundId AND rj.isActive = true")

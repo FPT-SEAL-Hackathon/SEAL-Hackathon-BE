@@ -34,6 +34,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
+@Transactional(readOnly = true)
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
@@ -47,6 +48,8 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Override
+    @Transactional
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
                 .findById(roundId)
