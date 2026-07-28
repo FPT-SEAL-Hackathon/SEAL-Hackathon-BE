@@ -16,11 +16,15 @@ import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityMemberResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
+import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamWithdrawalRequestRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.TeamEventRegistrationService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
@@ -63,6 +67,8 @@ public class TeamServiceImpl implements TeamService {
     private final EventParticipantRepository eventParticipantRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
+    private final DisqualificationsRepository disqualificationsRepository;
+    private final TeamWithdrawalRequestRepository teamWithdrawalRequestRepository;
 
     @Override
     @Transactional
@@ -309,6 +315,7 @@ public class TeamServiceImpl implements TeamService {
 
     private TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = TeamMapper.toTeamResponse(team, members);
+        enrichLifecycleDetail(team, response);
         if (response.getMembers() == null) {
             return response;
         }
@@ -320,6 +327,44 @@ public class TeamServiceImpl implements TeamService {
         });
 
         return response;
+    }
+
+    private void enrichLifecycleDetail(Teams team, TeamResponse response) {
+        if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())) {
+            disqualificationsRepository
+                    .findTopByTeamIdAndReversedFalseOrderByDisqualifiedAtDesc(team.getTeamId())
+                    .ifPresent(disqualification -> applyDisqualificationDetail(response, disqualification));
+        }
+
+        if (TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+            teamWithdrawalRequestRepository
+                    .findTopByTeamIdOrderByRequestedAtDesc(team.getTeamId())
+                    .ifPresent(withdrawal -> applyWithdrawalDetail(response, withdrawal));
+        }
+    }
+
+    private void applyDisqualificationDetail(TeamResponse response, Disqualifications disqualification) {
+        response.setDisqualifiedReason(disqualification.getReason());
+        response.setDisqualifiedById(disqualification.getDisqualifiedById());
+        response.setDisqualifiedAt(disqualification.getDisqualifiedAt());
+
+        User disqualifiedBy = disqualification.getDisqualifiedBy();
+        if (disqualifiedBy != null) {
+            response.setDisqualifiedByName(disqualifiedBy.getFullName());
+            response.setDisqualifiedByEmail(disqualifiedBy.getEmail());
+        }
+    }
+
+    private void applyWithdrawalDetail(TeamResponse response, TeamWithdrawalRequest withdrawal) {
+        response.setWithdrawnReason(withdrawal.getReason());
+        response.setWithdrawnById(withdrawal.getRequestedById());
+        response.setWithdrawnAt(withdrawal.getRequestedAt());
+
+        User requestedBy = withdrawal.getRequestedBy();
+        if (requestedBy != null) {
+            response.setWithdrawnByName(requestedBy.getFullName());
+            response.setWithdrawnByEmail(requestedBy.getEmail());
+        }
     }
 
     @Override

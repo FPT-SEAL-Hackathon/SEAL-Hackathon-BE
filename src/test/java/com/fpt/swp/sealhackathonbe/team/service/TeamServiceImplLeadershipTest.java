@@ -12,11 +12,15 @@ import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
+import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import com.fpt.swp.sealhackathonbe.team.entity.TeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
+import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamWithdrawalRequestRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.service.impl.TeamServiceImpl;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -29,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +53,10 @@ class TeamServiceImplLeadershipTest {
             UUID.fromString("60000000-0000-0000-0000-000000000001");
     private static final UUID ACTIVE_STATUS =
             UUID.fromString("60000000-0000-0000-0000-000000000002");
+    private static final UUID DISQUALIFIED_STATUS =
+            UUID.fromString("60000000-0000-0000-0000-000000000003");
+    private static final UUID WITHDRAWN_STATUS =
+            UUID.fromString("60000000-0000-0000-0000-000000000004");
     private static final UUID PENDING_STATUS =
             UUID.fromString("60000000-0000-0000-0000-000000000005");
     private static final UUID REJECTED_STATUS =
@@ -82,6 +91,12 @@ class TeamServiceImplLeadershipTest {
 
     @Mock
     private com.fpt.swp.sealhackathonbe.team.service.impl.TeamJoinRequestCleaner teamJoinRequestCleaner;
+
+    @Mock
+    private DisqualificationsRepository disqualificationsRepository;
+
+    @Mock
+    private TeamWithdrawalRequestRepository teamWithdrawalRequestRepository;
 
     @InjectMocks
     private TeamServiceImpl teamService;
@@ -454,7 +469,7 @@ class TeamServiceImplLeadershipTest {
         UUID leaderId = UUID.randomUUID();
         UUID memberId = UUID.randomUUID();
         Teams team = team(teamId, leaderId);
-        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000003"));
+        team.setTeamStatusId(DISQUALIFIED_STATUS);
         TeamMembers leader = member(team, leaderId);
         TeamMembers member = member(team, memberId);
 
@@ -467,6 +482,71 @@ class TeamServiceImplLeadershipTest {
         assertEquals("Suspended", response.getMembers().get(0).getParticipantStatusName());
         assertEquals("Suspended", response.getMembers().get(1).getParticipantStatus());
         assertEquals("Suspended", response.getMembers().get(1).getParticipantStatusName());
+    }
+
+    @Test
+    void disqualifiedTeamResponseIncludesLatestDisqualificationDetail() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        LocalDateTime disqualifiedAt = LocalDateTime.now().minusDays(1);
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(DISQUALIFIED_STATUS);
+        Disqualifications disqualification = new Disqualifications();
+        disqualification.setTeamId(teamId);
+        disqualification.setReason("Policy violation");
+        disqualification.setDisqualifiedById(adminId);
+        disqualification.setDisqualifiedAt(disqualifiedAt);
+        User admin = new User();
+        admin.setUserId(adminId);
+        admin.setFullName("Organizer One");
+        admin.setEmail("organizer@seal.test");
+        disqualification.setDisqualifiedBy(admin);
+
+        when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndActiveTrue(teamId)).thenReturn(List.of());
+        when(disqualificationsRepository.findTopByTeamIdAndReversedFalseOrderByDisqualifiedAtDesc(teamId))
+                .thenReturn(Optional.of(disqualification));
+
+        TeamResponse response = teamService.getById(teamId);
+
+        assertEquals("Policy violation", response.getDisqualifiedReason());
+        assertEquals(adminId, response.getDisqualifiedById());
+        assertEquals("Organizer One", response.getDisqualifiedByName());
+        assertEquals("organizer@seal.test", response.getDisqualifiedByEmail());
+        assertEquals(disqualifiedAt, response.getDisqualifiedAt());
+    }
+
+    @Test
+    void withdrawnTeamResponseIncludesLatestWithdrawalDetail() {
+        UUID teamId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        LocalDateTime withdrawnAt = LocalDateTime.now().minusHours(2);
+        Teams team = team(teamId, leaderId);
+        team.setTeamStatusId(WITHDRAWN_STATUS);
+        TeamWithdrawalRequest withdrawal = new TeamWithdrawalRequest();
+        withdrawal.setTeamId(teamId);
+        withdrawal.setReason("Schedule conflict");
+        withdrawal.setRequestedById(leaderId);
+        withdrawal.setRequestedAt(withdrawnAt);
+        User leader = new User();
+        leader.setUserId(leaderId);
+        leader.setFullName("Leader One");
+        leader.setEmail("leader@seal.test");
+        withdrawal.setRequestedBy(leader);
+
+        when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.findByTeamIdAndActiveTrue(teamId)).thenReturn(List.of());
+        when(teamWithdrawalRequestRepository.findTopByTeamIdOrderByRequestedAtDesc(teamId))
+                .thenReturn(Optional.of(withdrawal));
+
+        TeamResponse response = teamService.getById(teamId);
+
+        assertEquals("Schedule conflict", response.getWithdrawnReason());
+        assertEquals(leaderId, response.getWithdrawnById());
+        assertEquals("Leader One", response.getWithdrawnByName());
+        assertEquals("leader@seal.test", response.getWithdrawnByEmail());
+        assertEquals(withdrawnAt, response.getWithdrawnAt());
     }
 
     @Test
