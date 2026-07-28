@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.consultation.entity.ConsultationRequest;
+import com.fpt.swp.sealhackathonbe.consultation.entity.ConsultationStatus;
 import com.fpt.swp.sealhackathonbe.consultation.repository.ConsultationRequestRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateMilestoneRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.MilestoneResponse;
@@ -46,6 +47,12 @@ public class MilestoneService {
     public MilestoneResponse create(UUID requestId, UUID mentorUserId, CreateMilestoneRequest req) {
         ConsultationRequest request = consultationRequestRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Request not found"));
+
+        if (request.getStatus() != ConsultationStatus.ACCEPTED && request.getStatus() != ConsultationStatus.IN_PROGRESS) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Milestones can only be added for accepted consultation requests");
+        }
 
         int nextOrder = milestoneRepository
                 .findByTeamIdOrderBySortOrderAscCreatedAtAsc(request.getTeam().getTeamId())

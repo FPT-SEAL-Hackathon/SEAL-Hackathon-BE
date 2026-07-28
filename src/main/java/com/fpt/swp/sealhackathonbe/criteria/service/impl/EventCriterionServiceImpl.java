@@ -14,6 +14,7 @@ import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ public class EventCriterionServiceImpl implements EventCriterionService {
     private final Mapper mapper;
 
     @Override
+    @Transactional
     public List<EventCriterionResponse> importCriteriaToEvent(UUID eventId, ImportCriteriaToEventRequest request) {
         //Get Event
         Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
@@ -66,6 +68,7 @@ public class EventCriterionServiceImpl implements EventCriterionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventCriterionResponse> getCriteriaByEvent(UUID eventId) {
         if (!eventRepository.existsById(eventId)) {
             throw new EntityNotFoundException("Event not found");
@@ -78,6 +81,7 @@ public class EventCriterionServiceImpl implements EventCriterionService {
     }
 
     @Override
+    @Transactional
     public EventCriterionResponse update(UUID eventCriterionId, UpdateEventCriterionRequest request) {
         EventCriteria eventCriterion = eventCriterionRepository.findById(eventCriterionId)
                 .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found"));
@@ -89,6 +93,7 @@ public class EventCriterionServiceImpl implements EventCriterionService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID eventCriterionId) {
         EventCriteria eventCriterion = eventCriterionRepository.findById(eventCriterionId)
                 .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found"));

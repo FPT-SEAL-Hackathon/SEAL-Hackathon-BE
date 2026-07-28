@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -157,6 +158,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundJudgeResponse> getJudgesByRound(UUID roundId) {
         if (!roundRepository.existsById(roundId)) {
             throw new EntityNotFoundException("Round not found");
@@ -169,6 +171,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundResponse> getRoundsByJudge(UUID judgeId) {
         if (!userRepository.existsById(judgeId)) {
             throw new EntityNotFoundException("Judge not found");
@@ -200,6 +203,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<JudgeResponse> getAllJudges() {
         return userRepository.findExpertsMentorsJudges()
                 .stream()

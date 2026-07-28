@@ -23,6 +23,7 @@ import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -45,6 +46,7 @@ public class RoundServiceImpl implements RoundService {
     private final RoundMapper roundMapper;
 
     @Override
+    @Transactional
     public RoundResponse create(UUID categoryId, CreateRoundRequest request) {
         Category category = categoryRepository
                 .findById(categoryId)
@@ -85,6 +87,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public RoundResponse getById(UUID roundId) {
         Round round = roundRepository
                 .findById(roundId)
@@ -93,6 +96,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundResponse> getByCategory(UUID categoryId) {
         return roundRepository.findByCategoryCategoryIdOrderByRoundOrderAsc(categoryId)
                 .stream()
@@ -101,6 +105,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional
     public RoundResponse update(UUID roundId, UpdateRoundRequest request) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
@@ -133,6 +138,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
@@ -146,6 +152,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public RoundResponse getFinalRound(UUID categoryId) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new EntityNotFoundException("Category not found");
@@ -156,6 +163,7 @@ public class RoundServiceImpl implements RoundService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Integer getAdvancementTopN(UUID roundId) {
         Round round = roundRepository
                 .findById(roundId)
