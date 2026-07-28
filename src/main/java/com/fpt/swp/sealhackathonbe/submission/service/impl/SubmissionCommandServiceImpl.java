@@ -218,27 +218,39 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private void validateTeamAdvancedFromPreviousRound(Teams team, Round round) {
-        Integer roundOrder = round.getRoundOrder();
-        if (roundOrder == null || roundOrder <= 1) {
-            return;
+        if (Boolean.TRUE.equals(round.getIsCalibrationRound())) {
+            throw new RuntimeException("Teams cannot submit work to calibration rounds");
         }
 
         UUID categoryId = round.getCategory().getCategoryId();
-        Round previousRound = roundRepository
-                .findTopByCategoryCategoryIdAndRoundOrderLessThanOrderByRoundOrderDesc(categoryId, roundOrder)
-                .orElseThrow(() -> new RuntimeException("Previous round not found for this round"));
+        Integer roundOrder = round.getRoundOrder();
+        if (roundOrder == null) {
+            throw new RuntimeException("Round order is required for submissions");
+        }
+
+        Round previousCompetitionRound = roundRepository
+                .findTopByCategoryCategoryIdAndRoundOrderLessThanAndIsCalibrationRoundFalseOrderByRoundOrderDesc(
+                        categoryId,
+                        roundOrder
+                )
+                .orElse(null);
+
+        if (previousCompetitionRound == null) {
+            return;
+        }
 
         boolean advanced = roundRankingRepository
                 .findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(
-                        previousRound.getRoundId(),
+                        previousCompetitionRound.getRoundId(),
                         categoryId,
                         team.getTeamId()
                 )
-                .map(ranking -> Boolean.TRUE.equals(ranking.getIsAdvanced()))
+                .map(ranking -> Boolean.TRUE.equals(ranking.getIsApproved())
+                        && Boolean.TRUE.equals(ranking.getIsAdvanced()))
                 .orElse(false);
 
         if (!advanced) {
-            throw new RuntimeException("Team has not advanced from the previous round");
+            throw new RuntimeException("Team has not advanced from the previous competition round");
         }
     }
 
