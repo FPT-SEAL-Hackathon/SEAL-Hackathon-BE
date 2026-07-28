@@ -47,6 +47,8 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Override
+    @Transactional
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
                 .findById(roundId)
