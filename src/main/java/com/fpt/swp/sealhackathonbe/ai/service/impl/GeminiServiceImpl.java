@@ -36,7 +36,7 @@ public class GeminiServiceImpl implements GeminiService {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent}")
+    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent}")
     private String apiUrl;
 
     private final RestTemplate restTemplate;
@@ -60,11 +60,11 @@ public class GeminiServiceImpl implements GeminiService {
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("You are an AI Mentor assisting students participating in the event.\n");
         contextBuilder.append("Your ONLY task is to match the student's question with the KNOWLEDGE BASE below.\n");
-        contextBuilder.append(
-                "If the question matches the meaning of a FAQ in the knowledge base, YOU MUST REPLY EXACTLY WITH THE STANDARD ANSWER.\n");
-        contextBuilder.append(
-                "If the question is NOT RELATED to any FAQ in the knowledge base, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
-        contextBuilder.append("Absolutely no inferring, no fabricating information, and no long explanations.\n\n");
+        contextBuilder.append("CRITICAL MATCHING RULES:\n");
+        contextBuilder.append("1. If the student's question asks for a SPECIFIC detail, clarification, follow-up, or sub-topic (e.g. specific rule details, submission platform instructions, technical specs, edge cases) that is NOT fully and explicitly answered in the Standard Answer, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
+        contextBuilder.append("2. If the student indicates they already know the general answer (e.g., \"I know but...\", \"I understand the general rule but...\") or asks a follow-up question beyond what the Standard Answer contains, DO NOT repeat a generic answer. YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
+        contextBuilder.append("3. ONLY if a FAQ in the Knowledge Base directly, completely, and specifically answers what the student is asking, reply EXACTLY with the Standard Answer.\n");
+        contextBuilder.append("4. Absolutely no inferring, no fabricating information, no guessing, and no long explanations.\n\n");
         contextBuilder.append("--- KNOWLEDGE BASE ---\n");
 
         for (int i = 0; i < knowledgeBase.size(); i++) {
