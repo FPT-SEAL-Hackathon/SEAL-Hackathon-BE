@@ -15,8 +15,11 @@ import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -131,7 +134,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
         // Controller -> service -> repository.findById -> mapper -> response.
         return submissionsRepository.findById(submissionId)
                 .map(this::enrichResponse)
-                .orElseThrow(() -> new RuntimeException("Submission not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Submission not found"));
     }
 
     @Override
@@ -139,14 +142,14 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     public SubmissionResponse getSubmissionByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId) {
         // Dung unique key o muc bang: moi team chi co mot submission trong mot round.
         TeamMembers membership = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
-                .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+                .orElseThrow(() -> new AccessDeniedException("User does not belong to this team"));
         if (!canViewReadOnlyAfterTeamExit(membership)) {
             eventParticipantService.assertActiveParticipant(membership.getTeam().getEventId(), currentUserId);
         }
 
         return submissionsRepository.findByTeamIdAndRoundId(teamId, roundId)
                 .map(this::enrichResponse)
-                .orElseThrow(() -> new RuntimeException("Submission not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Submission not found"));
     }
 
     private boolean canViewReadOnlyAfterTeamExit(TeamMembers membership) {
@@ -186,7 +189,7 @@ public class SubmissionQueryServiceImpl implements SubmissionQueryService {
     @Transactional(readOnly = true)
     public List<SubmissionHistoryResponse> getSubmissionHistoryByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId) {
         teamMembersRepository.findByTeamIdAndUserId(teamId, currentUserId)
-                .orElseThrow(() -> new RuntimeException("User does not belong to this team"));
+                .orElseThrow(() -> new AccessDeniedException("User does not belong to this team"));
 
         return submissionHistoryRepository.findByTeamIdAndRoundIdOrderByVersionNumberDesc(teamId, roundId)
                 .stream()

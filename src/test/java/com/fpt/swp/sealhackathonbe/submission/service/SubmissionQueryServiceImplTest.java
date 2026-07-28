@@ -18,12 +18,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -112,6 +117,49 @@ class SubmissionQueryServiceImplTest {
         service.getSubmissionByTeamAndRound(teamId, roundId, userId);
 
         verify(eventParticipantService).assertActiveParticipant(eventId, userId);
+    }
+
+    @Test
+    void currentSubmissionReturnsNotFoundWhenTeamRoundHasNoSubmission() {
+        UUID teamId = UUID.randomUUID();
+        UUID roundId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        TeamMembers membership = membership(teamId, userId, eventId, TeamStatusConstants.ACTIVE);
+
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId))
+                .thenReturn(Optional.of(membership));
+        when(submissionsRepository.findByTeamIdAndRoundId(teamId, roundId))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getSubmissionByTeamAndRound(teamId, roundId, userId)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("Submission not found", exception.getReason());
+        verify(eventParticipantService).assertActiveParticipant(eventId, userId);
+    }
+
+    @Test
+    void currentSubmissionDeniesUserOutsideTeam() {
+        UUID teamId = UUID.randomUUID();
+        UUID roundId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, userId))
+                .thenReturn(Optional.empty());
+
+        AccessDeniedException exception = assertThrows(
+                AccessDeniedException.class,
+                () -> service.getSubmissionByTeamAndRound(teamId, roundId, userId)
+        );
+
+        assertEquals("User does not belong to this team", exception.getMessage());
+        verify(eventParticipantService, never()).assertActiveParticipant(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(submissionsRepository, never()).findByTeamIdAndRoundId(teamId, roundId);
     }
 
     private TeamMembers membership(UUID teamId, UUID userId, UUID eventId, UUID teamStatusId) {
