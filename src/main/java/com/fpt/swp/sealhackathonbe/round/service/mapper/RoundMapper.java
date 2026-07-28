@@ -46,15 +46,20 @@ public class RoundMapper {
     }
 
     public RoundJudgeResponse toRoundJudgeResponse(RoundJudge roundJudge) {
+        if (roundJudge == null) return null;
+        var judge = roundJudge.getJudge();
+        var round = roundJudge.getRound();
+        var assignedBy = roundJudge.getAssignedBy();
+
         return RoundJudgeResponse.builder()
                 .roundJudgeId(roundJudge.getRoundJudgeId())
-                .roundId(roundJudge.getRound().getRoundId())
-                .judgeId(roundJudge.getJudge().getUserId())
-                .fullName(roundJudge.getJudge().getFullName())
-                .email(roundJudge.getJudge().getEmail())
-                .phone(roundJudge.getJudge().getPhone())
+                .roundId(round != null ? round.getRoundId() : null)
+                .judgeId(judge != null ? judge.getUserId() : null)
+                .fullName(judge != null ? judge.getFullName() : null)
+                .email(judge != null ? judge.getEmail() : null)
+                .phone(judge != null ? judge.getPhone() : null)
                 .assignedAt(roundJudge.getAssignedAt())
-                .assignedById(roundJudge.getAssignedBy() != null ? roundJudge.getAssignedBy().getUserId() : null)
+                .assignedById(assignedBy != null ? assignedBy.getUserId() : null)
                 .build();
     }
 
