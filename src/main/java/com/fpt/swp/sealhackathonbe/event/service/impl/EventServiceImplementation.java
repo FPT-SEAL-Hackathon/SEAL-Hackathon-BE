@@ -475,4 +475,35 @@ public class EventServiceImplementation implements EventService {
         return eventMapper.toEventResponse(eventRepository.save(event));
     }
 
+    @Override
+    @Transactional
+    public EventResponse cancelEvent(UUID eventId) {
+        Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+        String currentStatus = event.getEventStatus().getEventStatusName();
+
+        if (currentStatus.equalsIgnoreCase("Cancelled")) {
+            throw new BadRequestException("Event has already been cancelled");
+        }
+
+        if (currentStatus.equalsIgnoreCase("Completed")) {
+            throw new BadRequestException("Cannot cancel completed event");
+        }
+
+        LocalDate today = LocalDate.now();
+
+        if (!currentStatus.equalsIgnoreCase("Draft")) {
+            if (event.getEventStartDate() != null && !today.isBefore(event.getEventStartDate())) {
+                throw new BadRequestException("Cannot cancel ongoing event");
+            }
+        }
+
+        EventStatus cancelledStatus = eventStatusRepository.findByEventStatusName("Cancelled")
+                .orElseThrow(() -> new EntityNotFoundException("Cancelled status not found"));
+
+        event.setEventStatus(cancelledStatus);
+
+        return eventMapper.toEventResponse(event);
+    }
+
 }

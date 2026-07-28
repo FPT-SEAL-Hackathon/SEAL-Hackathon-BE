@@ -74,6 +74,11 @@ public class EventController {
         return ResponseEntity.ok(eventService.publishEvent(id));
     }
 
+    @PatchMapping("/event/cancel/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<EventResponse> cancelEvent(@PathVariable UUID id) {
+        return ResponseEntity.ok(eventService.cancelEvent(id));
+    }
 
 
 
