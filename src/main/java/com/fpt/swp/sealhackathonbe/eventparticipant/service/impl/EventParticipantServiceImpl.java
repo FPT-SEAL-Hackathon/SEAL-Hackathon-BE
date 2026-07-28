@@ -51,8 +51,10 @@ public class EventParticipantServiceImpl implements EventParticipantService {
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_REJECTED = "REJECTED";
     private static final String STATUS_SUSPENDED = "SUSPENDED";
+    private static final String STATUS_WITHDRAWN = "WITHDRAWN";
     private static final String STATUS_TEMPORARY = "TEMPORARY";
-    private static final String STATUS_UNVERIFIED = "UNVERIFIED";
+    private static final String ALLOWED_PARTICIPANT_STATUSES =
+            "PENDING, ACTIVE, REJECTED, SUSPENDED, WITHDRAWN";
     private static final UUID FPT_STUDENT_ID =
             UserRoleConstants.ROLE_FPT_STUDENT;
     private static final UUID EXTERNAL_STUDENT_ID =
@@ -540,7 +542,8 @@ public class EventParticipantServiceImpl implements EventParticipantService {
             throw new BadRequestException("Status is required");
         }
         if ("INVALID".equals(normalizedStatus)) {
-            throw new BadRequestException("Invalid participant status. Allowed values are: PENDING, ACTIVE, REJECTED.");
+            throw new BadRequestException(
+                    "Invalid participant status. Allowed values are: " + ALLOWED_PARTICIPANT_STATUSES + ".");
         }
         if (isPendingStatus(normalizedStatus)) {
             return getRegistrationPendingStatus();
@@ -548,7 +551,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
 
         return participantStatusRepository.findByStatusNameIgnoreCase(normalizedStatus)
                 .orElseThrow(() -> new BadRequestException(
-                        "Invalid participant status. Allowed values are: PENDING, ACTIVE, REJECTED."
+                        "Invalid participant status. Allowed values are: " + ALLOWED_PARTICIPANT_STATUSES + "."
                 ));
     }
 
@@ -562,7 +565,9 @@ public class EventParticipantServiceImpl implements EventParticipantService {
                 .toUpperCase();
         if (STATUS_PENDING.equals(normalized)
                 || STATUS_ACTIVE.equals(normalized)
-                || STATUS_REJECTED.equals(normalized)) {
+                || STATUS_REJECTED.equals(normalized)
+                || STATUS_SUSPENDED.equals(normalized)
+                || STATUS_WITHDRAWN.equals(normalized)) {
             return normalized;
         }
         return "INVALID";
@@ -602,15 +607,15 @@ public class EventParticipantServiceImpl implements EventParticipantService {
                 (isPendingStatus(currentStatus)
                         && (STATUS_ACTIVE.equalsIgnoreCase(newStatus) || STATUS_REJECTED.equalsIgnoreCase(newStatus)))
                 || (STATUS_ACTIVE.equalsIgnoreCase(currentStatus)
-                        && (STATUS_SUSPENDED.equalsIgnoreCase(newStatus) || STATUS_TEMPORARY.equalsIgnoreCase(newStatus)))
+                        && (STATUS_SUSPENDED.equalsIgnoreCase(newStatus) || STATUS_WITHDRAWN.equalsIgnoreCase(newStatus)))
                 || (STATUS_SUSPENDED.equalsIgnoreCase(currentStatus)
                         && STATUS_ACTIVE.equalsIgnoreCase(newStatus))
-                || (STATUS_TEMPORARY.equalsIgnoreCase(currentStatus)
+                || (STATUS_WITHDRAWN.equalsIgnoreCase(currentStatus)
                         && STATUS_ACTIVE.equalsIgnoreCase(newStatus))
                 || (STATUS_REJECTED.equalsIgnoreCase(currentStatus)
                         && isPendingStatus(newStatus));
 
-        if (!allowed || STATUS_UNVERIFIED.equalsIgnoreCase(newStatus)) {
+        if (!allowed) {
             throw new BusinessConflictException("Participant status transition is not allowed");
         }
     }
@@ -627,7 +632,8 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         log.info("Event registration resolving participant status lookup: statusName={}", STATUS_PENDING);
         return participantStatusRepository.findByStatusNameIgnoreCase(STATUS_PENDING)
                 .orElseThrow(() -> new BadRequestException(
-                        "Participant status lookup is not configured for PENDING. Please seed participant status values: PENDING, ACTIVE, REJECTED."
+                        "Participant status lookup is not configured for PENDING. Please seed participant status values: "
+                                + ALLOWED_PARTICIPANT_STATUSES + "."
                 ));
     }
 

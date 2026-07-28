@@ -68,7 +68,7 @@ public class EventParticipantController {
 
     @Operation(summary = "Search event participants")
     @GetMapping("/organizer/event-participants")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Page<EventParticipantResponse>> search(
             @RequestParam(required = false) UUID eventId,
             @RequestParam(required = false) UUID categoryId,
@@ -93,7 +93,7 @@ public class EventParticipantController {
 
     @Operation(summary = "List participants for one event")
     @GetMapping("/events/{eventId}/participants")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Page<EventParticipantResponse>> getEventParticipants(
             @PathVariable UUID eventId,
             @RequestParam(required = false) String status,
@@ -117,7 +117,7 @@ public class EventParticipantController {
 
     @Operation(summary = "Update one event participant status")
     @PatchMapping({"/organizer/event-participants/{id}/status", "/event-participants/{id}/status"})
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventParticipantResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody EventParticipantStatusUpdateRequest request
@@ -128,7 +128,7 @@ public class EventParticipantController {
 
     @Operation(summary = "Bulk update event participant statuses")
     @PatchMapping({"/organizer/event-participants/status", "/event-participants/status"})
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<EventParticipantResponse>> updateStatuses(
             @Valid @RequestBody EventParticipantBulkStatusUpdateRequest request
     ) {

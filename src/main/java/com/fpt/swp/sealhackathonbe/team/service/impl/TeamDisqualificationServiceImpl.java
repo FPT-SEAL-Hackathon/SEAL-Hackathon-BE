@@ -11,6 +11,7 @@ import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantR
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.ParticipantStatusRepository;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.submission.service.SubmissionHistoryService;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
@@ -42,6 +43,7 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
     private final TeamsRepository teamsRepository;
     private final DisqualificationsRepository disqualificationsRepository;
     private final SubmissionsRepository submissionsRepository;
+    private final SubmissionHistoryService submissionHistoryService;
     private final TeamMembersRepository teamMembersRepository;
     private final EventParticipantRepository eventParticipantRepository;
     private final ParticipantStatusRepository participantStatusRepository;
@@ -81,6 +83,7 @@ public class TeamDisqualificationServiceImpl implements TeamDisqualificationServ
         submissions.forEach(submission -> {
             submission.setSubmissionStatusId(SUBMISSION_STATUS_DISQUALIFIED);
             submission.setLastUpdatedAt(now);
+            submissionHistoryService.recordSnapshot(submission);
         });
         submissionsRepository.saveAll(submissions);
 

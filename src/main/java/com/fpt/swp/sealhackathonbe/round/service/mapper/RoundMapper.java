@@ -54,7 +54,7 @@ public class RoundMapper {
                 .email(roundJudge.getJudge().getEmail())
                 .phone(roundJudge.getJudge().getPhone())
                 .assignedAt(roundJudge.getAssignedAt())
-                .assignedById(roundJudge.getAssignedBy().getUserId())
+                .assignedById(roundJudge.getAssignedBy() != null ? roundJudge.getAssignedBy().getUserId() : null)
                 .build();
     }
 

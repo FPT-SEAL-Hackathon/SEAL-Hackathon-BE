@@ -352,6 +352,11 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "You are not assigned to this request's category"));
 
+        if (req.getStatus() != ConsultationStatus.ACCEPTED && req.getStatus() != ConsultationStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Notes can only be updated for accepted consultation requests");
+        }
+
         TeamMentorNote note = teamMentorNoteRepository.findByTeamIdAndMentorId(req.getTeam().getTeamId(), mentor.getUserId())
                 .orElse(null);
 
@@ -546,9 +551,9 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
         checkRequestAccess(user, req);
 
-        if (req.getStatus() == ConsultationStatus.RESOLVED || req.getStatus() == ConsultationStatus.REJECTED
-                || req.getStatus() == ConsultationStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot send message in closed request");
+        if (req.getStatus() != ConsultationStatus.ACCEPTED && req.getStatus() != ConsultationStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot send message unless consultation request is ACCEPTED or IN_PROGRESS");
         }
 
         boolean senderIsMentor = isMentorRole(user);

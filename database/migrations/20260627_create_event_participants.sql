@@ -11,8 +11,7 @@ BEGIN
                 N'ACTIVE',
                 N'REJECTED',
                 N'SUSPENDED',
-                N'TEMPORARY',
-                N'UNVERIFIED'
+                N'WITHDRAWN'
             )
         )
     );
@@ -35,13 +34,9 @@ IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'SUSPENDE
     INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
     VALUES ('80000000-0000-0000-0000-000000000004', N'SUSPENDED');
 
-IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'TEMPORARY')
+IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'WITHDRAWN')
     INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
-    VALUES ('80000000-0000-0000-0000-000000000005', N'TEMPORARY');
-
-IF NOT EXISTS (SELECT 1 FROM dbo.ParticipantStatus WHERE StatusName = N'UNVERIFIED')
-    INSERT INTO dbo.ParticipantStatus (StatusID, StatusName)
-    VALUES ('80000000-0000-0000-0000-000000000006', N'UNVERIFIED');
+    VALUES ('80000000-0000-0000-0000-000000000005', N'WITHDRAWN');
 GO
 
 IF OBJECT_ID(N'dbo.EventParticipants', N'U') IS NULL

@@ -954,6 +954,23 @@ PRIMARY KEY CLUSTERED
 )WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[TeamWithdrawalRequests]    Script Date: 7/28/2026 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TeamWithdrawalRequests](
+	[RequestID] [uniqueidentifier] NOT NULL CONSTRAINT [PK_TeamWithdrawalRequests] PRIMARY KEY,
+	[TeamID] [uniqueidentifier] NOT NULL,
+	[RequestedByID] [uniqueidentifier] NOT NULL,
+	[Reason] [nvarchar](1000) NOT NULL,
+	[RequestStatus] [nvarchar](20) NOT NULL,
+	[RequestedAt] [datetime2](7) NOT NULL,
+	[RespondedAt] [datetime2](7) NULL,
+	[RespondedByID] [uniqueidentifier] NULL,
+	[ResponseNote] [nvarchar](500) NULL
+) ON [PRIMARY]
+GO
 /****** Object:  Table [dbo].[TeamMembers]    Script Date: 7/14/2026 9:01:54 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -1073,8 +1090,7 @@ INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000001', N'PENDING')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000003', N'REJECTED')
 INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000004', N'SUSPENDED')
-INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000005', N'TEMPORARY')
-INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000006', N'UNVERIFIED')
+INSERT [dbo].[ParticipantStatus] ([StatusID], [StatusName]) VALUES (N'80000000-0000-0000-0000-000000000005', N'WITHDRAWN')
 GO
 GO
 GO
@@ -1325,6 +1341,22 @@ CREATE UNIQUE NONCLUSTERED INDEX [UQ_TeamJoinRequests_Pending] ON [dbo].[TeamJoi
 )
 WHERE [RequestStatus] = N'PENDING'
 WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [UX_TeamWithdrawalRequests_OnePendingPerTeam]    Script Date: 7/28/2026 ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UX_TeamWithdrawalRequests_OnePendingPerTeam] ON [dbo].[TeamWithdrawalRequests]
+(
+	[TeamID] ASC
+)
+WHERE [RequestStatus] = N'PENDING'
+WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_TeamWithdrawalRequests_EventStatus]    Script Date: 7/28/2026 ******/
+CREATE NONCLUSTERED INDEX [IX_TeamWithdrawalRequests_EventStatus] ON [dbo].[TeamWithdrawalRequests]
+(
+	[RequestStatus] ASC,
+	[TeamID] ASC
+)
+WITH (STATISTICS_NORECOMPUTE = OFF, ONLINE = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 /****** Object:  Index [UQ_TeamMembers]    Script Date: 7/14/2026 9:01:57 PM ******/
 ALTER TABLE [dbo].[TeamMembers] ADD  CONSTRAINT [UQ_TeamMembers] UNIQUE NONCLUSTERED 
@@ -1597,6 +1629,12 @@ GO
 ALTER TABLE [dbo].[TeamJoinRequests] ADD  DEFAULT (N'PENDING') FOR [RequestStatus]
 GO
 ALTER TABLE [dbo].[TeamJoinRequests] ADD  DEFAULT (getutcdate()) FOR [RequestedAt]
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests] ADD  CONSTRAINT [DF_TeamWithdrawalRequests_RequestID] DEFAULT (newid()) FOR [RequestID]
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests] ADD  CONSTRAINT [DF_TeamWithdrawalRequests_RequestStatus] DEFAULT (N'PENDING') FOR [RequestStatus]
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests] ADD  CONSTRAINT [DF_TeamWithdrawalRequests_RequestedAt] DEFAULT (getutcdate()) FOR [RequestedAt]
 GO
 ALTER TABLE [dbo].[TeamMembers] ADD  DEFAULT (newid()) FOR [TeamMemberID]
 GO
@@ -1914,6 +1952,15 @@ GO
 ALTER TABLE [dbo].[TeamJoinRequests]  WITH CHECK ADD FOREIGN KEY([UserID])
 REFERENCES [dbo].[Users] ([UserID])
 GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests]  WITH CHECK ADD CONSTRAINT [FK_TeamWithdrawalRequests_RequestedBy] FOREIGN KEY([RequestedByID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests]  WITH CHECK ADD CONSTRAINT [FK_TeamWithdrawalRequests_RespondedBy] FOREIGN KEY([RespondedByID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests]  WITH CHECK ADD CONSTRAINT [FK_TeamWithdrawalRequests_Teams] FOREIGN KEY([TeamID])
+REFERENCES [dbo].[Teams] ([TeamID])
+GO
 ALTER TABLE [dbo].[TeamMembers]  WITH CHECK ADD FOREIGN KEY([TeamID])
 REFERENCES [dbo].[Teams] ([TeamID])
 GO
@@ -1985,13 +2032,17 @@ ALTER TABLE [dbo].[Judging]  WITH CHECK ADD  CONSTRAINT [CK_Judging_Value] CHECK
 GO
 ALTER TABLE [dbo].[Judging] CHECK CONSTRAINT [CK_Judging_Value]
 GO
-ALTER TABLE [dbo].[ParticipantStatus]  WITH CHECK ADD  CONSTRAINT [CK_ParticipantStatus_Name] CHECK  (([StatusName]=N'UNVERIFIED' OR [StatusName]=N'TEMPORARY' OR [StatusName]=N'SUSPENDED' OR [StatusName]=N'REJECTED' OR [StatusName]=N'ACTIVE' OR [StatusName]=N'PENDING'))
+ALTER TABLE [dbo].[ParticipantStatus]  WITH CHECK ADD  CONSTRAINT [CK_ParticipantStatus_Name] CHECK  (([StatusName]=N'WITHDRAWN' OR [StatusName]=N'SUSPENDED' OR [StatusName]=N'REJECTED' OR [StatusName]=N'ACTIVE' OR [StatusName]=N'PENDING'))
 GO
 ALTER TABLE [dbo].[ParticipantStatus] CHECK CONSTRAINT [CK_ParticipantStatus_Name]
 GO
 ALTER TABLE [dbo].[TeamJoinRequests]  WITH CHECK ADD  CONSTRAINT [CK_TeamJoinRequests_Status] CHECK  (([RequestStatus]=N'CANCELLED' OR [RequestStatus]=N'REJECTED' OR [RequestStatus]=N'APPROVED' OR [RequestStatus]=N'PENDING'))
 GO
 ALTER TABLE [dbo].[TeamJoinRequests] CHECK CONSTRAINT [CK_TeamJoinRequests_Status]
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests]  WITH CHECK ADD CONSTRAINT [CK_TeamWithdrawalRequests_Status] CHECK  (([RequestStatus]=N'REJECTED' OR [RequestStatus]=N'APPROVED' OR [RequestStatus]=N'PENDING'))
+GO
+ALTER TABLE [dbo].[TeamWithdrawalRequests] CHECK CONSTRAINT [CK_TeamWithdrawalRequests_Status]
 GO
 ALTER TABLE [dbo].[UserOAuthAccounts]  WITH CHECK ADD  CONSTRAINT [CK_UserOAuthAccounts_Provider] CHECK  (([Provider]=N'GITHUB' OR [Provider]=N'GOOGLE'))
 GO

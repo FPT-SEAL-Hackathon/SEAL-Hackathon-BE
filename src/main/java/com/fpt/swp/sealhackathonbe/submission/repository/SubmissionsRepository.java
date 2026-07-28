@@ -22,6 +22,9 @@ public interface SubmissionsRepository extends JpaRepository<Submissions, UUID> 
     // Dung khi team bi loai: tat ca submission hien co cua team cung chuyen sang Disqualified.
     List<Submissions> findByTeamId(UUID teamId);
 
+    // Team withdrawn chi tac dong submission cua round hien tai, khong cham round da completed.
+    List<Submissions> findByTeamIdAndRoundIdIn(UUID teamId, List<UUID> roundIds);
+
     // Submission khong chua EventID truc tiep, nen loc event thong qua team cua submission.
     @Query("SELECT s FROM Submissions s WHERE s.team.eventId = :eventId")
     List<Submissions> findByEventId(@Param("eventId") UUID eventId);

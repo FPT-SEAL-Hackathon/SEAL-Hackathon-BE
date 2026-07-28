@@ -24,7 +24,7 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
 
-    Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanOrderByRoundOrderDesc(
+    Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanAndIsCalibrationRoundFalseOrderByRoundOrderDesc(
             UUID categoryId,
             Integer roundOrder
     );
@@ -41,5 +41,16 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     // khi caller (orchestration ngoai transaction) can xac dinh event cua submission qua round.
     @Query("SELECT r.category.event.eventId FROM Round r WHERE r.roundId = :roundId")
     Optional<UUID> findEventIdByRoundId(@Param("roundId") UUID roundId);
+
+    @Query("""
+            SELECT r.roundId FROM Round r
+            WHERE r.category.categoryId = :categoryId
+              AND LOWER(r.roundStatus.statusName) IN :statusNames
+            ORDER BY r.roundOrder ASC
+            """)
+    List<UUID> findRoundIdsByCategoryIdAndStatusNames(
+            @Param("categoryId") UUID categoryId,
+            @Param("statusNames") List<String> statusNames
+    );
 
 }

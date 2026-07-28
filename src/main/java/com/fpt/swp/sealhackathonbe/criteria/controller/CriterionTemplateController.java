@@ -31,7 +31,7 @@ public class CriterionTemplateController {
     }
 
     @PostMapping("/criteria/template")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<CriterionTemplateResponse> createTemplate(
             @RequestBody CreateTemplateRequest request
             ) {
@@ -41,7 +41,7 @@ public class CriterionTemplateController {
     }
 
     @PutMapping("/criteria/template/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<CriterionTemplateResponse> updateTemplate(
             @PathVariable UUID id,
             @RequestBody UpdateTemplateRequest request
@@ -50,7 +50,7 @@ public class CriterionTemplateController {
     }
 
     @DeleteMapping("/criteria/template/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> deleteTemplate(@PathVariable UUID id) {
         templateService.delete(id);
         return ResponseEntity.noContent().build();
