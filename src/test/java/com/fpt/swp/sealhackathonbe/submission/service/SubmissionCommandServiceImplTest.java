@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.submission.service;
 
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.eventparticipant.service.EventParticipantService;
 import com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService;
@@ -8,6 +10,7 @@ import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.impl.SubmissionCommandServiceImpl;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -184,6 +187,24 @@ class SubmissionCommandServiceImplTest {
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any()
                 );
+    }
+
+    @Test
+    void approveScoreRejectsDisqualifiedSubmission() {
+        UUID submissionId = UUID.randomUUID();
+        Submissions submission = new Submissions();
+        submission.setSubmissionId(submissionId);
+        submission.setSubmissionStatusId(SubmissionStatusConstants.DISQUALIFIED);
+
+        when(submissionsRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        BusinessConflictException exception = assertThrows(
+                BusinessConflictException.class,
+                () -> service.approveScore(submissionId, true)
+        );
+
+        assertEquals("Disqualified submissions cannot have scores approved or rejected", exception.getMessage());
+        verify(submissionsRepository, never()).save(org.mockito.ArgumentMatchers.any(Submissions.class));
     }
 
     private void validateTeamAdvancedFromPreviousRound(Teams team, Round round) {

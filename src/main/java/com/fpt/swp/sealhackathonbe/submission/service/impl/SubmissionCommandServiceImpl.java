@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.submission.service.impl;
 
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
@@ -18,8 +20,10 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +40,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private static final UUID TEAM_STATUS_ACTIVE       = TeamStatusConstants.ACTIVE;
     private static final UUID TEAM_STATUS_DISQUALIFIED = TeamStatusConstants.DISQUALIFIED;
     private static final UUID TEAM_STATUS_REJECTED     = TeamStatusConstants.REJECTED;
+    private static final UUID TEAM_STATUS_WITHDRAWN    = TeamStatusConstants.WITHDRAWN;
     private static final String ROUND_STATUS_SUBMISSION_OPEN = "Submission Open";
 
     private final SubmissionsRepository submissionsRepository;
@@ -161,18 +166,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private Teams validateLeaderCanSubmit(UUID teamId, UUID currentUserId) {
         // Chi leader active cua team moi duoc nop hoac cap nhat bai cua team do.
         Teams team = teamsRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         boolean isMember = teamMembersRepository
                 .findByTeamIdAndUserIdAndActiveTrue(teamId, currentUserId)
                 .isPresent();
 
         if (!isMember) {
-            throw new RuntimeException("User does not belong to this team");
+            throw new AccessDeniedException("User does not belong to this team");
         }
 
         if (!currentUserId.equals(team.getLeaderUserId())) {
-            throw new RuntimeException("Only the team leader can submit work");
+            throw new AccessDeniedException("Only the team leader can submit work");
         }
 
         return team;
@@ -183,10 +188,10 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         if (!TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
             if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())
                     || TEAM_STATUS_REJECTED.equals(team.getTeamStatusId())) {
-                throw new RuntimeException("This team cannot submit because it is rejected or disqualified");
+                throw new BusinessConflictException("This team cannot submit because it is rejected or disqualified");
             }
 
-            throw new RuntimeException("Only active teams can submit work");
+            throw new BusinessConflictException("Only active teams can submit work");
         }
     }
 
@@ -196,20 +201,20 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         Round round = findRound(roundId);
 
         if (round.getCategory() == null || round.getCategory().getCategoryId() == null) {
-            throw new RuntimeException("Round category not found");
+            throw new EntityNotFoundException("Round category not found");
         }
 
         if (!team.getCategoryId().equals(round.getCategory().getCategoryId())) {
-            throw new RuntimeException("Team cannot submit to a round outside its category");
+            throw new BusinessConflictException("Team cannot submit to a round outside its category");
         }
 
         if (round.getCategory().getEvent() == null
                 || round.getCategory().getEvent().getEventId() == null) {
-            throw new RuntimeException("Round event not found");
+            throw new EntityNotFoundException("Round event not found");
         }
 
         if (!team.getEventId().equals(round.getCategory().getEvent().getEventId())) {
-            throw new RuntimeException("Team cannot submit to a round outside its event");
+            throw new BusinessConflictException("Team cannot submit to a round outside its event");
         }
 
         validateTeamAdvancedFromPreviousRound(team, round);
@@ -219,13 +224,13 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
 
     private void validateTeamAdvancedFromPreviousRound(Teams team, Round round) {
         if (Boolean.TRUE.equals(round.getIsCalibrationRound())) {
-            throw new RuntimeException("Teams cannot submit work to calibration rounds");
+            throw new BusinessConflictException("Teams cannot submit work to calibration rounds");
         }
 
         UUID categoryId = round.getCategory().getCategoryId();
         Integer roundOrder = round.getRoundOrder();
         if (roundOrder == null) {
-            throw new RuntimeException("Round order is required for submissions");
+            throw new BadRequestException("Round order is required for submissions");
         }
 
         Round previousCompetitionRound = roundRepository
@@ -250,18 +255,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 .orElse(false);
 
         if (!advanced) {
-            throw new RuntimeException("Team has not advanced from the previous competition round");
+            throw new BusinessConflictException("Team has not advanced from the previous competition round");
         }
     }
 
     private Round findRound(UUID roundId) {
         return roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Round not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round not found"));
     }
 
     private void validateCalibrationRound(Round round) {
         if (!Boolean.TRUE.equals(round.getIsCalibrationRound())) {
-            throw new RuntimeException("Sample submissions are only allowed for calibration rounds");
+            throw new BusinessConflictException("Sample submissions are only allowed for calibration rounds");
         }
     }
 
@@ -271,7 +276,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 : null;
 
         if ("Judging".equalsIgnoreCase(statusName) || "Completed".equalsIgnoreCase(statusName)) {
-            throw new RuntimeException("Cannot create sample submissions after calibration round enters judging or completed status");
+            throw new BusinessConflictException("Cannot create sample submissions after calibration round enters judging or completed status");
         }
     }
 
@@ -281,18 +286,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 : null;
 
         if (!ROUND_STATUS_SUBMISSION_OPEN.equalsIgnoreCase(statusName)) {
-            throw new RuntimeException("Round is not open for submissions");
+            throw new BusinessConflictException("Round is not open for submissions");
         }
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate = round.getStartDate();
         if (startDate != null && now.isBefore(startDate)) {
-            throw new RuntimeException("Round has not started yet");
+            throw new BusinessConflictException("Round has not started yet");
         }
 
         LocalDateTime deadline = round.getSubmissionDeadline();
         if (deadline != null && now.isAfter(deadline)) {
-            throw new RuntimeException("Submission deadline has passed");
+            throw new BusinessConflictException("Submission deadline has passed");
         }
     }
 
@@ -303,7 +308,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
                 .createStoredProcedureQuery("sp_UpsertSubmission");
 
         query.registerStoredProcedureParameter("TeamID", UUID.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RoundID", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("RoundID", UUID.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("RepositoryURL", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("DemoURL", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("ReportURL", String.class, ParameterMode.IN);
@@ -316,7 +321,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         query.registerStoredProcedureParameter("SubmittedByUserID", UUID.class, ParameterMode.IN);
 
         query.setParameter("TeamID", request.getTeamId());
-        query.setParameter("RoundID", request.getRoundId().toString());
+        query.setParameter("RoundID", request.getRoundId());
         query.setParameter("RepositoryURL", request.getRepositoryUrl());
         query.setParameter("DemoURL", request.getDemoUrl());
         query.setParameter("ReportURL", request.getReportUrl());
@@ -335,7 +340,9 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     @Transactional
     public SubmissionResponse approveScore(UUID submissionId, boolean approve) {
         Submissions submission = submissionsRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+        validateSubmissionScoreCanBeChanged(submission);
+
         submission.setIsScoreApproved(approve);
         
         if (approve) {
@@ -346,5 +353,18 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         
         submissionsRepository.save(submission);
         return SubmissionMapper.toSubmissionResponse(submission);
+    }
+
+    private void validateSubmissionScoreCanBeChanged(Submissions submission) {
+        if (SubmissionStatusConstants.DISQUALIFIED.equals(submission.getSubmissionStatusId())) {
+            throw new BusinessConflictException("Disqualified submissions cannot have scores approved or rejected");
+        }
+
+        UUID teamStatusId = submission.getTeam() != null
+                ? submission.getTeam().getTeamStatusId()
+                : null;
+        if (TEAM_STATUS_DISQUALIFIED.equals(teamStatusId) || TEAM_STATUS_WITHDRAWN.equals(teamStatusId)) {
+            throw new BusinessConflictException("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected");
+        }
     }
 }
