@@ -47,11 +47,11 @@ public class User {
     @Column(name = "Phone", length = 20)
     private String phone;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "UserTypeID", nullable = false)
     private UserType userType;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "AccountStatusID", nullable = false)
     private AccountStatus accountStatus;
 
