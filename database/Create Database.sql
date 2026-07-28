@@ -3160,3 +3160,242 @@ CREATE TABLE Appeals (
     CONSTRAINT FK_Appeals_CreatedBy FOREIGN KEY (CreatedByUserID) REFERENCES Users(UserID)
 );
 GO
+
+-- ##########################################################################
+-- ## BO SUNG TU MIGRATIONS (hop nhat ngay 2026-07-27)
+-- ##
+-- ## Cac migration duoi day tung bi quen cap nhat vao file snapshot nay.
+-- ## Tat ca deu IDEMPOTENT (IF NOT EXISTS) nen chay lai nhieu lan van an toan,
+-- ## va dat o CUOI file de moi bang goc + khoa ngoai da ton tai truoc do.
+-- ##
+-- ## Sau khi hop nhat: chi can chay RIENG file nay la tao du toan bo database.
+-- ##########################################################################
+
+
+-- ==========================================================================
+-- 1) Users: cac cot ho so bo sung     (nguon: 20260719_add_user_profile_fields.sql)
+-- ==========================================================================
+IF COL_LENGTH(N'dbo.Users', N'Bio') IS NULL
+    ALTER TABLE dbo.Users ADD Bio NVARCHAR(1000) NULL;
+GO
+IF COL_LENGTH(N'dbo.Users', N'Github') IS NULL
+    ALTER TABLE dbo.Users ADD Github NVARCHAR(500) NULL;
+GO
+IF COL_LENGTH(N'dbo.Users', N'Portfolio') IS NULL
+    ALTER TABLE dbo.Users ADD Portfolio NVARCHAR(500) NULL;
+GO
+
+
+-- ==========================================================================
+-- 2) AccountLinkTickets               (nguon: 20260716_account_link_tickets.sql)
+--    Lien ket tai khoan Google <-> local. Chi luu HASH cua token va OTP.
+-- ==========================================================================
+IF OBJECT_ID(N'dbo.AccountLinkTickets', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AccountLinkTickets (
+        TicketID              UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID() PRIMARY KEY,
+        UserID                UNIQUEIDENTIFIER NOT NULL REFERENCES dbo.Users(UserID),
+        -- GOOGLE_LINK: gan dinh danh Google vao user local hien co.
+        -- LOCAL_SETUP: thiet lap mat khau local cho user Google-only hien co.
+        Purpose               NVARCHAR(30)   NOT NULL,
+        Provider              NVARCHAR(30)   NULL,
+        ProviderUserID        NVARCHAR(255)  NULL,
+        ProviderEmail         NVARCHAR(255)  NULL,
+        ProviderEmailVerified BIT            NULL,
+        ProviderDisplayName   NVARCHAR(255)  NULL,
+        ProviderAvatarUrl     NVARCHAR(1000) NULL,
+        TokenHash             NVARCHAR(128)  NOT NULL UNIQUE,
+        OtpHash               NVARCHAR(128)  NULL,
+        OtpExpiresAt          DATETIME2      NULL,
+        OtpAttempts           INT            NOT NULL DEFAULT 0,
+        OtpLastSentAt         DATETIME2      NULL,
+        OtpVerifiedAt         DATETIME2      NULL,
+        CreatedAt             DATETIME2      NOT NULL DEFAULT GETUTCDATE(),
+        ExpiresAt             DATETIME2      NOT NULL,
+        ConsumedAt            DATETIME2      NULL
+    );
+
+    CREATE NONCLUSTERED INDEX IX_AccountLinkTickets_UserID
+        ON dbo.AccountLinkTickets(UserID);
+END
+GO
+
+
+-- ==========================================================================
+-- 3) DeletedUserTombstones       (nguon: 20260717_create_deleted_user_tombstones.sql)
+--    KHONG co FK toi Users: organizer thuc hien xoa sau nay cung co the bi xoa.
+-- ==========================================================================
+IF OBJECT_ID(N'dbo.DeletedUserTombstones', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DeletedUserTombstones (
+        [TombstoneID]     [uniqueidentifier] NOT NULL DEFAULT NEWID(),
+        [Email]           [nvarchar](255)    NOT NULL,
+        [FullName]        [nvarchar](200)    NULL,
+        [DeletedByUserID] [uniqueidentifier] NULL,
+        [Reason]          [nvarchar](500)    NULL,
+        [DeletedAt]       [datetime2](7)     NOT NULL,
+        [ExpiresAt]       [datetime2](7)     NOT NULL,
+        CONSTRAINT [PK_DeletedUserTombstones] PRIMARY KEY CLUSTERED ([TombstoneID])
+    );
+
+    CREATE NONCLUSTERED INDEX [IX_DeletedUserTombstones_Email]
+        ON dbo.DeletedUserTombstones ([Email]) INCLUDE ([ExpiresAt]);
+END
+GO
+
+
+-- ==========================================================================
+-- 4) TeamMentorNotes               (nguon: 20260718_create_team_mentor_notes.sql)
+-- ==========================================================================
+IF OBJECT_ID(N'dbo.TeamMentorNotes', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TeamMentorNotes (
+        NoteID    UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        TeamID    UNIQUEIDENTIFIER NOT NULL,
+        MentorID  UNIQUEIDENTIFIER NOT NULL,
+        Note      NVARCHAR(MAX),
+        CreatedAt DATETIME2 DEFAULT CURRENT_TIMESTAMP,
+        UpdatedAt DATETIME2,
+        CONSTRAINT FK_TeamMentorNotes_Teams FOREIGN KEY (TeamID)   REFERENCES dbo.Teams(TeamID),
+        CONSTRAINT FK_TeamMentorNotes_Users FOREIGN KEY (MentorID) REFERENCES dbo.Users(UserID),
+        CONSTRAINT UQ_TeamMentorNotes_Team_Mentor UNIQUE (TeamID, MentorID)
+    );
+END
+GO
+
+
+-- ==========================================================================
+-- 5) AI_Knowledge_Base             (nguon: 20260721_create_ai_knowledge_base.sql)
+-- ==========================================================================
+IF OBJECT_ID(N'dbo.AI_Knowledge_Base', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AI_Knowledge_Base (
+        ID              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        EventID         UNIQUEIDENTIFIER NOT NULL,
+        CategoryID      UNIQUEIDENTIFIER DEFAULT NULL,
+        QuestionPattern NVARCHAR(MAX) NOT NULL,
+        StandardAnswer  NVARCHAR(MAX) NOT NULL,
+        MentorID        UNIQUEIDENTIFIER NOT NULL,
+        CreatedAt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+        UpdatedAt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_AI_KB_Event    FOREIGN KEY (EventID)    REFERENCES dbo.Events(EventID) ON DELETE CASCADE,
+        CONSTRAINT FK_AI_KB_Category FOREIGN KEY (CategoryID) REFERENCES dbo.Categories(CategoryID),
+        CONSTRAINT FK_AI_KB_Mentor   FOREIGN KEY (MentorID)   REFERENCES dbo.Users(UserID)
+    );
+
+    CREATE INDEX IX_AI_KB_Event    ON dbo.AI_Knowledge_Base(EventID);
+    CREATE INDEX IX_AI_KB_Category ON dbo.AI_Knowledge_Base(CategoryID);
+END
+GO
+
+
+-- ==========================================================================
+-- 6) SubmissionRepositories
+--    Gop 3 migration: 20260722 (bang goc)
+--                   + 20260723_submission_repositories_counts (star/fork/issue)
+--                   + 20260726_submission_repositories_activity (activity + pin)
+--    LUU Y: cac cot Pinned* hien DORMANT (khong con duoc ghi) - giu lai de
+--    khong phai tao migration xoa cot. Xem AGENTS.md muc GitHub scoring-aid.
+-- ==========================================================================
+IF OBJECT_ID(N'dbo.SubmissionRepositories', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SubmissionRepositories (
+        SubmissionRepositoryID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        SubmissionID           UNIQUEIDENTIFIER NOT NULL,
+        Provider               VARCHAR(20)    NOT NULL,
+        ExternalRepositoryID   NVARCHAR(100)  NULL,
+        RepositoryUrl          NVARCHAR(500)  NOT NULL,
+        Owner                  NVARCHAR(200)  NULL,
+        RepositoryName         NVARCHAR(200)  NULL,
+        FullName               NVARCHAR(400)  NULL,
+        Description            NVARCHAR(MAX)  NULL,
+        Visibility             VARCHAR(20)    NULL,
+        DefaultBranch          NVARCHAR(200)  NULL,
+        PrimaryLanguage        NVARCHAR(100)  NULL,
+        RepositoryCreatedAt    DATETIME2 NULL,
+        RepositoryUpdatedAt    DATETIME2 NULL,
+        LastPushedAt           DATETIME2 NULL,
+        ExternalUrl            NVARCHAR(500)  NULL,
+        LastSyncStatus         VARCHAR(30)    NOT NULL DEFAULT ('NOT_SYNCHRONIZED'),
+        LastSynchronizedAt     DATETIME2 NULL,
+        ErrorCode              NVARCHAR(100)  NULL,
+        ErrorMessage           NVARCHAR(1000) NULL,
+        -- 20260723: so lieu tham khao tu GitHub
+        StarCount              INT NULL,
+        ForkCount              INT NULL,
+        OpenIssuesCount        INT NULL,
+        -- 20260726: hoat dong phat trien (best-effort, co the NULL)
+        LanguagesJson          NVARCHAR(MAX) NULL,
+        ContributorCount       INT NULL,
+        TopContributorsJson    NVARCHAR(MAX) NULL,
+        CommitCount            INT NULL,
+        LastCommitSha          VARCHAR(64) NULL,
+        -- 20260726: ghim phien ban (DORMANT - khong con duoc ghi)
+        PinnedCommitSha        VARCHAR(64) NULL,
+        PinnedAt               DATETIME2(7) NULL,
+        PinnedByUserID         UNIQUEIDENTIFIER NULL,
+        CreatedAt              DATETIME2 NOT NULL DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt              DATETIME2 NOT NULL DEFAULT (SYSUTCDATETIME()),
+
+        CONSTRAINT PK_SubmissionRepositories PRIMARY KEY (SubmissionRepositoryID),
+        CONSTRAINT FK_SubmissionRepositories_Submissions FOREIGN KEY (SubmissionID) REFERENCES dbo.Submissions(SubmissionID),
+        CONSTRAINT UQ_SubmissionRepositories_SubmissionID UNIQUE (SubmissionID),
+        CONSTRAINT CK_SubmissionRepositories_Provider CHECK (Provider IN ('GITHUB', 'GITLAB', 'UNKNOWN')),
+        CONSTRAINT CK_SubmissionRepositories_LastSyncStatus CHECK (LastSyncStatus IN ('NOT_SYNCHRONIZED', 'RUNNING', 'SUCCESS', 'FAILED', 'PARTIAL_SUCCESS'))
+    );
+
+    CREATE NONCLUSTERED INDEX IX_SubmissionRepositories_Provider_ExternalID
+        ON dbo.SubmissionRepositories (Provider, ExternalRepositoryID);
+END
+GO
+
+
+-- ==========================================================================
+-- 7) Index chong trung ten event dang hoat dong
+--                              (nguon: 20260628_add_unique_active_event_name.sql)
+-- ==========================================================================
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UQ_Events_EventName_Active' AND object_id = OBJECT_ID('dbo.Events')
+)
+BEGIN
+    CREATE UNIQUE INDEX UQ_Events_EventName_Active
+        ON dbo.Events(EventName)
+        WHERE IsDeleted = 0;
+END
+GO
+
+
+-- ==========================================================================
+-- 8) Index chong trung email tai khoan LOCAL
+--                                     (nguon: 20260718_unique_local_email.sql)
+--    Chi ap cho account local chua xoa; KHONG dung toi account OAuth-only,
+--    nen local + Google cung email van song song duoc theo thiet ke hien tai.
+-- ==========================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UQ_Users_Email_LocalActive')
+BEGIN
+    CREATE UNIQUE INDEX [UQ_Users_Email_LocalActive]
+        ON dbo.Users ([Email])
+        WHERE [LocalLoginEnabled] = 1 AND [IsDeleted] = 0;
+END
+GO
+
+
+-- ==========================================================================
+-- 9) Go account status "Pending Approval" da loi thoi
+--                           (nguon: 20260725_remove_pending_approval_status.sql)
+--    Luong duyet nay da chuyen sang cap TEAM. Users.AccountStatusID la FK
+--    NOT NULL nen phai reassign truoc khi xoa row.
+-- ==========================================================================
+IF EXISTS (SELECT 1 FROM dbo.AccountStatus WHERE StatusID = '20000000-0000-0000-0000-000000000001')
+BEGIN
+    UPDATE dbo.Users
+        SET AccountStatusID = '20000000-0000-0000-0000-000000000006'   -- Unverified
+        WHERE AccountStatusID = '20000000-0000-0000-0000-000000000001';
+
+    DELETE FROM dbo.AccountStatus
+        WHERE StatusID = '20000000-0000-0000-0000-000000000001';
+END
+GO
+
+-- ################## HET PHAN BO SUNG TU MIGRATIONS ########################
