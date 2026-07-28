@@ -22,10 +22,12 @@ import java.util.Map;
  * Xử lý luồng kết nối trực tiếp với Google Gemini API thông qua RestTemplate.
  * 
  * Kiến trúc & Security:
- * - Sử dụng RAG (Retrieval-Augmented Generation) để đưa Knowledge Base vào System Prompt.
- * - Anti-Prompt Injection: Giới hạn cứng hành vi của AI trong system prompt, 
- *   buộc AI chỉ được phép trả lời các câu hỏi khớp với Knowledge Base.
- * - Trả về "UNKNOWN" nếu câu hỏi nằm ngoài phạm vi, giúp kích hoạt fallback human mentor.
+ * - Sử dụng RAG (Retrieval-Augmented Generation) để đưa Knowledge Base vào
+ * System Prompt.
+ * - Anti-Prompt Injection: Giới hạn cứng hành vi của AI trong system prompt,
+ * buộc AI chỉ được phép trả lời các câu hỏi khớp với Knowledge Base.
+ * - Trả về "UNKNOWN" nếu câu hỏi nằm ngoài phạm vi, giúp kích hoạt fallback
+ * human mentor.
  */
 @Service
 @Slf4j
@@ -58,8 +60,10 @@ public class GeminiServiceImpl implements GeminiService {
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("You are an AI Mentor assisting students participating in the event.\n");
         contextBuilder.append("Your ONLY task is to match the student's question with the KNOWLEDGE BASE below.\n");
-        contextBuilder.append("If the question matches the meaning of a FAQ in the knowledge base, YOU MUST REPLY EXACTLY WITH THE STANDARD ANSWER.\n");
-        contextBuilder.append("If the question is NOT RELATED to any FAQ in the knowledge base, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
+        contextBuilder.append(
+                "If the question matches the meaning of a FAQ in the knowledge base, YOU MUST REPLY EXACTLY WITH THE STANDARD ANSWER.\n");
+        contextBuilder.append(
+                "If the question is NOT RELATED to any FAQ in the knowledge base, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
         contextBuilder.append("Absolutely no inferring, no fabricating information, and no long explanations.\n\n");
         contextBuilder.append("--- KNOWLEDGE BASE ---\n");
 
@@ -77,17 +81,17 @@ public class GeminiServiceImpl implements GeminiService {
             Map<String, Object> requestBody = new HashMap<>();
             Map<String, Object> part = new HashMap<>();
             part.put("text", contextBuilder.toString());
-            
+
             Map<String, Object> content = new HashMap<>();
             content.put("parts", List.of(part));
-            
+
             requestBody.put("contents", List.of(content));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            
+
             String fullUrl = apiUrl + "?key=" + apiKey;
             ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, entity, String.class);
 
