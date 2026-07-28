@@ -48,7 +48,7 @@ public class RankingController {
      * Compute rankings for an event.
      */
     @PostMapping("/admin/events/{id}/compute-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Compute rankings for an event", description = "Calculates the final rankings for all submissions in an event")
     public ResponseEntity<List<EventRankingDTO>> computeEventRankings(
             @PathVariable("id") UUID eventId) {
@@ -58,7 +58,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/rounds/{roundId}/compute-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Compute rankings for a round", description = "Calculates the rankings for submissions in a specific round and category")
     public ResponseEntity<List<RoundRankingDTO>> computeRoundRankings(
             @PathVariable("roundId") UUID roundId,
@@ -68,7 +68,7 @@ public class RankingController {
         return ResponseEntity.ok(rankings);
     }
     @PostMapping("/admin/rounds/{roundId}/publish-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Publish rankings for a round", description = "Publishes the computed rankings for a specific round and category")
     public ResponseEntity<Void> publishRoundRankings(
             @PathVariable("roundId") UUID roundId,
@@ -81,7 +81,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/rounds/{roundId}/approve-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Approve rankings for a round", description = "Approves and locks the computed rankings for a specific round and category")
     public ResponseEntity<Void> approveRoundRankings(
             @PathVariable("roundId") UUID roundId,
@@ -93,7 +93,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/events/{eventId}/publish-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Publish rankings for an event", description = "Publishes the computed final rankings for a specific event and category")
     public ResponseEntity<Void> publishEventRankings(
             @PathVariable("eventId") UUID eventId,
@@ -104,7 +104,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/categories/{categoryId}/compute-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Compute rankings for a category", description = "Calculates the final rankings for all submissions in a category")
     public ResponseEntity<List<EventRankingDTO>> computeCategoryEventRankings(
             @PathVariable("categoryId") UUID categoryId) {
@@ -114,7 +114,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/categories/{categoryId}/publish-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Publish rankings for a category", description = "Publishes the computed final rankings for a specific category")
     public ResponseEntity<Void> publishCategoryEventRankings(
             @PathVariable("categoryId") UUID categoryId,
@@ -125,7 +125,7 @@ public class RankingController {
     }
 
     @PostMapping("/admin/categories/{categoryId}/approve-rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Approve rankings for a category", description = "Approves and locks the computed final rankings for a specific category")
     public ResponseEntity<Void> approveCategoryEventRankings(
             @PathVariable("categoryId") UUID categoryId,
@@ -136,7 +136,7 @@ public class RankingController {
     }
 
     @GetMapping("/admin/rounds/{roundId}/rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get rankings for a round", description = "Fetches the existing rankings for a specific round and category without computing")
     public ResponseEntity<List<RoundRankingDTO>> getRoundRankings(
             @PathVariable("roundId") UUID roundId,
@@ -147,7 +147,7 @@ public class RankingController {
     }
 
     @GetMapping("/admin/events/{eventId}/categories/{categoryId}/rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get rankings for a category", description = "Fetches the existing final rankings for a specific category without computing")
     public ResponseEntity<List<EventRankingDTO>> getCategoryRankings(
             @PathVariable("eventId") UUID eventId,
@@ -158,7 +158,7 @@ public class RankingController {
     }
 
     @GetMapping("/admin/events/{eventId}/rankings")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get rankings for an event", description = "Fetches the existing final rankings for a specific event without computing")
     public ResponseEntity<List<EventRankingDTO>> getEventRankings(
             @PathVariable("eventId") UUID eventId) {

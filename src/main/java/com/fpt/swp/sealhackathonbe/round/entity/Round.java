@@ -32,7 +32,7 @@ public class Round {
     @Column(name = "RoundOrder")
     private Integer roundOrder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "RoundStatusID")
     private RoundStatus roundStatus;
 

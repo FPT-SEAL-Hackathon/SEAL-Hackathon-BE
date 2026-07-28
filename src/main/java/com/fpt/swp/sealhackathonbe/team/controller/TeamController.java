@@ -90,7 +90,7 @@ public class TeamController {
             description = "Organizer reviews team size and member profile information before competition."
     )
     @GetMapping("/admin/events/{eventId}/teams/eligibility-review")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<TeamEligibilityReviewResponse>> reviewTeamsEligibility(
             @PathVariable UUID eventId
     ) {
@@ -103,7 +103,7 @@ public class TeamController {
             description = "Organizer approves an eligible team for competition or rejects it with a disqualification reason."
     )
     @PostMapping("/admin/teams/{teamId}/eligibility-decision")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EligibilityDecisionResponse> decideTeamEligibility(
             @PathVariable UUID teamId,
             @Valid @RequestBody EligibilityDecisionRequest request,
@@ -321,7 +321,7 @@ public class TeamController {
             description = "Mark a team as disqualified and record the reason. Use an organizer account."
     )
     @PostMapping("/admin/teams/{teamId}/disqualify")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<DisqualificationResponse> disqualifyTeam(
             @PathVariable UUID teamId,
             @Valid @RequestBody DisqualifyTeamRequest request,

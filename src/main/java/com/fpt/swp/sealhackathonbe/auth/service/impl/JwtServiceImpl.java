@@ -35,8 +35,8 @@ import java.util.Map;
  */
 @Service
 public class JwtServiceImpl implements JwtService {
-    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 2;
-    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24;
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 30; // 30 phút
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24 * 7L; // 7 ngày
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;

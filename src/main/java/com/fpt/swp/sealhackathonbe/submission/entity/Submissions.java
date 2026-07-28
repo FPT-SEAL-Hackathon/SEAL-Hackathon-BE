@@ -36,7 +36,7 @@ public class Submissions {
     @Column(name = "SubmissionStatusID", nullable = false)
     private UUID submissionStatusId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "SubmissionStatusID", nullable = false, insertable = false, updatable = false)
     private SubmissionStatus submissionStatus;
 

@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.award.service.impl;
 
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternItemRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternRequest;
 import com.fpt.swp.sealhackathonbe.award.dto.AwardPatternResponse;
@@ -42,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -416,12 +418,20 @@ public class AwardServiceImpl implements AwardService {
 
     private List<RoundRanking> getTopRankings(UUID roundId, UUID categoryId, int limit) {
         validateLimit(limit);
-        return roundRankingRepository
-                .findByRoundRoundIdAndCategoryCategoryIdOrderByRankPositionAsc(
-                        roundId,
-                        categoryId,
-                        PageRequest.of(0, limit)
-                );
+        List<RoundRanking> allRankings = roundRankingRepository
+                .findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
+
+        return allRankings.stream()
+                .filter(r -> r.getTeam() != null && isTeamActive(r.getTeam()))
+                .sorted(Comparator.comparing(RoundRanking::getRankPosition, Comparator.nullsLast(Comparator.naturalOrder())))
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    private boolean isTeamActive(Teams team) {
+        if (team == null) return false;
+        if (TeamStatusConstants.ACTIVE.equals(team.getTeamStatusId())) return true;
+        return team.getTeamStatus() != null && "Active".equalsIgnoreCase(team.getTeamStatus().getStatusName());
     }
 
     private void validateLimit(int limit) {

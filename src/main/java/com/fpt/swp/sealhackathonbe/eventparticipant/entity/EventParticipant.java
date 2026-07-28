@@ -59,7 +59,7 @@ public class EventParticipant {
     @Column(name = "ParticipantStatusID", nullable = false)
     private UUID participantStatusId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ParticipantStatusID", nullable = false, insertable = false, updatable = false)
     private ParticipantStatus participantStatus;
 
