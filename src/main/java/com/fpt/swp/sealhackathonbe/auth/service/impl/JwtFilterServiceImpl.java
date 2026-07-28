@@ -1,6 +1,8 @@
 package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtFilterService;
+import com.fpt.swp.sealhackathonbe.core.exception.ErrorResponse;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
@@ -22,7 +24,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Lọc JWT trên mỗi request để thiết lập người dùng và quyền trong SecurityContext.
@@ -38,6 +42,37 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
     @Autowired
     private UserRepository userRepository;
+
+    // KHONG @Autowired: du an nay khong co bean ObjectMapper nao (moi noi deu dung
+    // `new ObjectMapper()` — xem GeminiServiceImpl, GitHubRepositoryMetadataClient),
+    // va filter duoc khoi tao rat som trong vong doi servlet nen inject se lam
+    // app fail-to-start. ObjectMapper la thread-safe khi chi doc/ghi nen dung static.
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * Cache user da tra cuu theo userId, TTL ngan.
+     *
+     * VI SAO CAN: filter nay tra DB o MOI request (findByUserIdAndIsDeletedFalse) de
+     * kiem tai khoan con Active/chua bi xoa. Do la ly do khoa/xoa tai khoan co hieu luc
+     * ngay, nhung cung la 1 query moi request — gop phan lam can HikariCP pool.
+     * Cache 60s giam xuong toi da 1 query/phut/user.
+     *
+     * DANH DOI da duoc chap nhan: khoa tai khoan co hieu luc cham toi TTL (60 giay).
+     * Neu can tuc thi thi giam TTL hoac bo cache.
+     *
+     * Dung ConcurrentHashMap thay vi them thu vien cache: du an chua co Caffeine va
+     * so user dong thoi nho; entry het han duoc don ngay khi doc (khong can job rieng).
+     */
+    private static final long USER_CACHE_TTL_MS = 60_000L;
+    private static final int USER_CACHE_MAX_ENTRIES = 5_000;
+
+    private record CachedUser(UserDetails details, long expiresAtMs) {
+        boolean isFresh() {
+            return System.currentTimeMillis() < expiresAtMs;
+        }
+    }
+
+    private final Map<UUID, CachedUser> userCache = new ConcurrentHashMap<>();
 
     /**
      * JWT:
@@ -126,12 +161,29 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
         if (userIdClaim != null && !userIdClaim.isBlank()) {
             try {
                 UUID userId = UUID.fromString(userIdClaim);
+
+                CachedUser cached = userCache.get(userId);
+                if (cached != null) {
+                    if (cached.isFresh()) {
+                        return cached.details();
+                    }
+                    userCache.remove(userId); // het han -> don ngay khi doc
+                }
+
                 User user = userRepository
                         .findByUserIdAndIsDeletedFalse(userId)
                         .orElse(null);
                 if (user != null) {
-                    return new UserPrincipal(user);
+                    UserDetails details = new UserPrincipal(user);
+                    // Chan cache phinh vo han neu co nhieu user (vd bot quet token).
+                    if (userCache.size() >= USER_CACHE_MAX_ENTRIES) {
+                        userCache.clear();
+                    }
+                    userCache.put(userId, new CachedUser(details, System.currentTimeMillis() + USER_CACHE_TTL_MS));
+                    return details;
                 }
+                // Khong tim thay (bi xoa) -> bo cache cu de khong con dung ban da stale.
+                userCache.remove(userId);
             } catch (IllegalArgumentException ignored) {
                 // Claim userId không hợp lệ thì dùng email.
             }
@@ -141,6 +193,11 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
 
     /**
      * Trả lỗi 401 dạng JSON khi xác thực thất bại.
+     *
+     * Dung ObjectMapper + ErrorResponse thay vi noi chuoi tay: ban cu chi can message
+     * chua mot dau " hoac ky tu xuong dong la body thanh JSON hong, frontend parse
+     * that bai va chi hien "Request failed (401)". Cach nay cung dam bao hinh dang
+     * response giong het GlobalExceptionHandler.
      */
     private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, String message) throws IOException {
         String responseMessage = isEventRegistrationRequest(request)
@@ -149,11 +206,14 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(
-                "{\"success\":false,\"status\":401,\"error\":\"UNAUTHORIZED\","
-                        + "\"message\":\"" + responseMessage + "\","
-                        + "\"timestamp\":\"" + LocalDateTime.now() + "\"}"
-        );
+
+        ErrorResponse body = ErrorResponse.builder()
+                .status(HttpServletResponse.SC_UNAUTHORIZED)
+                .error("UNAUTHORIZED")
+                .message(responseMessage)
+                .path(request.getRequestURI())
+                .build();
+        OBJECT_MAPPER.writeValue(response.getWriter(), body);
     }
 
     /**
