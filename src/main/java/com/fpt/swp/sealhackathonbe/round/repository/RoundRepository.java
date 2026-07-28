@@ -24,7 +24,7 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
 
-    Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanOrderByRoundOrderDesc(
+    Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanAndIsCalibrationRoundFalseOrderByRoundOrderDesc(
             UUID categoryId,
             Integer roundOrder
     );
