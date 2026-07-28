@@ -34,6 +34,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
+@Transactional(readOnly = true)
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
