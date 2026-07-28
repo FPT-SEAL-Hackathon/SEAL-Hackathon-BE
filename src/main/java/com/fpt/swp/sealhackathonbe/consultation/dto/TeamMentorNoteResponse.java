@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TeamMentorNoteResponse {
-    private UUID teamId;
+    private UUID requestId;
     private UUID mentorId;
     private String note;
     private LocalDateTime updatedAt;

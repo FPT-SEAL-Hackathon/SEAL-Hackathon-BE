@@ -15,31 +15,27 @@ import java.util.UUID;
 @Getter
 @Setter
 public class CreateEventRequest {
-    @NotBlank(message = "Event name must not be empty")
+    @NotBlank(message = "Event name is required")
     private String eventName;
 
     private String description;
 
+    // Bat buoc: EventServiceImplementation.create() goi location.trim() -> thieu se NPE (500)
+    // thay vi 400 co thong bao ro rang.
     @NotBlank(message = "Location is required")
     private String location;
 
     @URL(message = "Invalid banner image URL")
     private String bannerImageUrl;
 
-    @NotNull(message = "Event status is required")
-    private UUID eventStatusId;
-
-    @NotNull(message = "Registration start time is required")
     @FutureOrPresent(message = "Registration start time must be in the present or future")
     private LocalDateTime registrationStart;
 
-    @NotNull(message = "Registration end time is required")
     private LocalDateTime registrationEnd;
 
-    @NotNull(message = "Event start date is required")
+    @FutureOrPresent(message = "Event start time must be in the present or future")
     private LocalDate eventStartDate;
 
-    @NotNull(message = "Event end date is required")
     private LocalDate eventEndDate;
 
     @NotNull(message = "Max team size is required")

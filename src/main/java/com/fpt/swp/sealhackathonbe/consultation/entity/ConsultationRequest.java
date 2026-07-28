@@ -37,12 +37,13 @@ public class ConsultationRequest {
     private Teams team;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "MentorUserID", nullable = false)
-    private User mentor;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CreatedByUserID", nullable = false)
     private User createdBy;
+
+    // Added to satisfy the MentorUserID NOT NULL constraint in the database
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MentorUserID")
+    private User mentor;
 
     @Column(name = "Title", nullable = false, length = 150)
     private String title;

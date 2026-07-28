@@ -36,3 +36,6 @@ build/
 .claude/
 CLAUDE.md
 AGENTS.md
+conversation_log.md
+.docs/
+docs/API_REFERENCE.md

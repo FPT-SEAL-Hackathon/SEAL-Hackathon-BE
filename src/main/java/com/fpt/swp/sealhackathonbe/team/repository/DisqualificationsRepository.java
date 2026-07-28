@@ -37,6 +37,15 @@ public interface DisqualificationsRepository extends JpaRepository<Disqualificat
             @Param("categoryId") UUID categoryId
     );
 
+    @Query("""
+            SELECT d FROM Disqualifications d
+            WHERE d.team.categoryId = :categoryId
+              AND d.reversed = false
+            """)
+    List<Disqualifications> findActiveTeamDisqualificationsByCategory(
+            @Param("categoryId") UUID categoryId
+    );
+
     // Hard delete user: user còn là người ra/gỡ quyết định loại team → chặn xóa.
     boolean existsByDisqualifiedBy_UserId(UUID userId);
 

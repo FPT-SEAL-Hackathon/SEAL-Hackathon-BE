@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,6 +66,16 @@ public class JudgingController {
         return ResponseEntity.ok(Map.of("message", "Scores have been updated successfully by the Server."));
     }
 
+    @DeleteMapping("/judging/submission/{submissionId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @Operation(summary = "Delete judging scores", description = "Allows judges to delete their previously submitted scores for a submission")
+    public ResponseEntity<Map<String, String>> deleteJudging(
+            @PathVariable("submissionId") UUID submissionId,
+            @RequestParam(value = "reason", required = false) String reason) {
+        judgingService.deleteJudging(submissionId, reason);
+        return ResponseEntity.ok(Map.of("message", "Scores have been deleted successfully."));
+    }
+
     @PostMapping("/judging/batch-scores")
     @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get batch judging scores", description = "Retrieves scores for multiple submissions")
@@ -84,6 +95,14 @@ public class JudgingController {
         return ResponseEntity.ok(scores);
     }
 
+    @GetMapping("/judging/team-submission/{submissionId}/published")
+    @PreAuthorize("hasAnyRole('FPT_STUDENT', 'EXTERNAL_STUDENT')")
+    @Operation(summary = "Get published judging scores for a submission", description = "Retrieves published scores for a team's submission")
+    public ResponseEntity<List<JudgingDTO>> getPublishedScoresBySubmission(@PathVariable UUID submissionId) {
+        List<JudgingDTO> scores = judgingService.getPublishedScoresBySubmission(submissionId);
+        return ResponseEntity.ok(scores);
+    }
+
     @GetMapping("/judging/judge/{judgeUserId}")
     // RBAC:
     // Cho phép ORGANIZER hoặc chính judge xem lịch sử chấm của mình.
@@ -96,8 +115,8 @@ public class JudgingController {
 
     @GetMapping("/judging/audit-logs/event/{eventId}")
     // RBAC:
-    // Chỉ ORGANIZER được xem audit log điểm của event.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    // ORGANIZER (vận hành) và ADMIN (giám sát hệ thống) được xem audit log điểm của event.
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     @Operation(summary = "Get evaluation audit logs by event ID", description = "Retrieves audit logs for score changes in an event")
     public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {
         List<EvaluationAuditLogDTO> logs = judgingService.getEvaluationAuditLogsByEvent(eventId);

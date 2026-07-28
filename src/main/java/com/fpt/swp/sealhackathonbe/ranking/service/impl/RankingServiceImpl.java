@@ -3,6 +3,8 @@ package com.fpt.swp.sealhackathonbe.ranking.service.impl;
 import com.fpt.swp.sealhackathonbe.core.constant.RankingStatusConstants;
 import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 
+import com.fpt.swp.sealhackathonbe.appeal.entity.AppealStatus;
+import com.fpt.swp.sealhackathonbe.appeal.repository.AppealRepository;
 import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.judging.entity.Judging;
@@ -60,6 +62,7 @@ public class RankingServiceImpl implements RankingService {
     private final CategoryRepository categoryRepository;
     private final NotificationService notificationService;
     private final TeamMembersRepository teamMembersRepository;
+    private final AppealRepository appealRepository;
 
 
     @Override
@@ -85,6 +88,9 @@ public class RankingServiceImpl implements RankingService {
                 .map(DisqualifiedTeamResponse:: getTeamId)
                 .toList();
 
+        // KIỂM TRA ĐIỂM ĐÃ ĐƯỢC DUYỆT (FINALIZED)
+        validateScoresFinalizedForRound(roundId, "compute");
+
         Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
                 SubmissionResponse::getSubmissionId,
                 SubmissionResponse::getTeamId
@@ -92,6 +98,10 @@ public class RankingServiceImpl implements RankingService {
 
         // Lấy danh sách ranking hiện có để update thay vì insert mới (tránh lỗi UNIQUE KEY)
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
+        if (existingRankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsApproved()))) {
+            throw new IllegalStateException("Cannot compute rankings because they have been approved and locked.");
+        }
+        
         Map<UUID, RoundRanking> existingRankingMap = existingRankings.stream()
                 .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
 
@@ -140,26 +150,68 @@ public class RankingServiceImpl implements RankingService {
             ranking.setAverageScore(averageScore);
             ranking.setRankPosition(0);
             ranking.setIsPublished(false);
+            ranking.setIsApproved(false);
             ranking.setIsAdvanced(false);
 
             rankings.add(ranking);
         }
 
-        // Sort by total score descending
-        rankings.sort((r1, r2) -> r2.getTotalScore().compareTo(r1.getTotalScore()));
+        // Sort by total score descending, tie-breaker: submission time ascending
+        rankings.sort((r1, r2) -> {
+            int scoreCompare = r2.getTotalScore().compareTo(r1.getTotalScore());
+            if (scoreCompare != 0) return scoreCompare;
+            LocalDateTime t1 = r1.getSubmission().getLastUpdatedAt();
+            LocalDateTime t2 = r2.getSubmission().getLastUpdatedAt();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2);
+        });
 
         int currentRank = 1;
         Integer topN = roundService.getAdvancementTopN(roundId);
         int advancementN = topN != null ? topN : 0;
+        int validRankCount = 0;
         
         for (int i = 0; i < rankings.size(); i++) {
-            if (i > 0 && rankings.get(i).getTotalScore().compareTo(rankings.get(i - 1).getTotalScore()) < 0) {
-                currentRank = i + 1;
+            boolean isDisqualified = disqualifiedSubIds.contains(rankings.get(i).getSubmission().getSubmissionId()) 
+                                  || disqualifiedTeamIds.contains(rankings.get(i).getTeam().getTeamId());
+            boolean hasZeroScore = rankings.get(i).getTotalScore().compareTo(BigDecimal.ZERO) == 0;
+            
+            if (isDisqualified || hasZeroScore) {
+                rankings.get(i).setRankPosition(0);
+                rankings.get(i).setIsAdvanced(false);
+                continue;
+            }
+
+            if (validRankCount > 0) {
+                RoundRanking prevValid = null;
+                for (int j = i - 1; j >= 0; j--) {
+                    if (rankings.get(j).getRankPosition() > 0) {
+                        prevValid = rankings.get(j);
+                        break;
+                    }
+                }
+                if (prevValid != null) {
+                    int scoreCompare = rankings.get(i).getTotalScore().compareTo(prevValid.getTotalScore());
+                    if (scoreCompare < 0) {
+                        currentRank = validRankCount + 1;
+                    } else if (scoreCompare == 0) {
+                        LocalDateTime t1 = prevValid.getSubmission().getLastUpdatedAt();
+                        LocalDateTime t2 = rankings.get(i).getSubmission().getLastUpdatedAt();
+                        if (t1 != null && t2 != null && t2.isAfter(t1)) {
+                            currentRank = validRankCount + 1;
+                        }
+                    }
+                }
             }
             rankings.get(i).setRankPosition(currentRank);
-            if(currentRank <= advancementN){
+            if (currentRank <= advancementN) {
                 rankings.get(i).setIsAdvanced(true);
+            } else {
+                rankings.get(i).setIsAdvanced(false);
             }
+            validRankCount++;
         }
 
         // Save to DB
@@ -181,35 +233,39 @@ public class RankingServiceImpl implements RankingService {
                 .isAdvanced(r.getIsAdvanced())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
                 .isPublished(r.getIsPublished())
+                .isApproved(r.getIsApproved())
                 .build()
         ).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId) {
+    public void publishRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId, Integer appealDurationMinutes) {
         List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Rankings must be computed before publishing.");
         }
+        
+        validateScoresFinalizedForRound(roundId, "publish");
+        
+        // Update appeal window for the round
+        com.fpt.swp.sealhackathonbe.round.entity.Round round = existingRankings.get(0).getRound();
+        round.setAppealStartTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        if (appealDurationMinutes != null) {
+            round.setAppealEndTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusMinutes(appealDurationMinutes));
+        } else {
+            round.setAppealEndTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusMinutes(40)); // default 40 mins
+        }
+        
         List<UUID> recipientIds = new ArrayList<>();
         for (RoundRanking r : existingRankings) {
             r.setIsPublished(true);
             
-            List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(r.getTeam().getTeamId());
+            List<com.fpt.swp.sealhackathonbe.team.entity.TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(r.getTeam().getTeamId());
             members.forEach(m -> recipientIds.add(m.getUserId()));
 
-            // Disqualify team if they did not advance and are not already disqualified
-            if (Boolean.FALSE.equals(r.getIsAdvanced()) && !TeamStatusConstants.DISQUALIFIED.equals(r.getTeam().getTeamStatusId())) {
-                try {
-                    DisqualifyTeamRequest req = new DisqualifyTeamRequest();
-                    req.setReason("Did not reach the top positions to advance to the next round");
-                    teamDisqualificationService.disqualifyTeam(r.getTeam().getTeamId(), req, adminUserId);
-                } catch (Exception e) {
-                    log.warn("Failed to automatically disqualify team {} (probably already disqualified): {}", 
-                             r.getTeam().getTeamId(), e.getMessage());
-                }
-            }
+            // We no longer automatically disqualify teams that do not advance.
+            // Not advancing is purely tracked by the isAdvanced flag.
         }
         roundRankingRepository.saveAll(existingRankings);
 
@@ -229,6 +285,33 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
+    public void approveRoundRankings(UUID roundId, UUID categoryId, UUID adminUserId) {
+        List<RoundRanking> existingRankings = roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId);
+        if (existingRankings.isEmpty()) {
+            throw new IllegalStateException("Rankings must be computed before approving.");
+        }
+        
+        com.fpt.swp.sealhackathonbe.round.entity.Round round = existingRankings.get(0).getRound();
+        
+        // Kiểm tra thời gian appeal đã đóng chưa
+        if (round.getAppealEndTime() != null && java.time.LocalDateTime.now().isBefore(round.getAppealEndTime())) {
+            throw new IllegalStateException("Cannot approve rankings while the appeal window is still open.");
+        }
+        
+        // Kiểm tra còn appeal nào đang pending không
+        if (appealRepository.existsByRound_RoundIdAndStatus(roundId, AppealStatus.PENDING)) {
+            throw new IllegalStateException("Cannot approve rankings because there are still pending appeals for this round.");
+        }
+        
+        validateScoresFinalizedForRound(roundId, "approve");
+        for (RoundRanking r : existingRankings) {
+            r.setIsApproved(true);
+        }
+        roundRankingRepository.saveAll(existingRankings);
+    }
+
+    @Override
+    @Transactional
     public List<EventRankingDTO> computeEventRankings(UUID eventId) {
         Event eventRef = entityManager.find(Event.class, eventId);
         if (eventRef == null) throw new IllegalArgumentException("Event ID does not exist: " + eventId);
@@ -237,102 +320,7 @@ public class RankingServiceImpl implements RankingService {
         List<EventRankingDTO> allComputedRankings = new ArrayList<>();
 
         for (Category categoryRef : categories) {
-            UUID categoryId = categoryRef.getCategoryId();
-            List<EventRanking> rankings = new ArrayList<>();
-
-            RoundResponse finalRound = null;
-            try {
-                finalRound = roundService.getFinalRound(categoryId);
-            } catch (RuntimeException e) {
-                log.warn("Skipping Event Ranking computation for Category {} because it has no rounds.", categoryRef.getCategoryName());
-                continue;
-            }
-
-            if (finalRound == null) {
-                log.warn("Skipping Event Ranking computation for Category {} because final round is null.", categoryRef.getCategoryName());
-                continue;
-            }
-
-            // (Removed strict "Completed" check to allow computation if rankings exist)
-
-            List<UUID> teamIds = entityManager.createQuery(
-                    "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
-                    .setParameter("categoryId", categoryId)
-                    .setParameter("eventId", eventId)
-                    .getResultList();
-
-            List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(finalRound.getRoundId(), categoryId)
-                    .stream()
-                    .map(DisqualifiedTeamResponse:: getTeamId)
-                    .toList();
-            
-            // Lấy danh sách ranking hiện có của Event & Category để update thay vì insert mới
-            // Get existing Event & Category rankings to update instead of inserting new ones
-            List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
-            Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
-                    .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
-
-            List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
-            
-            if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
-                log.warn("Skipping Event Ranking computation for Category {} because final round rankings have not been computed.", categoryRef.getCategoryName());
-                continue;
-            }
-
-            Map<UUID, BigDecimal> dScores = finalRoundRankings.stream()
-                    .collect(Collectors.toMap(
-                            r -> r.getTeam().getTeamId(),
-                            RoundRanking::getTotalScore
-                    ));
-
-            for (UUID teamId : teamIds) {
-                Teams teamRef = entityManager.getReference(Teams.class, teamId);
-                BigDecimal finalScore = BigDecimal.ZERO;
-
-                // Nếu Đội không bị tước tư cách -> Lấy điểm từ Vòng Chung Kết
-                if (!disqualifiedTeamIds.contains(teamId)) {
-                    finalScore = dScores.getOrDefault(teamId, BigDecimal.ZERO);
-                }
-
-                // Cập nhật record cũ nếu đã tồn tại, hoặc tạo mới nếu chưa
-                EventRanking ranking = existingRankingMap.getOrDefault(teamId, new EventRanking());
-                ranking.setEvent(eventRef);
-                ranking.setCategory(categoryRef); // Ranking phân chia chuẩn theo Category
-                ranking.setTeam(teamRef);
-                ranking.setFinalScore(finalScore);
-                ranking.setRankPosition(0);
-                ranking.setIsPublished(false);
-
-                rankings.add(ranking);
-            }
-
-            // Sort and Rank
-            rankings.sort((r1, r2) -> r2.getFinalScore().compareTo(r1.getFinalScore()));
-
-            int currentRank = 1;
-            for (int i = 0; i < rankings.size(); i++) {
-                // Nếu điểm đội hiện tại nhỏ hơn đội đứng trước -> Rớt hạng
-                if (i > 0 && rankings.get(i).getFinalScore().compareTo(rankings.get(i - 1).getFinalScore()) < 0) {
-                    currentRank = i + 1;
-                }
-                rankings.get(i).setRankPosition(currentRank);
-            }
-
-            List<EventRanking> savedRankings = eventRankingRepository.saveAll(rankings);
-
-            allComputedRankings.addAll(savedRankings.stream().map(r -> EventRankingDTO.builder()
-                    .id(r.getId())
-                    .eventId(eventId)
-                    .categoryId(categoryId)
-                    .categoryName(r.getCategory().getCategoryName())
-                    .teamId(r.getTeam().getTeamId())
-                    .teamName(r.getTeam().getTeamName())
-                    .finalScore(r.getFinalScore())
-                    .rankPosition(r.getRankPosition())
-                    .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
-                    .isPublished(r.getIsPublished())
-                    .build()
-            ).collect(Collectors.toList()));
+            allComputedRankings.addAll(computeCategoryEventRankings(categoryRef.getCategoryId()));
         }
 
         return allComputedRankings;
@@ -340,13 +328,220 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     @Transactional
-    public void publishEventRankings(UUID eventId, UUID categoryId) {
+    public List<EventRankingDTO> computeCategoryEventRankings(UUID categoryId) {
+        Category categoryRef = entityManager.find(Category.class, categoryId);
+        if (categoryRef == null) throw new IllegalArgumentException("Category ID does not exist: " + categoryId);
+        UUID eventId = categoryRef.getEvent().getEventId();
+        List<EventRanking> rankings = new ArrayList<>();
+        
+        RoundResponse finalRound = null;
+        try {
+            finalRound = roundService.getFinalRound(categoryId);
+        } catch (RuntimeException e) {
+            log.warn("Skipping Event Ranking computation for Category {} because it has no rounds.", categoryRef.getCategoryName());
+            return Collections.emptyList();
+        }
+
+        if (finalRound == null) {
+            log.warn("Skipping Event Ranking computation for Category {} because final round is null.", categoryRef.getCategoryName());
+            return Collections.emptyList();
+        }
+
+        List<UUID> teamIds = entityManager.createQuery(
+                "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
+                .setParameter("categoryId", categoryId)
+                .setParameter("eventId", eventId)
+                .getResultList();
+
+        List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeamsByCategory(categoryId)
+                .stream().map(com.fpt.swp.sealhackathonbe.team.dto.DisqualifiedTeamResponse::getTeamId).collect(Collectors.toList());
+        
         List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
+        if (existingRankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsApproved()))) {
+            throw new IllegalStateException("Cannot compute rankings because they have been approved and locked.");
+        }
+
+        Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
+                .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
+
+        List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
+        
+        if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
+            log.warn("Skipping Event Ranking computation for Category {} because final round rankings have not been computed.", categoryRef.getCategoryName());
+            return Collections.emptyList();
+        }
+
+        List<RoundRanking> allRoundRankings = roundRankingRepository.findByCategory_CategoryId(categoryId);
+
+        // KIỂM TRA TẤT CẢ RANKING CỦA CÁC VÒNG ĐÃ ĐƯỢC DUYỆT CHƯA
+        boolean allRoundsApproved = allRoundRankings.stream()
+                .allMatch(r -> Boolean.TRUE.equals(r.getIsApproved()));
+        if (!allRoundRankings.isEmpty() && !allRoundsApproved) {
+            throw new IllegalStateException("Cannot compute event rankings because not all round rankings in this category have been approved.");
+        }
+
+        allRoundRankings.sort(java.util.Comparator.comparing(r -> r.getRound().getRoundOrder()));
+        
+        Map<UUID, BigDecimal> dScores = new java.util.HashMap<>();
+        Map<UUID, Integer> dRoundOrders = new java.util.HashMap<>();
+        Map<UUID, LocalDateTime> dSubmissionTimes = new java.util.HashMap<>();
+        for (RoundRanking rr : allRoundRankings) {
+            dScores.put(rr.getTeam().getTeamId(), rr.getTotalScore());
+            dRoundOrders.put(rr.getTeam().getTeamId(), rr.getRound().getRoundOrder());
+            dSubmissionTimes.put(rr.getTeam().getTeamId(), rr.getSubmission().getLastUpdatedAt());
+        }
+
+        for (UUID teamId : teamIds) {
+            Teams teamRef = entityManager.getReference(Teams.class, teamId);
+            BigDecimal finalScore = BigDecimal.ZERO;
+
+            if (!disqualifiedTeamIds.contains(teamId)) {
+                finalScore = dScores.getOrDefault(teamId, BigDecimal.ZERO);
+            }
+
+            EventRanking ranking = existingRankingMap.getOrDefault(teamId, new EventRanking());
+            ranking.setEvent(categoryRef.getEvent());
+            ranking.setCategory(categoryRef);
+            ranking.setTeam(teamRef);
+            ranking.setFinalScore(finalScore);
+            ranking.setRankPosition(0);
+            ranking.setIsPublished(false);
+            ranking.setIsApproved(false);
+
+            rankings.add(ranking);
+        }
+
+        rankings.sort((r1, r2) -> {
+            int roundOrder1 = dRoundOrders.getOrDefault(r1.getTeam().getTeamId(), -1);
+            int roundOrder2 = dRoundOrders.getOrDefault(r2.getTeam().getTeamId(), -1);
+            
+            if (disqualifiedTeamIds.contains(r1.getTeam().getTeamId())) roundOrder1 = -2;
+            if (disqualifiedTeamIds.contains(r2.getTeam().getTeamId())) roundOrder2 = -2;
+
+            if (roundOrder1 != roundOrder2) {
+                return Integer.compare(roundOrder2, roundOrder1);
+            }
+            int scoreCompare = r2.getFinalScore().compareTo(r1.getFinalScore());
+            if (scoreCompare != 0) return scoreCompare;
+            
+            LocalDateTime t1 = dSubmissionTimes.get(r1.getTeam().getTeamId());
+            LocalDateTime t2 = dSubmissionTimes.get(r2.getTeam().getTeamId());
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2);
+        });
+
+        int currentRank = 1;
+        int validRankCount = 0;
+        for (int i = 0; i < rankings.size(); i++) {
+            EventRanking currentTeam = rankings.get(i);
+            
+            boolean isCurrentDisqualified = disqualifiedTeamIds.contains(currentTeam.getTeam().getTeamId());
+            boolean hasZeroScore = currentTeam.getFinalScore().compareTo(BigDecimal.ZERO) == 0;
+            
+            if (isCurrentDisqualified || hasZeroScore) {
+                currentTeam.setRankPosition(0);
+                continue;
+            }
+
+            if (validRankCount > 0) {
+                EventRanking prevValidTeam = null;
+                int prevValidRoundOrder = -1;
+                for (int j = i - 1; j >= 0; j--) {
+                    if (rankings.get(j).getRankPosition() > 0) {
+                        prevValidTeam = rankings.get(j);
+                        prevValidRoundOrder = dRoundOrders.getOrDefault(prevValidTeam.getTeam().getTeamId(), -1);
+                        break;
+                    }
+                }
+                
+                if (prevValidTeam != null) {
+                    int currentRoundOrder = dRoundOrders.getOrDefault(currentTeam.getTeam().getTeamId(), -1);
+                    if (currentRoundOrder < prevValidRoundOrder) {
+                        currentRank = validRankCount + 1;
+                    } else if (currentRoundOrder == prevValidRoundOrder) {
+                        int scoreCompare = currentTeam.getFinalScore().compareTo(prevValidTeam.getFinalScore());
+                        if (scoreCompare < 0) {
+                            currentRank = validRankCount + 1;
+                        } else if (scoreCompare == 0) {
+                            LocalDateTime t1 = dSubmissionTimes.get(prevValidTeam.getTeam().getTeamId());
+                            LocalDateTime t2 = dSubmissionTimes.get(currentTeam.getTeam().getTeamId());
+                            if (t1 != null && t2 != null && t2.isAfter(t1)) {
+                                currentRank = validRankCount + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            currentTeam.setRankPosition(currentRank);
+            validRankCount++;
+        }
+
+        List<EventRanking> savedRankings = eventRankingRepository.saveAll(rankings);
+
+        return savedRankings.stream().map(r -> EventRankingDTO.builder()
+                .id(r.getId())
+                .eventId(r.getEvent().getEventId())
+                .categoryId(r.getCategory().getCategoryId())
+                .teamId(r.getTeam().getTeamId())
+                .teamName(r.getTeam().getTeamName())
+                .finalScore(r.getFinalScore())
+                .rankPosition(r.getRankPosition())
+                .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
+                .isPublished(r.getIsPublished())
+                .isApproved(r.getIsApproved())
+                .build()
+        ).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void publishEventRankings(UUID eventId, UUID categoryId) {
+        if (categoryId != null) {
+            publishCategoryEventRankings(categoryId, null);
+            return;
+        }
+        List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventId(eventId);
         if (existingRankings.isEmpty()) {
             throw new IllegalStateException("Event rankings must be computed before publishing.");
         }
         for (EventRanking r : existingRankings) {
             r.setIsPublished(true);
+        }
+        eventRankingRepository.saveAll(existingRankings);
+    }
+
+    @Override
+    @Transactional
+    public void publishCategoryEventRankings(UUID categoryId, UUID adminUserId) {
+        Category categoryRef = entityManager.find(Category.class, categoryId);
+        if (categoryRef == null) throw new IllegalArgumentException("Category ID does not exist: " + categoryId);
+        UUID eventId = categoryRef.getEvent().getEventId();
+        
+        List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
+        if (existingRankings.isEmpty()) {
+            throw new IllegalStateException("Category rankings must be computed before publishing.");
+        }
+        for (EventRanking r : existingRankings) {
+            r.setIsPublished(true);
+        }
+        eventRankingRepository.saveAll(existingRankings);
+    }
+
+    @Override
+    @Transactional
+    public void approveCategoryEventRankings(UUID categoryId, UUID adminUserId) {
+        Category categoryRef = entityManager.find(Category.class, categoryId);
+        if (categoryRef == null) throw new IllegalArgumentException("Category ID does not exist: " + categoryId);
+        UUID eventId = categoryRef.getEvent().getEventId();
+        
+        List<EventRanking> existingRankings = eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId);
+        if (existingRankings.isEmpty()) {
+            throw new IllegalStateException("Category rankings must be computed before approving.");
+        }
+        for (EventRanking r : existingRankings) {
+            r.setIsApproved(true);
         }
         eventRankingRepository.saveAll(existingRankings);
     }
@@ -366,8 +561,11 @@ public class RankingServiceImpl implements RankingService {
                 .rankPosition(r.getRankPosition())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
                 .isPublished(r.getIsPublished())
+                .isApproved(r.getIsApproved())
                 .build()
-        ).collect(Collectors.toList());
+        )
+        .sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE))
+        .collect(Collectors.toList());
     }
 
     @Override
@@ -383,7 +581,11 @@ public class RankingServiceImpl implements RankingService {
         }
         return rankings.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
-                .sorted((r1, r2) -> Integer.compare(r1.getRankPosition(), r2.getRankPosition()))
+                .sorted((r1, r2) -> {
+                    int pos1 = r1.getRankPosition() > 0 ? r1.getRankPosition() : Integer.MAX_VALUE;
+                    int pos2 = r2.getRankPosition() > 0 ? r2.getRankPosition() : Integer.MAX_VALUE;
+                    return Integer.compare(pos1, pos2);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -400,7 +602,7 @@ public class RankingServiceImpl implements RankingService {
         }
         return rankings.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
-                .sorted(Comparator.comparing(RoundRankingDTO::getRankPosition, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE))
                 .collect(Collectors.toList());
     }
 
@@ -422,8 +624,9 @@ public class RankingServiceImpl implements RankingService {
                 .isAdvanced(r.getIsAdvanced())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
                 .isPublished(r.getIsPublished())
+                .isApproved(r.getIsApproved())
                 .build()
-        ).sorted(Comparator.comparingInt(RoundRankingDTO::getRankPosition)).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
     }
 
     @Override
@@ -441,7 +644,23 @@ public class RankingServiceImpl implements RankingService {
                 .rankPosition(r.getRankPosition())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
                 .isPublished(r.getIsPublished())
+                .isApproved(r.getIsApproved())
                 .build()
-        ).sorted(Comparator.comparingInt(EventRankingDTO::getRankPosition)).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
+    }
+
+    private void validateScoresFinalizedForRound(UUID roundId, String action) {
+        List<com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
+        List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
+                .map(com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse::getSubmissionId)
+                .toList();
+
+        boolean allScoresApproved = submissionsList.stream()
+                .filter(sub -> !disqualifiedSubIds.contains(sub.getSubmissionId()))
+                .allMatch(sub -> Boolean.TRUE.equals(sub.getIsScoreApproved()));
+
+        if (!submissionsList.isEmpty() && !allScoresApproved) {
+            throw new IllegalStateException(String.format("Cannot %s rankings because not all valid submissions have their scores finalized and approved.", action));
+        }
     }
 }

@@ -19,8 +19,7 @@ public class ConsultationRequestResponse {
     private String categoryName;
     private UUID teamId;
     private String teamName;
-    private UUID mentorId;
-    private String mentorName;
+
     private UUID createdByUserId;
     private String createdByName;
     private String title;
@@ -42,8 +41,7 @@ public class ConsultationRequestResponse {
                 .categoryName(request.getCategory().getCategoryName())
                 .teamId(request.getTeam().getTeamId())
                 .teamName(request.getTeam().getTeamName())
-                .mentorId(request.getMentor().getUserId())
-                .mentorName(request.getMentor().getFullName())
+
                 .createdByUserId(request.getCreatedBy().getUserId())
                 .createdByName(request.getCreatedBy().getFullName())
                 .title(request.getTitle())

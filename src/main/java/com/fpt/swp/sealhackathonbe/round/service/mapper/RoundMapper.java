@@ -25,6 +25,8 @@ public class RoundMapper {
                 .judgingDeadline(round.getJudgingDeadline())
                 .startDate(round.getStartDate())
                 .endDate(round.getEndDate())
+                .appealStartTime(round.getAppealStartTime())
+                .appealEndTime(round.getAppealEndTime())
                 .advancementTopN(round.getAdvancementTopN())
                 .isCalibrationRound(round.getIsCalibrationRound())
                 .build();

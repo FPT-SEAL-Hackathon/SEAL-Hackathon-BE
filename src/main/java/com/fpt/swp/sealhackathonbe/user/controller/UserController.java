@@ -37,11 +37,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Tag(name = "User Management", description = "Organizer APIs for managing user accounts")
+@Tag(name = "User Management", description = "Admin APIs for managing user accounts")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+// Quan ly nguoi dung la quan tri HE THONG -> chuyen tu ORGANIZER sang ADMIN.
+// Organizer chi van hanh cuoc thi (event/round/cham diem), khong dung vao tai khoan.
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class UserController {
     private static final Map<String, String> SORT_FIELDS = Map.of(
             "fullName", "fullName",
@@ -183,13 +185,27 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Scan accounts with non-standard profile and notify them to update (no blocking)")
+    @PostMapping("/notify-noncompliant")
+    public ResponseEntity<Map<String, Object>> notifyNonCompliant() {
+        int notified = userManagementService.notifyNonCompliantUsers(currentUserId());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "notifiedCount", notified,
+                "message", "Notified " + notified + " account(s) to update their profile."
+        ));
+    }
+
     @Operation(summary = "Deactivate user")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> delete(@PathVariable UUID userId) {
-        userManagementService.delete(userId, currentUserId());
+        com.fpt.swp.sealhackathonbe.user.dto.DeactivateUserResult result =
+                userManagementService.delete(userId, currentUserId());
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "User deactivated successfully"
+                "message", "User deactivated successfully",
+                "transferredTeams", result.getTransferredTeams(),
+                "warnings", result.getWarnings()
         ));
     }
 

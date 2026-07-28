@@ -197,10 +197,15 @@ public class UserService {
                 .fptStudentCode(user.getFptStudentCode())
                 .externalStudentCode(user.getExternalStudentCode())
                 .universityName(user.getUniversityName())
+                .bio(user.getBio())
+                .github(user.getGithub())
+                .portfolio(user.getPortfolio())
                 .phone(user.getPhone())
                 .accountStatus(toApiName(accountStatusName))
                 .accountStatusName(accountStatusName)
                 .createdAt(user.getCreatedAt())
+                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
+                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
                 .build();
     }
 

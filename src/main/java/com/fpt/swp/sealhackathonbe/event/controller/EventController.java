@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,7 +22,7 @@ public class EventController {
 
     private final EventService eventService;
 
-    @GetMapping("/event/{id}")
+    @GetMapping("/event/getById/{id}")
     public ResponseEntity<EventResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.getById(id));
     }
@@ -57,4 +58,23 @@ public class EventController {
         eventService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    // CHI DOC: Admin can danh sach event de chon khi xem bao cao/analytics.
+    // Cac thao tac tao/sua/xoa/publish event van la ORGANIZER-only.
+    // Path "/events/organizer" (SO NHIEU) lay tu dev - dung voi cai FE dang goi.
+    @GetMapping("/event/organizer")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<List<EventResponse>> getAllEventsForOrganizer() {
+        return ResponseEntity.ok(eventService.getAllEventsForOrganizer());
+    }
+
+    @PostMapping("/event/publish/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<EventResponse> publishEvent(@PathVariable UUID id) {
+        return ResponseEntity.ok(eventService.publishEvent(id));
+    }
+
+
+
+
 }

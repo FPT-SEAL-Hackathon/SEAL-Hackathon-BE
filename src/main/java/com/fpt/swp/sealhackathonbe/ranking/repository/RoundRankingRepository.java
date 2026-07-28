@@ -15,4 +15,6 @@ public interface RoundRankingRepository extends JpaRepository<RoundRanking, UUID
     Optional<RoundRanking> findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(UUID roundId, UUID categoryId, UUID teamId);
     List<RoundRanking> findByRoundRoundIdAndTeamTeamIdIn(UUID roundId, List<UUID> teamIds);
     List<RoundRanking> findByRoundRoundIdAndCategoryCategoryIdOrderByRankPositionAsc(UUID roundId, UUID categoryId, Pageable pageable);
+    List<RoundRanking> findByCategory_CategoryId(UUID categoryId);
+    boolean existsByRoundRoundId(UUID roundId);
 }

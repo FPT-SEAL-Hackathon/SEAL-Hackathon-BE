@@ -31,6 +31,9 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
+import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
+import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +46,17 @@ public class JudgingServiceImpl implements JudgingService {
     private final AuthenticationServiceImpl authenticationServiceImpl;
     private final RoundJudgeService roundJudgeService;
     private final RoundJudgeRepository roundJudgeRepository;
+    private final TeamMembersRepository teamMembersRepository;
+    private final RoundRankingRepository roundRankingRepository;
+    private final com.fpt.swp.sealhackathonbe.round.repository.RoundRepository roundRepository;
+
+    // Event context của một submission suy từ ROUND (round -> category -> event) để hoạt động
+    // cả với sample submission (calibration) vốn có TeamID = null (không lấy được qua team).
+    private Event resolveEvent(Submissions submission) {
+        return roundRepository.findById(submission.getRoundId())
+                .map(r -> r.getCategory() != null ? r.getCategory().getEvent() : null)
+                .orElse(null);
+    }
 
 
     @Override
@@ -76,17 +90,33 @@ public class JudgingServiceImpl implements JudgingService {
         RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
                 .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
 
-        // 4. Check Judging Deadline
+        // 4. Check Judging Deadline and 3-layer tight validation
         Round round = judge.getRound();
-        if (round != null && round.getJudgingDeadline() != null) {
-            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+        if (round != null) {
+            LocalDateTime now = LocalDateTime.now();
+            
+            // Layer 1: Time bounds
+            if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
+                throw new IllegalStateException("The judging period for this round has not started yet.");
+            }
+            if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
                 throw new IllegalStateException("The judging deadline for this round has passed.");
             }
+            
+            // Layer 2: Round Status
+            if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
+                throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
+            }
+        }
+        
+        // Layer 3: Submission Score Finalize check
+        if (Boolean.TRUE.equals(submission.getIsScoreApproved())) {
+            throw new IllegalStateException("The score for this submission has been finalized by the Organizer and cannot be modified.");
         }
 
         // 5. Extract Team and Event from the submission hierarchy
         Teams team = submission.getTeam();
-        Event event = (team != null) ? team.getEvent() : null;
+        Event event = resolveEvent(submission);
         if (event == null) {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
@@ -190,12 +220,28 @@ public class JudgingServiceImpl implements JudgingService {
 
             RoundCriterion criterion = existingJudging.getRoundCriterion();
 
-            // 4. Check Judging Deadline
+            // 4. Check Judging Deadline and 3-layer tight validation
             Round round = existingJudging.getRoundJudge().getRound();
-            if (round != null && round.getJudgingDeadline() != null) {
-                if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+            if (round != null) {
+                LocalDateTime now = LocalDateTime.now();
+                
+                // Layer 1: Time bounds
+                if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
+                    throw new IllegalStateException("The judging period for this round has not started yet.");
+                }
+                if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
                     throw new IllegalStateException("The judging deadline for this round has passed.");
                 }
+                
+                // Layer 2: Round Status
+                if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
+                    throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
+                }
+            }
+            
+            // Layer 3: Submission Score Finalize check
+            if (Boolean.TRUE.equals(existingJudging.getSubmission().getIsScoreApproved())) {
+                throw new IllegalStateException("The score for this submission has been finalized by the Organizer and cannot be modified.");
             }
 
             // 5. Validate that the score value does not exceed the maximum allowed value
@@ -230,7 +276,7 @@ public class JudgingServiceImpl implements JudgingService {
             // 6. Extract Team and Event
             Submissions submission = existingJudging.getSubmission();
             Teams team = submission.getTeam();
-            Event event = (team != null) ? team.getEvent() : null;
+            Event event = resolveEvent(submission);
 
             if (event == null) {
                 throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
@@ -313,6 +359,65 @@ public class JudgingServiceImpl implements JudgingService {
                 .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
                 .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId()));
     }
+    @Override
+    @Transactional(readOnly = true)
+    public List<JudgingDTO> getPublishedScoresBySubmission(UUID submissionId) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Actor not found from token");
+        }
+
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+
+        // Sample submission (calibration) không thuộc team nào → không có bảng xếp hạng công bố.
+        if (submission.getTeam() == null) {
+            throw new com.fpt.swp.sealhackathonbe.core.exception.BadRequestException(
+                    "Published scores are not available for sample (calibration) submissions.");
+        }
+
+        UUID teamId = submission.getTeam().getTeamId();
+        UUID roundId = submission.getRoundId();
+        UUID categoryId = submission.getTeam().getCategoryId();
+
+        // 1. Verify user is in the team
+        boolean isTeamMember = teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, actor.getUserId()).isPresent();
+        if (!isTeamMember) {
+            throw new org.springframework.security.access.AccessDeniedException("You are not a member of this team.");
+        }
+
+        // 2. Check if the RoundRanking for this team and round is published
+        Optional<RoundRanking> roundRankingOpt = roundRankingRepository
+                .findByRound_RoundIdAndCategory_CategoryIdAndTeam_TeamId(roundId, categoryId, teamId);
+
+        if (roundRankingOpt.isEmpty() || !Boolean.TRUE.equals(roundRankingOpt.get().getIsPublished())) {
+            throw new org.springframework.security.access.AccessDeniedException("Results are not published yet.");
+        }
+
+        // 3. Fetch scores and anonymize judges
+        List<Judging> judgings = judgingRepository.findBySubmission_SubmissionIdIn(Collections.singletonList(submissionId));
+        
+        // Group by judge ID to assign consistent "Judge 1", "Judge 2" numbers
+        Map<UUID, String> judgeAnonymizationMap = new HashMap<>();
+        int judgeCounter = 1;
+        
+        List<JudgingDTO> results = new ArrayList<>();
+        for (Judging j : judgings) {
+            if (!Boolean.TRUE.equals(j.getIsActive())) continue;
+            
+            UUID judgeUserId = j.getRoundJudge().getJudge().getUserId();
+            if (!judgeAnonymizationMap.containsKey(judgeUserId)) {
+                judgeAnonymizationMap.put(judgeUserId, "Judge " + judgeCounter++);
+            }
+            
+            JudgingDTO dto = convertToDTO(j);
+            dto.setJudgeName(judgeAnonymizationMap.get(judgeUserId)); // Override with anonymous name
+            results.add(dto);
+        }
+
+        return results;
+    }
+
     private JudgingDTO convertToDTO(Judging judging) {
         return JudgingDTO.builder()
                 .id(judging.getId())
@@ -363,7 +468,7 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
 
         Teams team = submission.getTeam();
-        Event event = (team != null) ? team.getEvent() : null;
+        Event event = resolveEvent(submission);
 
         // Fetch active judging records
         List<Judging> activeJudgings = judgingRepository.findBySubmission_SubmissionId(submissionId)
@@ -394,5 +499,65 @@ public class JudgingServiceImpl implements JudgingService {
         submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
         submission.setIsScoreApproved(false);
         submissionRepository.save(submission);
+    }
+
+    @Override
+    @Transactional
+    public void deleteJudging(UUID submissionId, String reason) {
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found with ID: " + submissionId));
+
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        RoundJudge judge = roundJudgeRepository.findByJudge_UserIdAndRound_RoundId(actor.getUserId(), submission.getRoundId())
+                .orElseThrow(() -> new EntityNotFoundException("RoundJudge entity not found for this round and user."));
+
+        Round round = judge.getRound();
+        if (round != null && round.getJudgingDeadline() != null) {
+            if (LocalDateTime.now().isAfter(round.getJudgingDeadline())) {
+                throw new IllegalStateException("The judging deadline for this round has passed.");
+            }
+        }
+
+        Teams team = submission.getTeam();
+        Event event = resolveEvent(submission);
+        if (event == null) {
+            throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
+        }
+
+        List<Judging> existingScores = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, actor.getUserId());
+        List<Judging> scoresToDelete = existingScores.stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                .collect(Collectors.toList());
+
+        if (scoresToDelete.isEmpty()) {
+            throw new IllegalStateException("No active scores found for this submission to delete.");
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+        for (Judging judging : scoresToDelete) {
+            judging.setIsActive(false);
+
+            String oldComment = judging.getComment() != null ? judging.getComment().replace("\"", "\\\"") : "";
+            String oldValue = String.format("{\"score\":%s,\"comment\":\"%s\"}", judging.getScoreValue(), oldComment);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setScore(judging);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setOldValue(oldValue);
+            auditLog.setNewValue(null);
+            auditLog.setReason(reason != null && !reason.trim().isEmpty() ? reason : "Judge removed their scores");
+            auditLogs.add(auditLog);
+        }
+
+        judgingRepository.saveAll(scoresToDelete);
+        evaluationAuditLogRepository.saveAll(auditLogs);
     }
 }

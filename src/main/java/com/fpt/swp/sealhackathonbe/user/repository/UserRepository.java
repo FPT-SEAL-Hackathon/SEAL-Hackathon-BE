@@ -55,6 +55,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"userType", "accountStatus"})
     List<User> findAllByEmailIgnoreCase(String email);
 
+    // Scan chuẩn hóa hồ sơ: lấy mọi account còn sống để lọc ra account chưa chuẩn.
+    List<User> findAllByIsDeletedFalse();
+
     // Hard delete user: gỡ tham chiếu "người duyệt" trên các user khác
     // (ApprovedByUserID nullable) trước khi xóa user.
     @Modifying
@@ -251,4 +254,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("joinedFrom") LocalDateTime joinedFrom,
             @Param("joinedTo") LocalDateTime joinedTo
     );
+
+    /**
+     * Dem so tai khoan con dung duoc theo ten role (chua xoa + trang thai Active).
+     * Dung de chan ha cap/khoa tai khoan ADMIN cuoi cung -> tranh khoa chet he thong
+     * (khong con ai vao duoc User Management de cap lai quyen).
+     */
+    @Query("""
+            SELECT COUNT(u) FROM User u
+            WHERE LOWER(u.userType.typeName) = LOWER(:roleName)
+              AND (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND LOWER(u.accountStatus.statusName) = 'active'
+            """)
+    long countActiveByRoleName(@Param("roleName") String roleName);
 }

@@ -103,6 +103,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                         auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                             .requestMatchers(PUBLIC_WHITELIST).permitAll()
+                            // /event/organizer phải authenticated trước, tránh bị các rule khác permit qua
+                            .requestMatchers(HttpMethod.GET, "/api/v1/event/organizer").authenticated()
                             .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/*").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/total-prize", "/api/v1/awards/events/*/total-prize").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/awards/events/*", "/api/v1/categories/categories/*").permitAll();
