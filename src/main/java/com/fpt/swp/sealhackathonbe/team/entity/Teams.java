@@ -46,7 +46,7 @@ public class Teams {
   @Column(name = "TeamStatusID", nullable = false)
   private UUID teamStatusId;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "TeamStatusID", nullable = false, insertable = false, updatable = false)
   private TeamStatus teamStatus;
 
