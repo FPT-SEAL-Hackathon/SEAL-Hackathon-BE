@@ -20,6 +20,7 @@ import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.core.exception.EmailNotVerifiedException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
+import com.fpt.swp.sealhackathonbe.settings.service.FptStudentCodePrefixService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
@@ -99,6 +100,9 @@ public class UserService {
 
     @Autowired
     private AccountLinkService accountLinkService;
+
+    @Autowired
+    private FptStudentCodePrefixService fptStudentCodePrefixService;
 
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
@@ -215,8 +219,8 @@ public class UserService {
                 .accountStatus(toApiName(accountStatusName))
                 .accountStatusName(accountStatusName)
                 .createdAt(user.getCreatedAt())
-                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
-                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
+                .profileCompliant(fptStudentCodePrefixService.profileIssues(user).isEmpty())
+                .profileIssues(fptStudentCodePrefixService.profileIssues(user))
                 .build();
     }
 
@@ -386,7 +390,11 @@ public class UserService {
         user.setCreatedAt(LocalDateTime.now());
 
         if (userType.getUserTypeId().equals(FPT_STUDENT_ID)) {
-            user.setFptStudentCode(request.getStudentCode());
+            if (!fptStudentCodePrefixService.isValidActiveFptStudentCode(request.getStudentCode())) {
+                throw new BadRequestException(
+                        com.fpt.swp.sealhackathonbe.settings.service.impl.FptStudentCodePrefixServiceImpl.MSG_FPT_CODE);
+            }
+            user.setFptStudentCode(fptStudentCodePrefixService.normalizeFptStudentCode(request.getStudentCode()));
         } else {
             user.setExternalStudentCode(request.getStudentCode());
         }

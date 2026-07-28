@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * Quy tắc chuẩn hóa hồ sơ dùng chung cho mọi luồng validate + phát hiện account chưa chuẩn.
- * - FPT student code: SE/SS/SA + 6 số (vd SE123456).
+ * - FPT student code: 2 active FPT major-prefix letters + 6 digits (vd SE123456).
  * - External student code: linh hoạt (trường ngoài đa dạng) — alphanumeric + . _ - , dài 3–50.
  * - SĐT Việt Nam: 0 hoặc +84, đầu số 3/5/7/8/9, tổng 10 số (sau khi bỏ khoảng trắng/ký tự phân tách).
  * Dữ liệu cũ KHÔNG bị chặn tự động; chỉ dùng để phát hiện + nhắc, và enforce khi user SỬA field.
@@ -17,7 +17,7 @@ public final class ProfileValidation {
 
     private ProfileValidation() {}
 
-    private static final Pattern FPT_CODE = Pattern.compile("^(SE|SS|SA)\\d{6}$");
+    private static final Pattern FPT_CODE = Pattern.compile("^[A-Z]{2}\\d{6}$");
     private static final Pattern EXTERNAL_CODE = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._-]{2,49}$");
     private static final Pattern VN_PHONE = Pattern.compile("^(?:\\+84|0)(?:3|5|7|8|9)\\d{8}$");
 
@@ -27,7 +27,7 @@ public final class ProfileValidation {
     // Cac message nay di THANG ra UI: profileIssues(User) duoc FE render nguyen van trong
     // banner cua MyProfileSection. Phai giu DONG BO tung chu voi
     // SEAL-Hackathon-FE/src/features/users/utils/profileValidation.ts
-    public static final String MSG_FPT_CODE = "FPT student code must be SE/SS/SA followed by 6 digits (e.g. SE123456).";
+    public static final String MSG_FPT_CODE = "FPT student code must start with an active FPT major prefix and be followed by 6 digits (e.g. SE123456).";
     public static final String MSG_EXTERNAL_CODE = "External student code is invalid (3–50 letters/digits, dot, underscore or hyphen).";
     public static final String MSG_UNIVERSITY = "External students must provide their university name.";
     public static final String MSG_PHONE = "Enter a valid Vietnamese mobile number (e.g. 0912345678).";
