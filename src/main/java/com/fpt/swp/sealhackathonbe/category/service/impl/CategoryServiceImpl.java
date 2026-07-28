@@ -13,6 +13,7 @@ import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +27,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final RoundRepository roundRepository;
 
     @Override
+    @Transactional
     public CategoryResponse create(UUID eventId, CreateCategoryRequest request) {
         Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
@@ -51,6 +53,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryResponse> getByEvent(UUID eventId) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
@@ -62,6 +65,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CategoryResponse getById(UUID categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
@@ -69,6 +73,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional
     public CategoryResponse update(UUID categoryId, UpdateCategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
@@ -90,6 +95,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
