@@ -98,12 +98,146 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RepositoryIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleRepositoryIntegrationException(RepositoryIntegrationException ex) {
+        HttpStatus status;
+        switch (ex.getErrorCode()) {
+            case INVALID_GITHUB_REPOSITORY_URL:
+                status = HttpStatus.BAD_REQUEST;
+                break;
+            case INVALID_GITHUB_TOKEN:
+                status = HttpStatus.UNAUTHORIZED;
+                break;
+            case GITHUB_REPOSITORY_FORBIDDEN:
+            case EVENT_REPOSITORY_ACCESS_DENIED:
+                status = HttpStatus.FORBIDDEN;
+                break;
+            case GITHUB_REPOSITORY_NOT_FOUND:
+            case REPOSITORY_INTEGRATION_NOT_FOUND:
+            case SUBMISSION_NOT_FOUND:
+            case SUBMISSION_REPOSITORY_NOT_FOUND:
+                status = HttpStatus.NOT_FOUND;
+                break;
+            case SUBMISSION_REPOSITORY_ACCESS_DENIED:
+            case SUBMISSION_REPOSITORY_MODIFICATION_NOT_ALLOWED:
+                status = HttpStatus.FORBIDDEN;
+                break;
+            case REPOSITORY_ALREADY_CONNECTED:
+                status = HttpStatus.CONFLICT;
+                break;
+            case REPOSITORY_SYNC_ALREADY_RUNNING:
+                status = HttpStatus.CONFLICT;
+                break;
+            case GITHUB_RATE_LIMITED:
+                status = HttpStatus.TOO_MANY_REQUESTS;
+                break;
+            case GITHUB_UPSTREAM_ERROR:
+                status = HttpStatus.BAD_GATEWAY;
+                break;
+            case GITHUB_TIMEOUT:
+                status = HttpStatus.GATEWAY_TIMEOUT;
+                break;
+            case TOKEN_ENCRYPTION_CONFIGURATION_ERROR:
+            default:
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+                break;
+        }
+
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(status);
+        if (ex.getRetryAfter() != null) {
+            builder.header("Retry-After", ex.getRetryAfter());
+        }
+
+        return builder.body(ErrorResponse.builder()
+                .status(status.value())
+                .error(ex.getErrorCode().name())
+                .message(ex.getMessage() != null ? ex.getMessage() : "Repository integration error")
+                .path(currentPath())
+                .build());
+    }
+
+    /**
+     * Loi tu GitHub metadata client (validate/preview, resync). Truoc day khong co handler
+     * nen moi loi (repo private, 404, rate limit...) deu roi xuong handler generic thanh 500.
+     * Message cua RepositoryMetadataException da la thong tin an toan (khong chua raw
+     * response GitHub hay token) nen tra truc tiep cho FE.
+     */
+    @ExceptionHandler(com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataException.class)
+    public ResponseEntity<ErrorResponse> handleRepositoryMetadataException(
+            com.fpt.swp.sealhackathonbe.integration.repository.exception.RepositoryMetadataException ex) {
+        HttpStatus status;
+        switch (ex.getErrorCode()) {
+            case INVALID_GITHUB_REPOSITORY_URL:
+                status = HttpStatus.BAD_REQUEST;
+                break;
+            case GITHUB_REPOSITORY_NOT_FOUND:
+                status = HttpStatus.NOT_FOUND;
+                break;
+            case GITHUB_REPOSITORY_INACCESSIBLE:
+            case PRIVATE_REPOSITORY_NOT_SUPPORTED:
+                // Nghiep vu MVP chi ho tro repo public: private/inaccessible tra 422 de FE
+                // phan biet voi loi phan quyen noi bo (403) cua chinh he thong.
+                status = HttpStatus.UNPROCESSABLE_ENTITY;
+                break;
+            case GITHUB_RATE_LIMITED:
+                status = HttpStatus.TOO_MANY_REQUESTS;
+                break;
+            case GITHUB_TIMEOUT:
+                status = HttpStatus.GATEWAY_TIMEOUT;
+                break;
+            case GITHUB_UPSTREAM_ERROR:
+            case GITHUB_INVALID_RESPONSE:
+            default:
+                status = HttpStatus.BAD_GATEWAY;
+                break;
+        }
+        return build(
+                status,
+                ex.getErrorCode().name(),
+                ex.getMessage() != null ? ex.getMessage() : "Repository metadata error",
+                null
+        );
+    }
+
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<ErrorResponse> handleBadRequestExceptions(Exception ex) {
         return build(
                 HttpStatus.BAD_REQUEST,
                 "BAD_REQUEST",
                 ex.getMessage() != null ? ex.getMessage() : "Bad Request",
+                null
+        );
+    }
+
+    // Email đã thuộc user hiện có nhưng thiếu phương thức đăng nhập tương ứng:
+    // KHÔNG tạo user thứ hai — trả linkingToken để client chạy luồng xác minh
+    // (OTP email / mật khẩu) rồi liên kết vào đúng user đó.
+    @ExceptionHandler(AccountLinkRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleAccountLinkRequired(AccountLinkRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("ACCOUNT_LINK_REQUIRED")
+                .message(ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "This email already belongs to an existing account. Verification is required to link sign-in methods")
+                .path(currentPath())
+                .details(Map.of(
+                        "linkingToken", ex.getLinkingToken(),
+                        "email", ex.getEmail()
+                ))
+                .build());
+    }
+
+    // Tài khoản đã bị xóa cứng (còn tombstone): báo user tạo tài khoản mới
+    // thay vì trả "Invalid email or password" gây khó hiểu.
+    @ExceptionHandler(AccountRemovedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountRemoved(AccountRemovedException ex) {
+        return build(
+                HttpStatus.GONE,
+                "ACCOUNT_REMOVED",
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "This account has been removed. Please create a new account",
                 null
         );
     }
@@ -172,6 +306,9 @@ public class GlobalExceptionHandler {
         if (isDuplicateUserEmailViolation(ex)) {
             return build(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", "Email already exists.", null);
         }
+        if (isDuplicateTeamNameViolation(ex)) {
+            return build(HttpStatus.CONFLICT, "REGISTRATION_CONFLICT", "Team name already exists in this event", null);
+        }
 
         return build(HttpStatus.BAD_REQUEST, "DATA_INTEGRITY_VIOLATION", "Request violates data constraints", null);
     }
@@ -179,6 +316,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage(), null);
+    }
+
+    // Hai request cùng sửa/xóa một bản ghi (ví dụ 2 organizer hard-delete cùng
+    // email): trả 409 để client retry, thay vì 500 do StaleObjectState.
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            org.springframework.dao.OptimisticLockingFailureException ex) {
+        return build(
+                HttpStatus.CONFLICT,
+                "CONCURRENT_MODIFICATION",
+                "This record was changed by another request. Please refresh and try again.",
+                null
+        );
     }
 
     @ExceptionHandler(Exception.class)
@@ -262,5 +412,21 @@ public class GlobalExceptionHandler {
         String normalized = message.toLowerCase();
         return normalized.contains("users")
                 && (normalized.contains("email") || normalized.contains("uq_users_email"));
+    }
+
+    private boolean isDuplicateTeamNameViolation(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+
+        if (message == null) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase();
+        return normalized.contains("uq_teams_event_name")
+                || (normalized.contains("teams")
+                && normalized.contains("eventid")
+                && normalized.contains("teamname"));
     }
 }

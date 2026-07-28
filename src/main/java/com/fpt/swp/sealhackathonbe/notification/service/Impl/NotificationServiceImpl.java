@@ -1,8 +1,10 @@
 package com.fpt.swp.sealhackathonbe.notification.service.Impl;
 
+import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.notification.Repository.NotificationRepository;
+import jakarta.persistence.EntityNotFoundException;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationPushEvent;
 import com.fpt.swp.sealhackathonbe.notification.dto.NotificationResponse;
 import com.fpt.swp.sealhackathonbe.notification.entity.Notification;
@@ -22,7 +24,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+/**
+ * Service xử lý logic hệ thống thông báo (Notification).
+ * 
+ * Tính năng & Tối ưu:
+ * - Realtime Push: Tích hợp với Server-Sent Events (SSE) để push thông báo realtime ngay khi được tạo.
+ * - Aggregate API: Gộp chung việc lấy danh sách (getNotifications) và số lượng chưa đọc (unreadCount)
+ *   vào trong một response, loại bỏ 1 call API thừa (N+1 call) từ phía client.
+ * - Fallback Email: Hỗ trợ tự động fallback sang gửi mail nếu người dùng offline (tùy cấu hình).
+ */
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
@@ -52,7 +62,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public NotificationResponse sendNotification(
             UUID recipientUserId,
             UUID sentByUserId,
@@ -203,31 +213,31 @@ public class NotificationServiceImpl implements NotificationService {
 
     private void validateContent(String title, String body) {
         if (title == null || title.trim().isEmpty()) {
-            throw new RuntimeException("Notification title is required");
+            throw new BadRequestException("Notification title is required");
         }
         if (title.trim().length() > 300) {
-            throw new RuntimeException("Notification title must not exceed 300 characters");
+            throw new BadRequestException("Notification title must not exceed 300 characters");
         }
         if (body == null || body.trim().isEmpty()) {
-            throw new RuntimeException("Notification body is required");
+            throw new BadRequestException("Notification body is required");
         }
     }
 
     private User getUser(UUID userId, String errorMessage) {
         if (userId == null) {
-            throw new RuntimeException(errorMessage);
+            throw new BadRequestException(errorMessage);
         }
-        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException(errorMessage));
+        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException(errorMessage));
     }
 
     private User getUserByEmail(String email, String errorMessage) {
         if (email == null || email.trim().isEmpty()) {
-            throw new RuntimeException(errorMessage);
+            throw new BadRequestException(errorMessage);
         }
 
         User user = userRepository.findByEmail(email.trim());
         if (user == null) {
-            throw new RuntimeException(errorMessage);
+            throw new EntityNotFoundException(errorMessage);
         }
         return user;
     }
@@ -236,17 +246,17 @@ public class NotificationServiceImpl implements NotificationService {
         if (eventId == null) {
             return null;
         }
-        return eventRepository.findById(eventId).orElseThrow(() -> new RuntimeException("Event not found"));
+        return eventRepository.findById(eventId).orElseThrow(() -> new EntityNotFoundException("Event not found"));
     }
 
     private Notification getUserNotification(UUID notificationId, UUID userId) {
         if (notificationId == null) {
-            throw new RuntimeException("Notification id is required");
+            throw new BadRequestException("Notification id is required");
         }
 
         User user = getUser(userId, "User not found");
         return notificationRepository.findByIdAndRecipientUserID(notificationId, user)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Notification not found"));
     }
 
     private NotificationResponse dispatchAndConvert(Notification notification) {

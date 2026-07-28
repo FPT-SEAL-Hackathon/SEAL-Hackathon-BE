@@ -64,6 +64,15 @@ public class User {
     @Column(name = "UniversityName", length = 200)
     private String universityName;
 
+    @Column(name = "Bio", length = 1000)
+    private String bio;
+
+    @Column(name = "Github", length = 500)
+    private String github;
+
+    @Column(name = "Portfolio", length = 500)
+    private String portfolio;
+
     @CreationTimestamp
     @Column(name = "CreatedAt", updatable = false)
     private LocalDateTime createdAt;

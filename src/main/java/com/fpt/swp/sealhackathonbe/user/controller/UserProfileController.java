@@ -60,6 +60,16 @@ public class UserProfileController {
         );
     }
 
+    @Operation(summary = "Update profile (for existing user)")
+    @PutMapping("/profile")
+    public ResponseEntity<UserResponse> updateProfile(
+            @Valid @RequestBody com.fpt.swp.sealhackathonbe.user.dto.UpdateProfileRequest request
+    ) {
+        return ResponseEntity.ok(
+                userProfileService.updateProfile(authenticationService.getCurrentUser(), request)
+        );
+    }
+
     @Operation(summary = "List local accounts that can be linked (matching email)")
     @GetMapping("/link-candidates")
     public ResponseEntity<List<LinkCandidateResponse>> linkCandidates() {

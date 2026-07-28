@@ -16,4 +16,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     Optional<Event> findByEventIdAndIsDeletedFalseAndEventStatusEventStatusNameIn(UUID eventId, List<String> statusNames);
     boolean existsByEventNameIgnoreCaseAndIsDeletedFalse(String eventName);
     boolean existsByEventNameIgnoreCaseAndIsDeletedFalseAndEventIdNot(String eventName, UUID eventId);
+
+    // Hard delete user: user còn là người tạo event (CreatedByID NOT NULL) → chặn xóa.
+    boolean existsByCreatedBy_UserId(UUID userId);
+
+    // Repository metadata: quyền Organizer trên submission repository được scope theo
+    // đúng event chứa submission (creator-only), không phải "đã từng tạo event bất kỳ".
+    boolean existsByEventIdAndCreatedBy_UserId(UUID eventId, UUID userId);
 }

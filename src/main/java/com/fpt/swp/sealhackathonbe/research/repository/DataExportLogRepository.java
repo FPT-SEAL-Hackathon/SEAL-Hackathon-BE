@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface DataExportLogRepository extends JpaRepository<DataExportLog, UUID> {
     List<DataExportLog> findByEvent_EventIdOrderByExportedAtDesc(UUID eventId);
+
+    // Hard delete user: user còn log export dữ liệu → chặn xóa.
+    boolean existsByExportedBy_UserId(UUID userId);
 }

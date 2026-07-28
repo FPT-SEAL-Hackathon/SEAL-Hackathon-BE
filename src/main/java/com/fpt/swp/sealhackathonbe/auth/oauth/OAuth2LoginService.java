@@ -22,13 +22,35 @@ import java.util.UUID;
 /**
  * Đăng nhập/tạo tài khoản qua OAuth.
  * Định danh OAuth = (provider, providerUserId). Email trùng với tài khoản
- * local sẽ KHÔNG được auto-merge — user tự liên kết sau khi xác minh mật khẩu.
+ * hiện có sẽ KHÔNG được auto-merge và cũng KHÔNG tạo user thứ hai —
+ * luồng trả về LINK_REQUIRED để user xác minh quyền sở hữu
+ * (mật khẩu local hoặc OTP email) rồi mới gắn định danh Google vào user đó.
  */
 @Service
 public class OAuth2LoginService {
 
+    /**
+     * Kết quả xử lý đăng nhập OAuth:
+     * - user != null  → đăng nhập/tạo mới thành công như bình thường.
+     * - linkTarget != null → email đã thuộc một user hiện có; KHÔNG tạo user mới,
+     *   caller phải phát linkingToken (ACCOUNT_LINK_REQUIRED).
+     */
+    public record OAuthLoginOutcome(User user, User linkTarget) {
+        public static OAuthLoginOutcome success(User user) {
+            return new OAuthLoginOutcome(user, null);
+        }
+
+        public static OAuthLoginOutcome linkRequired(User target) {
+            return new OAuthLoginOutcome(null, target);
+        }
+
+        public boolean isLinkRequired() {
+            return linkTarget != null;
+        }
+    }
+
     private static final UUID EXTERNAL_STUDENT_ID =
-            UserRoleConstants.ROLE_USER;
+            UserRoleConstants.ROLE_EXTERNAL_STUDENT;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
@@ -50,11 +72,15 @@ public class OAuth2LoginService {
     }
 
     /**
-     * Tìm user theo định danh OAuth; nếu chưa có thì tạo user TEMPORARY mới.
-     * Không bao giờ gộp vào tài khoản local chỉ vì trùng email.
+     * Tìm user theo định danh OAuth (provider, sub).
+     * - Đã có định danh → đăng nhập user tương ứng.
+     * - Chưa có định danh nhưng email (đã được Google xác minh) trùng user hiện có
+     *   → KHÔNG tạo user mới, trả về linkRequired để phát linkingToken.
+     * - Email hoàn toàn mới → tạo user TEMPORARY như trước.
+     * Không bao giờ auto-merge chỉ vì trùng email.
      */
     @Transactional
-    public User loginOrCreate(OAuthUserInfo info) {
+    public OAuthLoginOutcome loginOrCreate(OAuthUserInfo info) {
         if (info.getProviderUserId() == null || info.getProviderUserId().isBlank()) {
             throw new IllegalStateException("OAuth provider did not return a user id");
         }
@@ -70,7 +96,17 @@ public class OAuth2LoginService {
             existing.setAvatarUrl(info.getAvatarUrl());
             existing.setUpdatedAt(LocalDateTime.now());
             userOAuthAccountRepository.save(existing);
-            return existing.getUser();
+            return OAuthLoginOutcome.success(existing.getUser());
+        }
+
+        // Google sub mới: nếu email (Google đã xác minh) trùng user hiện có
+        // thì yêu cầu liên kết thay vì tạo bản ghi Users thứ hai.
+        if (Boolean.TRUE.equals(info.getEmailVerified())
+                && info.getEmail() != null && !info.getEmail().isBlank()) {
+            User sameEmailUser = userRepository.findByEmail(info.getEmail().trim());
+            if (sameEmailUser != null) {
+                return OAuthLoginOutcome.linkRequired(sameEmailUser);
+            }
         }
 
         User user = createTemporaryOAuthUser(info);
@@ -90,7 +126,7 @@ public class OAuth2LoginService {
                 .build();
         userOAuthAccountRepository.save(oauthAccount);
 
-        return user;
+        return OAuthLoginOutcome.success(user);
     }
 
     /**

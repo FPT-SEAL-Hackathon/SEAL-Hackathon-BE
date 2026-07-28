@@ -1,46 +1,66 @@
 package com.fpt.swp.sealhackathonbe.team.repository;
 
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> {
 
-   // Tim membership active cua user, dung cho chuc nang xem team hien tai va roi team.
-   Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
+        // Tim membership active cua user, dung cho chuc nang xem team hien tai va roi
+        // team.
+        Optional<TeamMembers> findByUserIdAndActiveTrue(UUID userId);
 
-   Optional<TeamMembers> findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(UUID userId);
+        Optional<TeamMembers> findFirstByUserIdAndActiveTrueOrderByJoinedAtDesc(UUID userId);
 
-   // Xac nhan user dang la member active cua dung team truoc khi tra thong tin chi tiet.
-   Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
+        // Xac nhan user dang la member active cua dung team truoc khi tra thong tin chi
+        // tiet.
+        Optional<TeamMembers> findByTeamIdAndUserIdAndActiveTrue(UUID teamId, UUID userId);
 
-   // Tim ca membership da inactive de co the tai kich hoat khi user duoc approve lai.
-   Optional<TeamMembers> findByTeamIdAndUserId(UUID teamId, UUID userId);
+        // Tim ca membership da inactive de co the tai kich hoat khi user duoc approve
+        // lai.
+        Optional<TeamMembers> findByTeamIdAndUserId(UUID teamId, UUID userId);
 
-   // Lay cac member con hoat dong de tao TeamResponse.
-   List<TeamMembers> findByTeamIdAndActiveTrue(UUID teamId);
+        // Lay cac member con hoat dong de tao TeamResponse.
+        List<TeamMembers> findByTeamIdAndActiveTrue(UUID teamId);
 
-   // Thu tu xac dinh de chon leader ke nhiem khi leader hien tai roi team.
-   List<TeamMembers> findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(UUID teamId);
+        // Lay tat ca member ke ca inactive de hien thi
+        List<TeamMembers> findByTeamIdOrderByJoinedAtAsc(UUID teamId);
 
-   // Kiem tra nhanh user co membership active hay khong.
-   boolean existsByUserIdAndActiveTrue(UUID userId);
+        // Thu tu xac dinh de chon leader ke nhiem khi leader hien tai roi team.
+        List<TeamMembers> findByTeamIdAndActiveTrueOrderByJoinedAtAscTeamMemberIdAsc(UUID teamId);
 
-   // Dam bao mot user khong tham gia hai team active trong cung event.
-   boolean existsByUserIdAndTeam_EventIdAndActiveTrue(UUID userId, UUID eventId);
+        // Kiem tra nhanh user co membership active hay khong.
+        boolean existsByUserIdAndActiveTrue(UUID userId);
 
-   @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMembers tm WHERE tm.userId = :userId AND tm.active = true AND tm.team.eventId = :eventId AND tm.team.categoryId = :categoryId")
-   boolean existsActiveMemberInEventCategory(
-           @Param("userId") UUID userId,
-           @Param("eventId") UUID eventId,
-           @Param("categoryId") UUID categoryId
-   );
+        // Dam bao mot user khong tham gia hai team active trong cung event.
+        boolean existsByUserIdAndTeam_EventIdAndActiveTrue(UUID userId, UUID eventId);
 
-   // Dem member active de kiem tra MaxTeamSize va danh gia eligibility.
-   long countByTeamIdAndActiveTrue(UUID teamId);
+        @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMembers tm WHERE tm.userId = :userId AND tm.active = true AND tm.team.eventId = :eventId AND tm.team.categoryId = :categoryId")
+        boolean existsActiveMemberInEventCategory(
+                        @Param("userId") UUID userId,
+                        @Param("eventId") UUID eventId,
+                        @Param("categoryId") UUID categoryId);
+
+        // Dem member active de kiem tra MaxTeamSize va danh gia eligibility.
+        long countByTeamIdAndActiveTrue(UUID teamId);
+
+        long deleteByTeamId(UUID teamId);
+
+        // Batch cho trang quan ly user: nap membership active cua ca page trong
+        // MOT query (kem team + status) thay vi query rieng tung user (N+1).
+        @EntityGraph(attributePaths = { "team", "team.teamStatus" })
+        List<TeamMembers> findByUserIdInAndActiveTrue(Collection<UUID> userIds);
+
+        // Hard delete user: lay MOI membership active cua user (co the nhieu event).
+        List<TeamMembers> findAllByUserIdAndActiveTrue(UUID userId);
+
+        // Hard delete user: xoa toan bo membership (ke ca lich su inactive) cua user.
+        long deleteByUserId(UUID userId);
 }

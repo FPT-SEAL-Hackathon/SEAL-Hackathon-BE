@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface RoundCriterionRepository extends JpaRepository<RoundCriterion, UUID> {
     List<RoundCriterion> findByRoundRoundIdOrderBySortOrderAsc(UUID roundId);
+
+    boolean existsByRoundRoundId(UUID roundId);
 }

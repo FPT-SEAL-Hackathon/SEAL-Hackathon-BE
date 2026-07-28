@@ -133,6 +133,20 @@ public class ConsultationController {
         return ResponseEntity.ok(consultationService.resolveRequest(getCurrentUser(auth), requestId));
     }
 
+    @GetMapping("/expert/consultation-requests/{requestId}/note")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
+    @Operation(summary = "Get private mentor note for request")
+    public ResponseEntity<TeamMentorNoteResponse> getTeamMentorNote(Authentication auth, @PathVariable UUID requestId) {
+        return ResponseEntity.ok(consultationService.getTeamMentorNote(getCurrentUser(auth), requestId));
+    }
+
+    @PutMapping("/expert/consultation-requests/{requestId}/note")
+    @PreAuthorize("hasAnyRole('MENTOR', 'EXPERT')")
+    @Operation(summary = "Update private mentor note for request")
+    public ResponseEntity<TeamMentorNoteResponse> updateTeamMentorNote(Authentication auth, @PathVariable UUID requestId, @RequestBody TeamMentorNoteRequest request) {
+        return ResponseEntity.ok(consultationService.updateTeamMentorNote(getCurrentUser(auth), requestId, request));
+    }
+
     // ==========================================
     // Team APIs
     // ==========================================
@@ -142,6 +156,13 @@ public class ConsultationController {
     @Operation(summary = "Get my assigned experts")
     public ResponseEntity<java.util.List<MentorProfileResponse>> getMyExperts(Authentication auth) {
         return ResponseEntity.ok(consultationService.getMyMentors(getCurrentUser(auth)));
+    }
+
+    @GetMapping("/consultation-requests/{requestId}/mentor-notes")
+    @PreAuthorize("hasAnyRole('FPT_STUDENT', 'EXTERNAL_STUDENT')")
+    @Operation(summary = "Get mentor notes for my request")
+    public ResponseEntity<java.util.List<TeamMentorNoteResponse>> getMyTeamMentorNotes(Authentication auth, @PathVariable UUID requestId) {
+        return ResponseEntity.ok(consultationService.getMyTeamMentorNotes(getCurrentUser(auth), requestId));
     }
 
     @PostMapping("/consultation-requests")

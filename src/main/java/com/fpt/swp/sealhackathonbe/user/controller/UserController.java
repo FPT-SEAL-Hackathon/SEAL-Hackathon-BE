@@ -6,7 +6,9 @@ import com.fpt.swp.sealhackathonbe.user.dto.CreateUserManagementRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserManagementRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserRoleRequest;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateUserStatusRequest;
+import com.fpt.swp.sealhackathonbe.user.dto.UserFacetsResponse;
 import com.fpt.swp.sealhackathonbe.user.dto.UserManagementResponse;
+import com.fpt.swp.sealhackathonbe.user.service.UserHardDeleteService;
 import com.fpt.swp.sealhackathonbe.user.service.UserManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,14 +33,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Tag(name = "User Management", description = "Organizer APIs for managing user accounts")
+@Tag(name = "User Management", description = "Admin APIs for managing user accounts")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+// Quan ly nguoi dung la quan tri HE THONG -> chuyen tu ORGANIZER sang ADMIN.
+// Organizer chi van hanh cuoc thi (event/round/cham diem), khong dung vao tai khoan.
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class UserController {
     private static final Map<String, String> SORT_FIELDS = Map.of(
             "fullName", "fullName",
@@ -51,9 +56,10 @@ public class UserController {
     );
 
     private final UserManagementService userManagementService;
+    private final UserHardDeleteService userHardDeleteService;
     private final AuthenticationServiceImpl authenticationService;
 
-    @Operation(summary = "Search users")
+    @Operation(summary = "Search users (role/status nhận nhiều giá trị phân tách bằng dấu phẩy)")
     @GetMapping
     public ResponseEntity<Page<UserManagementResponse>> search(
             @RequestParam(defaultValue = "0") int page,
@@ -63,22 +69,73 @@ public class UserController {
             @RequestParam(required = false) UUID teamId,
             @RequestParam(required = false) String teamName,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String accountStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedTo,
+            // Cho admin xem cả account đã soft-delete (hiển thị mờ, readonly);
+            // default false để không đổi contract với client cũ.
+            @RequestParam(defaultValue = "false") boolean includeDeleted,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
         Page<UserManagementResponse> response = userManagementService.search(
                 search,
-                role,
+                splitCsv(role),
                 teamId,
                 teamName,
-                status,
+                // Alias: một số client cũ gửi "accountStatus" thay vì "status".
+                splitCsv(firstNonBlankParam(status, accountStatus)),
                 joinedFrom,
                 joinedTo,
+                includeDeleted,
                 toPageable(page, size, sortBy, sortDir)
         );
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Facet counts cho panel filter: số lượng cạnh mỗi option (drill-down)
+     * + total để preview "Show N users" trước khi xác nhận.
+     */
+    @Operation(summary = "User facet counts for the filter panel")
+    @GetMapping("/facets")
+    public ResponseEntity<UserFacetsResponse> facets(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID teamId,
+            @RequestParam(required = false) String teamName,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String accountStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joinedTo
+    ) {
+        return ResponseEntity.ok(userManagementService.facets(
+                search,
+                splitCsv(role),
+                teamId,
+                teamName,
+                splitCsv(firstNonBlankParam(status, accountStatus)),
+                joinedFrom,
+                joinedTo
+        ));
+    }
+
+    // "FPT_STUDENT,ORGANIZER" -> [FPT_STUDENT, ORGANIZER]; giá trị đơn vẫn hợp lệ.
+    private List<String> splitCsv(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .toList();
+    }
+
+    private String firstNonBlankParam(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second;
     }
 
     @Operation(summary = "Get user by ID")
@@ -128,13 +185,43 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Scan accounts with non-standard profile and notify them to update (no blocking)")
+    @PostMapping("/notify-noncompliant")
+    public ResponseEntity<Map<String, Object>> notifyNonCompliant() {
+        int notified = userManagementService.notifyNonCompliantUsers(currentUserId());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "notifiedCount", notified,
+                "message", "Notified " + notified + " account(s) to update their profile."
+        ));
+    }
+
     @Operation(summary = "Deactivate user")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> delete(@PathVariable UUID userId) {
-        userManagementService.delete(userId, currentUserId());
+        com.fpt.swp.sealhackathonbe.user.dto.DeactivateUserResult result =
+                userManagementService.delete(userId, currentUserId());
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "User deactivated successfully"
+                "message", "User deactivated successfully",
+                "transferredTeams", result.getTransferredTeams(),
+                "warnings", result.getWarnings()
+        ));
+    }
+
+    @Operation(summary = "Hard delete ALL accounts with this email (dev tool): "
+            + "removes personal data permanently, keeps collective data, "
+            + "notifies remaining team members; email is reusable immediately")
+    @DeleteMapping("/hard-delete")
+    public ResponseEntity<Map<String, Object>> hardDelete(
+            @RequestParam String email,
+            @RequestParam(required = false) String reason
+    ) {
+        int deletedAccounts = userHardDeleteService.hardDeleteByEmail(email, currentUserId(), reason);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User permanently deleted",
+                "deletedAccounts", deletedAccounts
         ));
     }
 

@@ -109,7 +109,7 @@ public class JwtServiceImpl implements JwtService {
 
         RefreshToken tokenEntity =
                 refreshTokenRepository
-                        .findByTokenHash(refreshToken)
+                        .findByTokenHash(tokenHashUtil.hash(refreshToken))
                         .orElseThrow(
                                 () -> new BadCredentialsException(
                                         "Refresh token not found"
@@ -131,6 +131,17 @@ public class JwtServiceImpl implements JwtService {
         }
 
         User user = tokenEntity.getUser();
+
+        // Tài khoản đã xóa/suspend không được cấp access token mới,
+        // kể cả khi refresh token của phiên cũ vẫn còn hạn.
+        String statusName = user.getAccountStatus() != null
+                ? user.getAccountStatus().getStatusName()
+                : "";
+        boolean enabled = "Active".equalsIgnoreCase(statusName)
+                || "Temporary".equalsIgnoreCase(statusName);
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || !enabled) {
+            throw new BadCredentialsException("User account is not active");
+        }
 
         String newAccessToken = generateAccessToken(user);
 
@@ -214,9 +225,10 @@ public class JwtServiceImpl implements JwtService {
 
     /**
      * Kích hoạt tài khoản nếu token xác minh email còn hiệu lực.
+     * Trả về User đã được kích hoạt để caller có thể cấp phiên đăng nhập ngay.
      */
     @Transactional
-    public void verifyEmail(String token) {
+    public User verifyEmail(String token) {
         if (token == null || token.isBlank()) {
             throw new BadRequestException(
                     "Invalid verification token"
@@ -258,5 +270,7 @@ public class JwtServiceImpl implements JwtService {
         verificationToken.setUsedAt(
                 LocalDateTime.now()
         );
+
+        return user;
     }
 }

@@ -30,4 +30,13 @@ public interface RoundJudgeRepository extends JpaRepository<RoundJudge, UUID> {
   
     @Query("SELECT rj FROM RoundJudge rj WHERE rj.judge.userId = :userId AND rj.round.roundId = :roundId AND rj.isActive = true")
     Optional<RoundJudge> findByJudge_UserIdAndRound_RoundId(@Param("userId") UUID userId, @Param("roundId") UUID roundId);
+
+    // Hard delete user: user còn là judge hoặc người phân công judge → chặn xóa.
+    boolean existsByJudge_UserId(UUID userId);
+
+    boolean existsByAssignedBy_UserId(UUID userId);
+
+    // BR-19 (chiều ngược): user đã là judge active trong round của category → không được assign làm mentor.
+    @Query("SELECT COUNT(rj) > 0 FROM RoundJudge rj WHERE rj.judge.userId = :judgeId AND rj.round.category.categoryId = :categoryId AND rj.isActive = true")
+    boolean existsActiveJudgeInCategory(@Param("judgeId") UUID judgeId, @Param("categoryId") UUID categoryId);
 }

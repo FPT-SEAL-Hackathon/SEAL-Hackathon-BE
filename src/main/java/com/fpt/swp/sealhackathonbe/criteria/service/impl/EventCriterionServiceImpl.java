@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.criteria.service.impl;
 
 import com.fpt.swp.sealhackathonbe.criteria.dto.request.ImportCriteriaToEventRequest;
+import com.fpt.swp.sealhackathonbe.criteria.dto.request.UpdateEventCriterionRequest;
 import com.fpt.swp.sealhackathonbe.criteria.dto.response.EventCriterionResponse;
 import com.fpt.swp.sealhackathonbe.criteria.entity.CriterionTemplate;
 import com.fpt.swp.sealhackathonbe.criteria.entity.EventCriteria;
@@ -70,9 +71,30 @@ public class EventCriterionServiceImpl implements EventCriterionService {
             throw new EntityNotFoundException("Event not found");
         }
 
-        return eventCriterionRepository.findByEventEventIdOrderBySortOrderAsc(eventId)
+        return eventCriterionRepository.findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(eventId)
                 .stream()
                 .map(mapper::toEventCriterionResponse)
                 .toList();
+    }
+
+    @Override
+    public EventCriterionResponse update(UUID eventCriterionId, UpdateEventCriterionRequest request) {
+        EventCriteria eventCriterion = eventCriterionRepository.findById(eventCriterionId)
+                .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found"));
+
+        eventCriterion.setWeight(request.getWeight());
+        eventCriterion.setMaxScore(request.getMaxScore());
+
+        return mapper.toEventCriterionResponse(eventCriterionRepository.save(eventCriterion));
+    }
+
+    @Override
+    public void delete(UUID eventCriterionId) {
+        EventCriteria eventCriterion = eventCriterionRepository.findById(eventCriterionId)
+                .orElseThrow(() -> new EntityNotFoundException("Event Criterion not found"));
+
+        eventCriterion.setIsActive(false);
+
+        eventCriterionRepository.save(eventCriterion);
     }
 }

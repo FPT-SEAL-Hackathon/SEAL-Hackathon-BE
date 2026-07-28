@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.team.service.impl;
 
 import com.fpt.swp.sealhackathonbe.auth.entity.AuditLog;
 import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import com.fpt.swp.sealhackathonbe.core.constant.UserRoleConstants;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
@@ -57,8 +58,10 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_REJECTED = "REJECTED";
     private static final String STATUS_TEMPORARY = "TEMPORARY";
-    private static final UUID FPT_STUDENT_ID = UserRoleConstants.ROLE_ADMIN;
-    private static final UUID EXTERNAL_STUDENT_ID = UserRoleConstants.ROLE_USER;
+    private static final UUID TEAM_STATUS_FORMING = TeamStatusConstants.FORMING;
+    private static final UUID TEAM_STATUS_PENDING = TeamStatusConstants.PENDING;
+    private static final UUID FPT_STUDENT_ID = UserRoleConstants.ROLE_FPT_STUDENT;
+    private static final UUID EXTERNAL_STUDENT_ID = UserRoleConstants.ROLE_EXTERNAL_STUDENT;
 
     private final EventRepository eventRepository;
     private final TeamsRepository teamsRepository;
@@ -68,11 +71,18 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
     private final NotificationService notificationService;
+    private final TeamJoinRequestCleaner teamJoinRequestCleaner;
 
     @Override
     @Transactional(readOnly = true)
     public void assertEligibleStudent(UUID userId) {
         validateStudentCanRegister(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void assertEventOpenForRegistration(UUID eventId) {
+        getRegisterableEvent(eventId);
     }
 
     @Override
@@ -93,11 +103,17 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
     @Override
     @Transactional
     public List<EventParticipantResponse> registerTeam(UUID teamId, UUID currentUserId) {
-        Teams team = teamsRepository.findById(teamId)
+        // Lock team để register không đua với approve join request:
+        // hai luồng cùng lock nên sĩ số tại thời điểm đăng ký là chốt.
+        Teams team = teamsRepository.findByIdForUpdate(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
         if (!team.getLeaderUserId().equals(currentUserId)) {
             throw new AccessDeniedException("Only the team leader can register the team for the event.");
+        }
+
+        if (!TEAM_STATUS_FORMING.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Only forming teams can request organizer approval.");
         }
 
         Event event = getRegisterableEvent(team.getEventId());
@@ -167,6 +183,15 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
             responses.add(toRegistrationResponse(saved, event, memberUser, pendingStatus));
         }
 
+        team.setTeamStatusId(TEAM_STATUS_PENDING);
+        team.setUpdatedAt(now);
+        teamsRepository.save(team);
+
+        // Roster đã khóa (FORMING -> PENDING): đóng mọi join request còn treo
+        // để không tồn tại request PENDING mà không ai xử lý được.
+        teamJoinRequestCleaner.rejectPendingRequestsForTeam(
+                teamId, currentUserId, "Team is no longer accepting members");
+
         return responses;
     }
 
@@ -178,6 +203,10 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
 
         if (!team.getLeaderUserId().equals(currentUserId)) {
             throw new AccessDeniedException("Only the team leader can withdraw the team registration.");
+        }
+
+        if (!TEAM_STATUS_PENDING.equals(team.getTeamStatusId())) {
+            throw new BusinessConflictException("Only pending team registration requests can be withdrawn.");
         }
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(teamId);
@@ -203,6 +232,10 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
             writeAuditLog("TEAM_EVENT_REGISTRATION_WITHDRAWN", participant, team, currentUserId);
             eventParticipantRepository.delete(participant);
         }
+
+        team.setTeamStatusId(TEAM_STATUS_FORMING);
+        team.setUpdatedAt(LocalDateTime.now());
+        teamsRepository.save(team);
     }
 
     @Override

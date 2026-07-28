@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.submission.service;
 
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionHistoryResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 
 import java.util.List;
@@ -20,4 +21,8 @@ public interface SubmissionQueryService {
 
     // Lay bai nop cua cac team thuoc event; submission khong chua EventID truc tiep.
     List<SubmissionResponse> findByEventId(UUID eventId);
+
+    List<SubmissionHistoryResponse> getSubmissionHistoryByTeamAndRound(UUID teamId, UUID roundId, UUID currentUserId);
+
+    List<SubmissionHistoryResponse> getSubmissionHistoryBySubmissionId(UUID submissionId);
 }

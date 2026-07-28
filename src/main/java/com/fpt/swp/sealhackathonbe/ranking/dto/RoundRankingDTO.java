@@ -27,4 +27,5 @@ public class RoundRankingDTO {
     private Boolean isAdvanced;
     private LocalDateTime computedAt;
     private Boolean isPublished;
+    private Boolean isApproved;
 }

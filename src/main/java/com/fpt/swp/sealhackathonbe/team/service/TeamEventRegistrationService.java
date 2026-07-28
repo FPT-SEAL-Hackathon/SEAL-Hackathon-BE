@@ -18,6 +18,8 @@ public interface TeamEventRegistrationService {
      */
     void assertEligibleStudent(UUID userId);
 
+    void assertEventOpenForRegistration(UUID eventId);
+
     /**
      * User đã có bản ghi participant cho event (dùng để khóa đội hình sau khi
      * team đăng ký).

@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.dto.RoundRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
+import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import org.springframework.security.core.Authentication;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,10 +28,20 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class RankingController {
 
     private final RankingService rankingService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public RankingController(RankingService rankingService) {
+    public RankingController(RankingService rankingService, UserRepository userRepository) {
         this.rankingService = rankingService;
+        this.userRepository = userRepository;
+    }
+
+    private UUID currentUserId(Authentication authentication) {
+        User user = userRepository.findByEmail(authentication.getName());
+        if (user == null) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        return user.getUserId();
     }
 
     /**
@@ -59,9 +72,23 @@ public class RankingController {
     @Operation(summary = "Publish rankings for a round", description = "Publishes the computed rankings for a specific round and category")
     public ResponseEntity<Void> publishRoundRankings(
             @PathVariable("roundId") UUID roundId,
-            @RequestParam UUID categoryId
+            @RequestParam UUID categoryId,
+            @RequestParam(required = false) Integer appealDurationMinutes,
+            Authentication authentication
     ){
-        rankingService.publishRoundRankings(roundId, categoryId);
+        rankingService.publishRoundRankings(roundId, categoryId, currentUserId(authentication), appealDurationMinutes);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/admin/rounds/{roundId}/approve-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Approve rankings for a round", description = "Approves and locks the computed rankings for a specific round and category")
+    public ResponseEntity<Void> approveRoundRankings(
+            @PathVariable("roundId") UUID roundId,
+            @RequestParam UUID categoryId,
+            Authentication authentication
+    ){
+        rankingService.approveRoundRankings(roundId, categoryId, currentUserId(authentication));
         return ResponseEntity.ok().build();
     }
 
@@ -70,9 +97,41 @@ public class RankingController {
     @Operation(summary = "Publish rankings for an event", description = "Publishes the computed final rankings for a specific event and category")
     public ResponseEntity<Void> publishEventRankings(
             @PathVariable("eventId") UUID eventId,
-            @RequestParam UUID categoryId
+            @RequestParam(required = false) UUID categoryId
     ){
         rankingService.publishEventRankings(eventId, categoryId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/admin/categories/{categoryId}/compute-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Compute rankings for a category", description = "Calculates the final rankings for all submissions in a category")
+    public ResponseEntity<List<EventRankingDTO>> computeCategoryEventRankings(
+            @PathVariable("categoryId") UUID categoryId) {
+
+        List<EventRankingDTO> rankings = rankingService.computeCategoryEventRankings(categoryId);
+        return ResponseEntity.ok(rankings);
+    }
+
+    @PostMapping("/admin/categories/{categoryId}/publish-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Publish rankings for a category", description = "Publishes the computed final rankings for a specific category")
+    public ResponseEntity<Void> publishCategoryEventRankings(
+            @PathVariable("categoryId") UUID categoryId,
+            Authentication authentication
+    ){
+        rankingService.publishCategoryEventRankings(categoryId, currentUserId(authentication));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/admin/categories/{categoryId}/approve-rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Approve rankings for a category", description = "Approves and locks the computed final rankings for a specific category")
+    public ResponseEntity<Void> approveCategoryEventRankings(
+            @PathVariable("categoryId") UUID categoryId,
+            Authentication authentication
+    ){
+        rankingService.approveCategoryEventRankings(categoryId, currentUserId(authentication));
         return ResponseEntity.ok().build();
     }
 
@@ -84,6 +143,17 @@ public class RankingController {
             @RequestParam UUID categoryId) {
 
         List<RoundRankingDTO> rankings = rankingService.getRoundRankings(roundId, categoryId);
+        return ResponseEntity.ok(rankings);
+    }
+
+    @GetMapping("/admin/events/{eventId}/categories/{categoryId}/rankings")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @Operation(summary = "Get rankings for a category", description = "Fetches the existing final rankings for a specific category without computing")
+    public ResponseEntity<List<EventRankingDTO>> getCategoryRankings(
+            @PathVariable("eventId") UUID eventId,
+            @PathVariable("categoryId") UUID categoryId) {
+
+        List<EventRankingDTO> rankings = rankingService.getCategoryLeaderboard(eventId, categoryId);
         return ResponseEntity.ok(rankings);
     }
 

@@ -19,4 +19,10 @@ public interface TeamJoinRequestService {
             HandleJoinRequest request,
             UUID leaderUserId
     );
+
+    // Người xin tự hủy request PENDING của chính mình.
+    JoinTeamRequestResponse cancelJoinRequest(UUID requestId, UUID currentUserId);
+
+    // Người xin xem các request PENDING của mình (mọi team).
+    List<JoinTeamRequestResponse> getMyPendingJoinRequests(UUID currentUserId);
 }

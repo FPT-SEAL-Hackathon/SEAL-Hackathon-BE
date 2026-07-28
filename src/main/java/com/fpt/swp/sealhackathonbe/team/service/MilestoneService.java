@@ -1,5 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
+import com.fpt.swp.sealhackathonbe.consultation.entity.ConsultationRequest;
+import com.fpt.swp.sealhackathonbe.consultation.repository.ConsultationRequestRepository;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateMilestoneRequest;
 import com.fpt.swp.sealhackathonbe.team.dto.MilestoneResponse;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMilestone;
@@ -19,13 +21,20 @@ import java.util.stream.Collectors;
 public class MilestoneService {
 
     private final TeamMilestoneRepository milestoneRepository;
+    private final ConsultationRequestRepository consultationRequestRepository;
+    private final com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository teamsRepository;
+    private final com.fpt.swp.sealhackathonbe.consultation.service.ConsultationService consultationService;
+    private final com.fpt.swp.sealhackathonbe.user.repository.UserRepository userRepository;
+    private final com.fpt.swp.sealhackathonbe.notification.service.NotificationService notificationService;
 
     // ── Read ─────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<MilestoneResponse> getByTeam(UUID teamId) {
+    public List<MilestoneResponse> getByRequest(UUID requestId) {
+        ConsultationRequest request = consultationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Request not found"));
         return milestoneRepository
-                .findByTeamIdOrderBySortOrderAscCreatedAtAsc(teamId)
+                .findByTeamIdOrderBySortOrderAscCreatedAtAsc(request.getTeam().getTeamId())
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -34,13 +43,16 @@ public class MilestoneService {
     // ── Create ───────────────────────────────────────────────────────────────
 
     @Transactional
-    public MilestoneResponse create(UUID teamId, UUID mentorUserId, CreateMilestoneRequest req) {
+    public MilestoneResponse create(UUID requestId, UUID mentorUserId, CreateMilestoneRequest req) {
+        ConsultationRequest request = consultationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new EntityNotFoundException("Request not found"));
+
         int nextOrder = milestoneRepository
-                .findByTeamIdOrderBySortOrderAscCreatedAtAsc(teamId)
+                .findByTeamIdOrderBySortOrderAscCreatedAtAsc(request.getTeam().getTeamId())
                 .size();
 
         TeamMilestone milestone = TeamMilestone.builder()
-                .teamId(teamId)
+                .teamId(request.getTeam().getTeamId())
                 .mentorUserId(mentorUserId)
                 .label(req.getLabel().trim())
                 .isDone(false)
@@ -53,10 +65,58 @@ public class MilestoneService {
     // ── Toggle done ───────────────────────────────────────────────────────────
 
     @Transactional
-    public MilestoneResponse toggle(UUID milestoneId, UUID mentorUserId) {
-        TeamMilestone milestone = getOwned(milestoneId, mentorUserId);
-        milestone.setIsDone(!milestone.getIsDone());
-        return toResponse(milestoneRepository.save(milestone));
+    public MilestoneResponse toggle(UUID requestId, UUID milestoneId, UUID currentUserId) {
+        TeamMilestone milestone = milestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new EntityNotFoundException("Milestone not found"));
+                
+        // Check if user is mentor who created it
+        boolean isMentor = milestone.getMentorUserId().equals(currentUserId);
+        
+        // Or if user is team leader
+        boolean isLeader = false;
+        if (!isMentor) {
+            com.fpt.swp.sealhackathonbe.team.entity.Teams team = teamsRepository.findById(milestone.getTeamId()).orElse(null);
+            if (team != null && team.getLeaderUserId().equals(currentUserId)) {
+                isLeader = true;
+            }
+        }
+        
+        if (!isMentor && !isLeader) {
+            throw new AccessDeniedException("You are not authorized to toggle this milestone");
+        }
+        
+        boolean wasDone = milestone.getIsDone();
+        milestone.setIsDone(!wasDone);
+        milestone = milestoneRepository.save(milestone);
+
+        // Auto send message if marked as done by leader
+        if (!wasDone && isLeader) {
+            com.fpt.swp.sealhackathonbe.user.entity.User user = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            com.fpt.swp.sealhackathonbe.consultation.dto.MessageRequest msgReq = 
+                    new com.fpt.swp.sealhackathonbe.consultation.dto.MessageRequest();
+            msgReq.setContent("✅ Milestone completed: " + milestone.getLabel());
+            consultationService.sendMessage(user, requestId, msgReq);
+
+            // Fetch request to get category and event
+            ConsultationRequest request = consultationRequestRepository.findById(requestId).orElse(null);
+            if (request != null) {
+                // Get all mentors assigned to this category
+                List<com.fpt.swp.sealhackathonbe.consultation.dto.MentorProfileResponse> mentors = 
+                        consultationService.getMentorsOfCategory(request.getCategory().getCategoryId());
+                
+                String teamName = request.getTeam().getTeamName();
+                String title = "Milestone Completed";
+                String body = "Team " + teamName + " has completed milestone: " + milestone.getLabel();
+                UUID eventId = request.getEvent().getEventId();
+
+                for (var mentorProfile : mentors) {
+                    notificationService.sendNotification(mentorProfile.getMentorId(), currentUserId, eventId, title, body);
+                }
+            }
+        }
+
+        return toResponse(milestone);
     }
 
     // ── Update label ──────────────────────────────────────────────────────────

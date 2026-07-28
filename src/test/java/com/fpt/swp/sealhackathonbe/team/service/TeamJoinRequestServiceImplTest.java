@@ -25,9 +25,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +55,9 @@ class TeamJoinRequestServiceImplTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.fpt.swp.sealhackathonbe.team.service.impl.TeamJoinRequestCleaner teamJoinRequestCleaner;
+
     @InjectMocks
     private TeamJoinRequestServiceImpl service;
 
@@ -74,6 +80,7 @@ class TeamJoinRequestServiceImplTest {
         team.setEvent(event);
         team.setTeamName("Seal Team");
         team.setLeaderUserId(leaderId);
+        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000001"));
 
         User user = new User();
         user.setUserId(userId);
@@ -101,6 +108,7 @@ class TeamJoinRequestServiceImplTest {
 
         when(teamJoinRequestsRepository.findByRequestIdAndRequestStatus(requestId, "PENDING"))
                 .thenReturn(Optional.of(joinRequest));
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
         when(teamMembersRepository.countByTeamIdAndActiveTrue(teamId)).thenReturn(1L);
         when(teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(userId, eventId))
                 .thenReturn(false);
@@ -109,6 +117,8 @@ class TeamJoinRequestServiceImplTest {
         when(teamJoinRequestsRepository.save(joinRequest)).thenReturn(joinRequest);
 
         service.handleJoinRequest(requestId, command, leaderId);
+
+        verify(teamEventRegistrationService).assertEventOpenForRegistration(eventId);
 
         ArgumentCaptor<TeamMembers> memberCaptor = ArgumentCaptor.forClass(TeamMembers.class);
         verify(teamMembersRepository).save(memberCaptor.capture());
@@ -123,5 +133,89 @@ class TeamJoinRequestServiceImplTest {
         verify(eventPublisher).publishEvent(eventCaptor.capture());
         assertEquals(userId, eventCaptor.getValue().recipientUserId());
         assertEquals(teamId, formerMembership.getTeamId());
+
+        // User đã vào team: các request PENDING khác trong event phải bị hủy.
+        verify(teamJoinRequestCleaner).cancelOtherPendingRequestsForUser(userId, eventId, teamId);
+    }
+
+    @Test
+    void approvingIntoFullTeamIsRejected() {
+        UUID requestId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+
+        Event event = new Event();
+        event.setEventId(eventId);
+        event.setMaxTeamSize(2);
+        event.setIsDeleted(false);
+
+        Teams team = new Teams();
+        team.setTeamId(teamId);
+        team.setEventId(eventId);
+        team.setEvent(event);
+        team.setLeaderUserId(leaderId);
+        team.setTeamStatusId(UUID.fromString("60000000-0000-0000-0000-000000000001"));
+
+        TeamJoinRequests joinRequest = new TeamJoinRequests();
+        joinRequest.setRequestId(requestId);
+        joinRequest.setTeamId(teamId);
+        joinRequest.setTeam(team);
+        joinRequest.setUserId(UUID.randomUUID());
+        joinRequest.setRequestStatus("PENDING");
+
+        HandleJoinRequest command = new HandleJoinRequest();
+        command.setAction("APPROVED");
+
+        when(teamJoinRequestsRepository.findByRequestIdAndRequestStatus(requestId, "PENDING"))
+                .thenReturn(Optional.of(joinRequest));
+        when(teamsRepository.findByIdForUpdate(teamId)).thenReturn(Optional.of(team));
+        when(teamMembersRepository.countByTeamIdAndActiveTrue(teamId)).thenReturn(2L);
+
+        assertThrows(
+                com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException.class,
+                () -> service.handleJoinRequest(requestId, command, leaderId)
+        );
+        verify(teamMembersRepository, never()).save(org.mockito.ArgumentMatchers.any(TeamMembers.class));
+    }
+
+    @Test
+    void requesterCanCancelOwnPendingRequest() {
+        UUID requestId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        TeamJoinRequests joinRequest = new TeamJoinRequests();
+        joinRequest.setRequestId(requestId);
+        joinRequest.setUserId(userId);
+        joinRequest.setRequestStatus("PENDING");
+        joinRequest.setRequestedAt(LocalDateTime.now());
+
+        when(teamJoinRequestsRepository.findByRequestIdAndRequestStatus(requestId, "PENDING"))
+                .thenReturn(Optional.of(joinRequest));
+        when(teamJoinRequestsRepository.save(joinRequest)).thenReturn(joinRequest);
+
+        service.cancelJoinRequest(requestId, userId);
+
+        assertEquals("CANCELLED", joinRequest.getRequestStatus());
+        assertNotNull(joinRequest.getRespondedAt());
+    }
+
+    @Test
+    void requesterCannotCancelSomeoneElsesRequest() {
+        UUID requestId = UUID.randomUUID();
+
+        TeamJoinRequests joinRequest = new TeamJoinRequests();
+        joinRequest.setRequestId(requestId);
+        joinRequest.setUserId(UUID.randomUUID());
+        joinRequest.setRequestStatus("PENDING");
+
+        when(teamJoinRequestsRepository.findByRequestIdAndRequestStatus(requestId, "PENDING"))
+                .thenReturn(Optional.of(joinRequest));
+
+        assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> service.cancelJoinRequest(requestId, UUID.randomUUID())
+        );
+        assertEquals("PENDING", joinRequest.getRequestStatus());
     }
 }

@@ -5,6 +5,7 @@ import com.fpt.swp.sealhackathonbe.event.dto.request.UpdateEventRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.request.UpdateEventStatusRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.response.EventResponse;
 import org.springframework.stereotype.Service;
+import org.w3c.dom.events.EventTarget;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +18,9 @@ public interface EventService {
     List<EventResponse> getAll();
     List<EventResponse> getPublicEvents();
     EventResponse getPublicEventById(UUID eventId);
+    List<EventResponse> getAllEventsForOrganizer();
     EventResponse updateStatus(UUID eventId, UpdateEventStatusRequest request);
     void delete(UUID eventId);
+    void updateEventStatuses();
+    EventResponse publishEvent(UUID eventId);
 }

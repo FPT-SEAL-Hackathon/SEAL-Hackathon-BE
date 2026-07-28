@@ -46,7 +46,7 @@ public class RoundJudgeController {
 
     @PatchMapping("/round/judge/{id}")
     // RBAC:
-    // Chỉ ORGANIZER được gỡ judge khỏi round.
+    // Chỉ ORGANIZER được disable judge.
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public void disableJudge(@PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "false") boolean force) {

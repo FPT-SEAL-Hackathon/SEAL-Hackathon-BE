@@ -1,6 +1,7 @@
 package com.fpt.swp.sealhackathonbe.team.service;
 
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
+import com.fpt.swp.sealhackathonbe.team.dto.LeadershipReassignmentResult;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamEligibilityReviewResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamMemberDetailResponse;
 import com.fpt.swp.sealhackathonbe.team.dto.TeamResponse;
@@ -20,15 +21,30 @@ public interface TeamService {
 
     List<TeamResponse> getByEventId(UUID eventId);
 
+    List<TeamResponse> getTeamsByUserId(UUID userId);
+
     List<TeamEligibilityReviewResponse> reviewTeamsEligibility(UUID eventId);
 
     TeamResponse activateTeam(UUID teamId, String note, UUID adminUserId);
+
+    TeamResponse rejectTeam(UUID teamId, String note, UUID adminUserId);
 
     // Lấy chi tiết một thành viên active trong team, bao gồm thông tin membership và hồ sơ user.
     TeamMemberDetailResponse getTeamMemberDetail(UUID teamId, UUID userId, UUID currentUserId);
 
     // Đánh dấu member inactive khi rời team hoặc bị leader xóa.
-    void removeMember(UUID teamId, UUID userId, UUID currentUserId);
+    void removeMember(UUID teamId, UUID userId, UUID currentUserId, String reason);
 
     TeamResponse transferLeadership(UUID teamId, UUID newLeaderUserId, UUID currentUserId);
+
+    // Leader giải tán team đang FORMING: gỡ đăng ký PENDING và xóa team + request + membership.
+    void disbandTeam(UUID teamId, UUID currentUserId);
+
+    /**
+     * Khi một user bị deactivate: với mỗi team user đang là leader và còn thành viên
+     * active khác → chuyển quyền cho thành viên tham gia sớm nhất + thông báo. GIỮ nguyên
+     * membership của user (không giảm sĩ số), KHÔNG giải tán team. Idempotent (no-op nếu
+     * user không làm leader team nào). Trả về danh sách team đã chuyển + team bị đóng băng.
+     */
+    LeadershipReassignmentResult reassignLeadershipForDeactivatedUser(UUID userId, UUID actorUserId);
 }

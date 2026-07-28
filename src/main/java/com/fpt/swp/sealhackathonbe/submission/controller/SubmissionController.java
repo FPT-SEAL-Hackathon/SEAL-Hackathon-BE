@@ -1,13 +1,16 @@
 package com.fpt.swp.sealhackathonbe.submission.controller;
 
 import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
+import com.fpt.swp.sealhackathonbe.submission.dto.CreateSampleSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.CreateSubmissionRequest;
 import com.fpt.swp.sealhackathonbe.submission.dto.DisqualifySubmissionRequest;
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionHistoryResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
+import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,6 +40,7 @@ public class SubmissionController {
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
     private final AuthenticationServiceImpl authenticationServiceImpl;
+    private final JudgingService judgingService;
 
     @Operation(
             summary = "Submit work",
@@ -49,6 +53,21 @@ public class SubmissionController {
         // Du lieu: request + user dang dang nhap -> command service -> stored procedure -> response.
         SubmissionResponse response =
                 submissionCommandService.submitWork(request, currentUserId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Create calibration sample submission",
+            description = "Organizer creates or updates a sample submission for a calibration round."
+    )
+    @PostMapping("/admin/calibration-sample-submissions")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<SubmissionResponse> submitSampleWork(
+            @Valid @RequestBody CreateSampleSubmissionRequest request
+    ) {
+        SubmissionResponse response =
+                submissionCommandService.submitSampleWork(request, currentUserId());
 
         return ResponseEntity.ok(response);
     }
@@ -75,6 +94,25 @@ public class SubmissionController {
     }
 
     @Operation(
+            summary = "Get team submission history in round",
+            description = "Get every saved submission version of a specific team in a specific round."
+    )
+    @GetMapping("/teams/{teamId}/rounds/{roundId}/submission/history")
+    public ResponseEntity<List<SubmissionHistoryResponse>> getSubmissionHistoryByTeamAndRound(
+            @PathVariable UUID teamId,
+            @PathVariable UUID roundId
+    ) {
+        List<SubmissionHistoryResponse> response =
+                submissionQueryService.getSubmissionHistoryByTeamAndRound(
+                        teamId,
+                        roundId,
+                        currentUserId()
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
             summary = "Get submissions by round",
             description = "Get all submissions in one round. Use an organizer account."
     )
@@ -84,6 +122,20 @@ public class SubmissionController {
             @PathVariable UUID roundId
     ) {
         List<SubmissionResponse> response = submissionQueryService.getSubmissionsByRound(roundId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get submission history",
+            description = "Get every saved version of one submission. Use an organizer or judge account."
+    )
+    @GetMapping("/admin/submissions/{submissionId}/history")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    public ResponseEntity<List<SubmissionHistoryResponse>> getSubmissionHistoryBySubmissionId(
+            @PathVariable UUID submissionId
+    ) {
+        List<SubmissionHistoryResponse> response =
+                submissionQueryService.getSubmissionHistoryBySubmissionId(submissionId);
         return ResponseEntity.ok(response);
     }
 
@@ -150,5 +202,20 @@ public class SubmissionController {
         boolean approve = request.getOrDefault("approve", true);
         SubmissionResponse response = submissionCommandService.approveScore(submissionId, approve);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Reject score",
+            description = "Reject a submission's judging score and require judges to score again"
+    )
+    @PostMapping("/admin/submissions/{submissionId}/reject-score")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<Void> rejectScore(
+            @PathVariable UUID submissionId,
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String reason = request.getOrDefault("reason", "Scores rejected by admin");
+        judgingService.rejectSubmissionScores(submissionId, reason);
+        return ResponseEntity.ok().build();
     }
 }

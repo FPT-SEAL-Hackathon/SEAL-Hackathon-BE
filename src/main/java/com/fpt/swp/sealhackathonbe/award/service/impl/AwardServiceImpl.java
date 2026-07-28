@@ -51,6 +51,15 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Service quản lý toàn bộ hệ thống giải thưởng (Award).
+ * 
+ * Logic & Tính năng chính:
+ * - Hall of Fame: Lấy danh sách các đội chiến thắng từ các sự kiện để vinh danh trên Landing Page.
+ * - Quản lý cấu hình giải (Award Pattern / Tier): Dễ dàng tái sử dụng pattern giải thưởng giữa các vòng.
+ * - Tính toán tổng tiền thưởng (Prize Pool): Đếm tổng tiền các giải để show ra dashboard.
+ * - Gán giải (Award Eligibility): Kiểm tra điều kiện xếp hạng của đội so với yêu cầu của giải.
+ */
 @Service
 @RequiredArgsConstructor
 public class AwardServiceImpl implements AwardService {
@@ -320,6 +329,11 @@ public class AwardServiceImpl implements AwardService {
     }
 
     private void validateAwardTierNotAlreadyGranted(Event event, Category category, AwardTier tier) {
+        // Cho phép các giải thưởng Đặc biệt (Special Award) được trao nhiều lần
+        if (tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special")) {
+            return;
+        }
+
         UUID categoryId = category != null ? category.getCategoryId() : null;
         if (awardRepository.existsPublishedAwardTierInScope(event.getEventId(), categoryId, tier.getId())) {
             throw new IllegalStateException(String.format(
@@ -341,7 +355,9 @@ public class AwardServiceImpl implements AwardService {
             AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
             AwardTier tier = pattern.getAwardTier();
 
-            if (!requestedTierIds.add(tier.getId())) {
+            boolean isSpecialAward = tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special");
+
+            if (!isSpecialAward && !requestedTierIds.add(tier.getId())) {
                 throw new IllegalStateException("Duplicate award tier in selected award patterns: " + tier.getTierName());
             }
 
