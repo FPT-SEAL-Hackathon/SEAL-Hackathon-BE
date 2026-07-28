@@ -1,9 +1,13 @@
 package com.fpt.swp.sealhackathonbe.submission.service.mapper;
 
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionHistoryResponse;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.entity.SubmissionHistory;
+import com.fpt.swp.sealhackathonbe.submission.entity.SubmissionStatus;
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
+
+import java.util.UUID;
 
 public class SubmissionMapper {
     private SubmissionMapper() {
@@ -25,12 +29,11 @@ public class SubmissionMapper {
                 ? submission.getTeam().getTeamName()
                 : null);
         response.setRoundId(submission.getRoundId());
-        response.setSubmissionStatusId(submission.getSubmissionStatus() != null
-                ? submission.getSubmissionStatus().getStatusId()
-                : submission.getSubmissionStatusId());
-        response.setSubmissionStatusName(submission.getSubmissionStatus() != null
-                ? submission.getSubmissionStatus().getStatusName()
-                : null);
+        response.setSubmissionStatusId(submission.getSubmissionStatusId());
+        response.setSubmissionStatusName(resolveStatusName(
+                submission.getSubmissionStatusId(),
+                submission.getSubmissionStatus()
+        ));
 
         response.setRepositoryUrl(submission.getRepositoryUrl());
         response.setDemoUrl(submission.getDemoUrl());
@@ -71,12 +74,11 @@ public class SubmissionMapper {
                 ? history.getTeam().getTeamName()
                 : null);
         response.setRoundId(history.getRoundId());
-        response.setSubmissionStatusId(history.getSubmissionStatus() != null
-                ? history.getSubmissionStatus().getStatusId()
-                : history.getSubmissionStatusId());
-        response.setSubmissionStatusName(history.getSubmissionStatus() != null
-                ? history.getSubmissionStatus().getStatusName()
-                : null);
+        response.setSubmissionStatusId(history.getSubmissionStatusId());
+        response.setSubmissionStatusName(resolveStatusName(
+                history.getSubmissionStatusId(),
+                history.getSubmissionStatus()
+        ));
 
         response.setRepositoryUrl(history.getRepositoryUrl());
         response.setDemoUrl(history.getDemoUrl());
@@ -99,5 +101,32 @@ public class SubmissionMapper {
         response.setSnapshotCreatedAt(history.getSnapshotCreatedAt());
 
         return response;
+    }
+
+    private static String resolveStatusName(UUID statusId, SubmissionStatus status) {
+        if (status != null && statusId != null && statusId.equals(status.getStatusId())) {
+            return status.getStatusName();
+        }
+
+        if (SubmissionStatusConstants.DRAFT.equals(statusId)) {
+            return "Draft";
+        }
+        if (SubmissionStatusConstants.SUBMITTED.equals(statusId)) {
+            return "Submitted";
+        }
+        if (SubmissionStatusConstants.UNDER_REVIEW.equals(statusId)) {
+            return "Under Review";
+        }
+        if (SubmissionStatusConstants.DISQUALIFIED.equals(statusId)) {
+            return "Disqualified";
+        }
+        if (SubmissionStatusConstants.SCORED.equals(statusId)) {
+            return "Scored";
+        }
+        if (SubmissionStatusConstants.IN_PROGRESS.equals(statusId)) {
+            return "In Progress";
+        }
+
+        return status != null ? status.getStatusName() : null;
     }
 }
