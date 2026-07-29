@@ -579,6 +579,8 @@ public class JudgingServiceImpl implements JudgingService {
         Submissions submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
 
+        validateSubmissionScoreCanBeChanged(submission);
+
         if (approve) {
             if (Boolean.TRUE.equals(submission.getIsSampleSubmission())) {
                 throw new IllegalStateException("Cannot finalize score for a sample calibration submission.");
@@ -637,5 +639,18 @@ public class JudgingServiceImpl implements JudgingService {
 
         submissionRepository.save(submission);
         return SubmissionMapper.toSubmissionResponse(submission);
+    }
+
+    private void validateSubmissionScoreCanBeChanged(Submissions submission) {
+        if (SubmissionStatusConstants.DISQUALIFIED.equals(submission.getSubmissionStatusId())) {
+            throw new BusinessConflictException("Disqualified submissions cannot have scores approved or rejected");
+        }
+
+        UUID teamStatusId = submission.getTeam() != null
+                ? submission.getTeam().getTeamStatusId()
+                : null;
+        if (TeamStatusConstants.DISQUALIFIED.equals(teamStatusId) || TeamStatusConstants.WITHDRAWN.equals(teamStatusId)) {
+            throw new BusinessConflictException("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected");
+        }
     }
 }

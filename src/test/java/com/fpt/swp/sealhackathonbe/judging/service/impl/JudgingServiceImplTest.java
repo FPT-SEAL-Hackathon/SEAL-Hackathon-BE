@@ -28,6 +28,8 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -501,5 +503,43 @@ public class JudgingServiceImplTest {
         assertTrue(response.getIsScoreApproved());
         assertEquals(SubmissionStatusConstants.SCORED, response.getSubmissionStatusId());
         verify(submissionRepository).save(submission);
+    }
+
+    @Test
+    void testApproveScore_DisqualifiedSubmission_ThrowsBusinessConflictException() {
+        submission.setSubmissionStatusId(SubmissionStatusConstants.DISQUALIFIED);
+        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        BusinessConflictException ex = assertThrows(BusinessConflictException.class, () ->
+                judgingService.approveScore(submissionId, true));
+        assertEquals("Disqualified submissions cannot have scores approved or rejected", ex.getMessage());
+    }
+
+    @Test
+    void testApproveScore_DisqualifiedTeam_ThrowsBusinessConflictException() {
+        submission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+        Teams teamEntity = new Teams();
+        teamEntity.setTeamStatusId(TeamStatusConstants.DISQUALIFIED);
+        submission.setTeam(teamEntity);
+
+        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        BusinessConflictException ex = assertThrows(BusinessConflictException.class, () ->
+                judgingService.approveScore(submissionId, true));
+        assertEquals("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected", ex.getMessage());
+    }
+
+    @Test
+    void testApproveScore_WithdrawnTeam_ThrowsBusinessConflictException() {
+        submission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+        Teams teamEntity = new Teams();
+        teamEntity.setTeamStatusId(TeamStatusConstants.WITHDRAWN);
+        submission.setTeam(teamEntity);
+
+        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        BusinessConflictException ex = assertThrows(BusinessConflictException.class, () ->
+                judgingService.approveScore(submissionId, true));
+        assertEquals("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected", ex.getMessage());
     }
 }
