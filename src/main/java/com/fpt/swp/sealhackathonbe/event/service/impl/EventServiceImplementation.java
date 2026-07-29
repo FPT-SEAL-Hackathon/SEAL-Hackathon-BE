@@ -93,8 +93,8 @@ public class EventServiceImplementation implements EventService {
     private void validateEventTimeline(CreateEventRequest request) {
         LocalDateTime registrationStart = request.getRegistrationStart();
         LocalDateTime registrationEnd = request.getRegistrationEnd();
-        LocalDate eventStart = request.getEventStartDate();
-        LocalDate eventEnd = request.getEventEndDate();
+        LocalDateTime eventStart = request.getEventStartDate();
+        LocalDateTime eventEnd = request.getEventEndDate();
 
         boolean hasRegistrationDates = registrationStart != null || registrationEnd != null;
         boolean hasEventDates = eventStart != null || eventEnd != null;
@@ -118,7 +118,7 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (hasRegistrationDates && hasEventDates) {
-            if (!registrationEnd.toLocalDate().isBefore(eventStart)) {
+            if (!registrationEnd.isBefore(eventStart)) {
                 throw new BadRequestException("Registration end time must be before the event starts");
             }
         }
@@ -231,12 +231,12 @@ public class EventServiceImplementation implements EventService {
             }
         }
 
-        LocalDate newEventStart = request.getEventStartDate();
-        LocalDate oldEventStart = event.getEventStartDate();
+        LocalDateTime newEventStart = request.getEventStartDate();
+        LocalDateTime oldEventStart = event.getEventStartDate();
         //Check if event start date is provided and modified
         if (newEventStart != null && oldEventStart != null && !newEventStart.isEqual(oldEventStart)) {
             //If it's modified, the new time must not be in the past
-            if (newEventStart.isBefore(LocalDate.now())) {
+            if (newEventStart.isBefore(LocalDateTime.now())) {
                 throw new IllegalArgumentException("When updating event start date, the new time must be in present or future");
             }
         }
@@ -248,7 +248,7 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (request.getRegistrationEnd()!=null && request.getEventStartDate()!=null) {
-            if (request.getRegistrationEnd().isAfter(request.getEventStartDate().atStartOfDay())) {
+            if (request.getRegistrationEnd().isAfter(request.getEventStartDate())) {
                 throw new IllegalArgumentException("Registration end date must be on or before event start date");
             }
         }
@@ -428,9 +428,9 @@ public class EventServiceImplementation implements EventService {
                 event.setEventStatus(upcoming);
             } else if (currentTime.isBefore(event.getRegistrationEnd())) {
                 event.setEventStatus(registrationOpen);
-            } else if (currentTime.toLocalDate().isBefore(event.getEventStartDate())) {
+            } else if (currentTime.isBefore(event.getEventStartDate())) {
                 event.setEventStatus(registrationClosed);
-            } else if (currentTime.toLocalDate().isBefore(event.getEventEndDate())) {
+            } else if (currentTime.isBefore(event.getEventEndDate())) {
                 event.setEventStatus(ongoing);
             } else {
                 event.setEventStatus(completed);
@@ -490,7 +490,7 @@ public class EventServiceImplementation implements EventService {
             throw new BadRequestException("Cannot cancel completed event");
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDateTime today = LocalDateTime.now();
 
         if (!currentStatus.equalsIgnoreCase("Draft")) {
             if (event.getEventStartDate() != null && !today.isBefore(event.getEventStartDate())) {
