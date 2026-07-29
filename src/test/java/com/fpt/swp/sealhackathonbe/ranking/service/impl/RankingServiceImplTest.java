@@ -119,14 +119,16 @@ public class RankingServiceImplTest {
         submission.setSubmissionId(submissionId);
         submission.setTeam(team);
         submission.setLastUpdatedAt(LocalDateTime.now());
+
+        lenient().when(entityManager.getReference(Round.class, roundId)).thenReturn(round);
+        lenient().when(entityManager.find(Round.class, roundId)).thenReturn(round);
+        lenient().when(entityManager.getReference(Category.class, categoryId)).thenReturn(category);
+        lenient().when(entityManager.find(Category.class, categoryId)).thenReturn(category);
     }
 
     @Test
     void testComputeRoundRankings_Success() {
         // Arrange
-        when(entityManager.getReference(Round.class, roundId)).thenReturn(round);
-        when(entityManager.getReference(Category.class, categoryId)).thenReturn(category);
-
         SubmissionResponse subResponse = new SubmissionResponse();
         subResponse.setSubmissionId(submissionId);
         subResponse.setTeamId(teamId);
@@ -324,6 +326,11 @@ public class RankingServiceImplTest {
         when(query.setParameter(anyString(), any())).thenReturn(query);
         when(query.getResultList()).thenReturn(List.of(teamId));
 
+        TypedQuery<Teams> teamsQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(anyString(), eq(Teams.class))).thenReturn(teamsQuery);
+        when(teamsQuery.setParameter(anyString(), any())).thenReturn(teamsQuery);
+        when(teamsQuery.getResultList()).thenReturn(List.of(team));
+
         when(teamDisqualificationService.getDisqualifiedTeamsByCategory(categoryId)).thenReturn(Collections.emptyList());
         when(eventRankingRepository.findByEvent_EventIdAndCategory_CategoryId(eventId, categoryId)).thenReturn(Collections.emptyList());
 
@@ -335,7 +342,6 @@ public class RankingServiceImplTest {
         roundRanking.setCategory(category);
         roundRanking.setIsApproved(true); // Must be approved
 
-        when(roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(roundId, List.of(teamId))).thenReturn(List.of(roundRanking));
         when(roundRankingRepository.findByCategory_CategoryId(categoryId)).thenReturn(new ArrayList<>(List.of(roundRanking)));
 
         when(entityManager.getReference(Teams.class, teamId)).thenReturn(team);
@@ -374,7 +380,6 @@ public class RankingServiceImplTest {
         roundRanking.setTeam(team);
         roundRanking.setIsApproved(false); // NOT approved!
 
-        when(roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(roundId, List.of(teamId))).thenReturn(List.of(roundRanking));
         when(roundRankingRepository.findByCategory_CategoryId(categoryId)).thenReturn(new ArrayList<>(List.of(roundRanking)));
 
         // Act & Assert
@@ -402,9 +407,6 @@ public class RankingServiceImplTest {
         // Tie-breaker: submission 1 is earlier, submission 2 is later
         submission.setLastUpdatedAt(LocalDateTime.now().minusHours(1));
         submission2.setLastUpdatedAt(LocalDateTime.now());
-
-        when(entityManager.getReference(Round.class, roundId)).thenReturn(round);
-        when(entityManager.getReference(Category.class, categoryId)).thenReturn(category);
 
         SubmissionResponse subResponse1 = new SubmissionResponse();
         subResponse1.setSubmissionId(submissionId);
@@ -494,9 +496,6 @@ public class RankingServiceImplTest {
         submission2.setLastUpdatedAt(LocalDateTime.now());
 
         submission.setLastUpdatedAt(LocalDateTime.now().minusHours(1));
-
-        when(entityManager.getReference(Round.class, roundId)).thenReturn(round);
-        when(entityManager.getReference(Category.class, categoryId)).thenReturn(category);
 
         SubmissionResponse subResponse1 = new SubmissionResponse();
         subResponse1.setSubmissionId(submissionId);
@@ -599,9 +598,6 @@ public class RankingServiceImplTest {
         // Team 1 (disqualified)
         submission.setLastUpdatedAt(LocalDateTime.now().minusHours(1));
 
-        when(entityManager.getReference(Round.class, roundId)).thenReturn(round);
-        when(entityManager.getReference(Category.class, categoryId)).thenReturn(category);
-
         SubmissionResponse subResponse1 = new SubmissionResponse();
         subResponse1.setSubmissionId(submissionId);
         subResponse1.setTeamId(teamId);
@@ -678,5 +674,45 @@ public class RankingServiceImplTest {
         // Beta team is disqualified -> rank 0, no advance
         assertEquals(0, betaRanking.getRankPosition());
         assertFalse(betaRanking.getIsAdvanced());
+    }
+
+    @Test
+    void testComputeRoundRankings_CalibrationRound_ThrowsIllegalStateException() {
+        // Arrange
+        Round calibrationRound = new Round();
+        calibrationRound.setRoundId(roundId);
+        calibrationRound.setIsCalibrationRound(true);
+
+        when(entityManager.find(Round.class, roundId)).thenReturn(calibrationRound);
+
+        // Act & Assert
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                rankingService.computeRoundRankings(roundId, categoryId));
+        assertEquals("Cannot compute rankings for a calibration round.", exception.getMessage());
+    }
+
+    @Test
+    void testComputeCategoryEventRankings_FinalRoundIsCalibration_ThrowsIllegalStateException() {
+        // Arrange
+        Category categoryRef = new Category();
+        categoryRef.setCategoryId(categoryId);
+        categoryRef.setCategoryName("AI Track");
+        com.fpt.swp.sealhackathonbe.event.entity.Event eventRef = new com.fpt.swp.sealhackathonbe.event.entity.Event();
+        eventRef.setEventId(eventId);
+        categoryRef.setEvent(eventRef);
+
+        when(entityManager.find(Category.class, categoryId)).thenReturn(categoryRef);
+
+        RoundResponse finalRoundResponse = RoundResponse.builder()
+                .roundId(roundId)
+                .isCalibrationRound(true)
+                .build();
+
+        when(roundService.getFinalRound(categoryId)).thenReturn(finalRoundResponse);
+
+        // Act & Assert
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                rankingService.computeCategoryEventRankings(categoryId));
+        assertEquals("Cannot compute event rankings because the final round is a calibration round.", exception.getMessage());
     }
 }

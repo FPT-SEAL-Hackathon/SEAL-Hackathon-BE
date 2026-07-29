@@ -26,6 +26,7 @@ import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
 import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
 
@@ -132,5 +133,35 @@ public class JudgingController {
             @RequestParam(required = false) UUID categoryId
     ) {
         return ResponseEntity.ok(researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId));
+    }
+
+    @Operation(
+            summary = "Approve score",
+            description = "Approve or unapprove a submission's judging score"
+    )
+    @PostMapping("/admin/submissions/{submissionId}/approve")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<SubmissionResponse> approveScore(
+            @PathVariable UUID submissionId,
+            @RequestBody java.util.Map<String, Boolean> request
+    ) {
+        boolean approve = request.getOrDefault("approve", true);
+        SubmissionResponse response = judgingService.approveScore(submissionId, approve);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Reject score",
+            description = "Reject a submission's judging score and require judges to score again"
+    )
+    @PostMapping("/admin/submissions/{submissionId}/reject-score")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<Void> rejectScore(
+            @PathVariable UUID submissionId,
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String reason = request.getOrDefault("reason", "Scores rejected by admin");
+        judgingService.rejectSubmissionScores(submissionId, reason);
+        return ResponseEntity.ok().build();
     }
 }

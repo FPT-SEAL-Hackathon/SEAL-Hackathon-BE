@@ -318,21 +318,4 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
 
         query.execute();
     }
-
-    @Override
-    @Transactional
-    public SubmissionResponse approveScore(UUID submissionId, boolean approve) {
-        Submissions submission = submissionsRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
-        submission.setIsScoreApproved(approve);
-        
-        if (approve) {
-            submission.setSubmissionStatusId(SubmissionStatusConstants.SCORED);
-        } else {
-            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
-        }
-        
-        submissionsRepository.save(submission);
-        return SubmissionMapper.toSubmissionResponse(submission);
-    }
 }

@@ -20,6 +20,8 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
+import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -559,5 +561,71 @@ public class JudgingServiceImpl implements JudgingService {
 
         judgingRepository.saveAll(scoresToDelete);
         evaluationAuditLogRepository.saveAll(auditLogs);
+    }
+
+    @Override
+    @Transactional
+    public SubmissionResponse approveScore(UUID submissionId, boolean approve) {
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new IllegalArgumentException("Submission not found"));
+
+        if (approve) {
+            if (Boolean.TRUE.equals(submission.getIsSampleSubmission())) {
+                throw new IllegalStateException("Cannot finalize score for a sample calibration submission.");
+            }
+
+            UUID roundId = submission.getRoundId();
+
+            // 1. Get all round criteria
+            List<RoundCriterion> criteria = roundCriterionRepository.findByRoundRoundIdOrderBySortOrderAsc(roundId);
+            if (criteria.isEmpty()) {
+                throw new IllegalStateException("Cannot finalize score because no criteria are configured for this round.");
+            }
+
+            // 2. Get active judges assigned to this round
+            List<RoundJudge> activeRoundJudges = roundJudgeRepository.findActiveByRoundRoundId(roundId);
+            if (activeRoundJudges.isEmpty()) {
+                throw new IllegalStateException("Cannot finalize score because no active judges are assigned to this round.");
+            }
+
+            // 3. Get all active judging records for this submission
+            List<Judging> judgings = judgingRepository.findBySubmission_SubmissionId(submissionId).stream()
+                    .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                    .toList();
+
+            if (judgings.isEmpty()) {
+                throw new IllegalStateException("Cannot finalize score because no scores have been submitted yet.");
+            }
+
+            // Group judgings by judge userId
+            Map<UUID, List<Judging>> judgeScoresMap = judgings.stream()
+                    .filter(j -> j.getRoundJudge() != null && j.getRoundJudge().getJudge() != null)
+                    .collect(Collectors.groupingBy(j -> j.getRoundJudge().getJudge().getUserId()));
+
+            for (RoundJudge rj : activeRoundJudges) {
+                UUID judgeId = rj.getJudge().getUserId();
+                String judgeName = rj.getJudge().getFullName() != null ? rj.getJudge().getFullName() : rj.getJudge().getEmail();
+
+                List<Judging> scores = judgeScoresMap.get(judgeId);
+                if (scores == null || scores.isEmpty()) {
+                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not submitted any scores.");
+                }
+
+                if (scores.size() < criteria.size()) {
+                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not scored all criteria.");
+                }
+            }
+        }
+
+        submission.setIsScoreApproved(approve);
+
+        if (approve) {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.SCORED);
+        } else {
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        }
+
+        submissionRepository.save(submission);
+        return SubmissionMapper.toSubmissionResponse(submission);
     }
 }
