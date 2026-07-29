@@ -18,6 +18,8 @@ import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+import com.fpt.swp.sealhackathonbe.core.constant.TeamStatusConstants;
+import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
@@ -39,6 +41,7 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class JudgingServiceImpl implements JudgingService {
 
     private final JudgingRepository judgingRepository;
@@ -470,6 +473,13 @@ public class JudgingServiceImpl implements JudgingService {
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
 
         Teams team = submission.getTeam();
+        if (SubmissionStatusConstants.DISQUALIFIED.equals(submission.getSubmissionStatusId())
+                || (team != null && (TeamStatusConstants.DISQUALIFIED.equals(team.getTeamStatusId())
+                || TeamStatusConstants.WITHDRAWN.equals(team.getTeamStatusId())))) {
+            throw new BusinessConflictException(
+                    "Disqualified submissions or submissions from inactive teams cannot have scores rejected");
+        }
+
         Event event = resolveEvent(submission);
 
         // Fetch active judging records

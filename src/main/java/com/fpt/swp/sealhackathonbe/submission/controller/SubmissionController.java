@@ -42,7 +42,7 @@ public class SubmissionController {
 
     @Operation(
             summary = "Submit work",
-            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
+            description = "Submit or update a team's work for a round."
     )
     @PostMapping("/submissions")
     public ResponseEntity<SubmissionResponse> submitWork(

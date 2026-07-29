@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EventServiceImplementation implements EventService {
 
     private static final List<String> PUBLIC_EVENT_STATUSES = List.of(
@@ -473,6 +474,37 @@ public class EventServiceImplementation implements EventService {
         event.setEventStatus(upcoming);
 
         return eventMapper.toEventResponse(eventRepository.save(event));
+    }
+
+    @Override
+    @Transactional
+    public EventResponse cancelEvent(UUID eventId) {
+        Event event = eventRepository.findByEventIdAndIsDeletedFalse(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+        String currentStatus = event.getEventStatus().getEventStatusName();
+
+        if (currentStatus.equalsIgnoreCase("Cancelled")) {
+            throw new BadRequestException("Event has already been cancelled");
+        }
+
+        if (currentStatus.equalsIgnoreCase("Completed")) {
+            throw new BadRequestException("Cannot cancel completed event");
+        }
+
+        LocalDate today = LocalDate.now();
+
+        if (!currentStatus.equalsIgnoreCase("Draft")) {
+            if (event.getEventStartDate() != null && !today.isBefore(event.getEventStartDate())) {
+                throw new BadRequestException("Cannot cancel ongoing event");
+            }
+        }
+
+        EventStatus cancelledStatus = eventStatusRepository.findByEventStatusName("Cancelled")
+                .orElseThrow(() -> new EntityNotFoundException("Cancelled status not found"));
+
+        event.setEventStatus(cancelledStatus);
+
+        return eventMapper.toEventResponse(event);
     }
 
 }
