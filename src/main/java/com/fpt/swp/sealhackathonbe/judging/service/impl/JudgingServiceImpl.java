@@ -37,6 +37,7 @@ import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class JudgingServiceImpl implements JudgingService {
 
     private final JudgingRepository judgingRepository;
