@@ -8,7 +8,6 @@ import com.fpt.swp.sealhackathonbe.auth.repository.AuditLogRepository;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
-import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import com.fpt.swp.sealhackathonbe.team.dto.CreateTeamRequest;
@@ -88,7 +87,7 @@ public class TeamServiceImpl implements TeamService {
         LocalDateTime now = LocalDateTime.now();
         releaseRejectedOrInactiveDuplicateTeamName(request.getEventId(), request.getTeamName(), now);
 
-        if (teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(currentUserId, event.getEventId())) {
+        if (teamMembersRepository.existsActiveMembershipInEvent(currentUserId, event.getEventId())) {
             throw new BusinessConflictException("User already belongs to an active team in this event");
         }
 
@@ -122,7 +121,7 @@ public class TeamServiceImpl implements TeamService {
                 currentUserId, event.getEventId(), savedTeam.getTeamId());
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
-        return toTeamResponse(savedTeam, members);
+        return toTeamResponse(savedTeam, members, event);
     }
 
     @Override
@@ -249,9 +248,8 @@ public class TeamServiceImpl implements TeamService {
     private boolean allActiveMembersRejectedForEvent(Teams team, List<TeamMembers> activeMembers) {
         for (TeamMembers member : activeMembers) {
             boolean rejected = eventParticipantRepository
-                    .findByEventIdAndUserId(team.getEventId(), member.getUserId())
-                    .map(participant -> participant.getParticipantStatus() != null
-                            && "REJECTED".equalsIgnoreCase(participant.getParticipantStatus().getStatusName()))
+                    .findParticipantStatusNameByEventIdAndUserId(team.getEventId(), member.getUserId())
+                    .map(statusName -> "REJECTED".equalsIgnoreCase(statusName))
                     .orElse(false);
             if (!rejected) {
                 return false;
@@ -315,6 +313,27 @@ public class TeamServiceImpl implements TeamService {
 
     private TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
         TeamResponse response = TeamMapper.toTeamResponse(team, members);
+        enrichLifecycleDetail(team, response);
+        if (response.getMembers() == null) {
+            return response;
+        }
+
+        response.getMembers().forEach(member -> {
+            String participantStatus = resolveParticipantStatusName(team, member.getUserId());
+            member.setParticipantStatus(participantStatus);
+            member.setParticipantStatusName(participantStatus);
+        });
+
+        return response;
+    }
+
+    private TeamResponse toTeamResponse(Teams team, List<TeamMembers> members, Event event) {
+        TeamResponse response = TeamMapper.toTeamResponse(
+                team,
+                members,
+                event != null ? event.getMinTeamSize() : null,
+                event != null ? event.getMaxTeamSize() : null
+        );
         enrichLifecycleDetail(team, response);
         if (response.getMembers() == null) {
             return response;
@@ -403,9 +422,7 @@ public class TeamServiceImpl implements TeamService {
         }
 
         return eventParticipantRepository
-                .findByEventIdAndUserId(team.getEventId(), userId)
-                .map(EventParticipant::getParticipantStatus)
-                .map(status -> status.getStatusName())
+                .findParticipantStatusNameByEventIdAndUserId(team.getEventId(), userId)
                 .orElse(null);
     }
 

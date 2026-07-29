@@ -117,7 +117,7 @@ class TeamServiceImplLeadershipTest {
                 .thenReturn(true);
         when(teamsRepository.findByEventIdAndTeamNameIgnoreCaseForUpdate(eventId, "RejectTeam"))
                 .thenReturn(List.of(rejectedTeam));
-        when(teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(leaderId, eventId))
+        when(teamMembersRepository.existsActiveMembershipInEvent(leaderId, eventId))
                 .thenReturn(false);
         when(teamsRepository.save(any(Teams.class))).thenAnswer(invocation -> {
             Teams saved = invocation.getArgument(0);
@@ -154,7 +154,7 @@ class TeamServiceImplLeadershipTest {
                 .thenReturn(List.of(existingTeam));
         when(teamMembersRepository.findByTeamIdAndActiveTrue(existingTeam.getTeamId()))
                 .thenReturn(List.of(existingMember));
-        when(eventParticipantRepository.findByEventIdAndUserId(eventId, existingMember.getUserId()))
+        when(eventParticipantRepository.findParticipantStatusNameByEventIdAndUserId(eventId, existingMember.getUserId()))
                 .thenReturn(Optional.empty());
 
         assertThrows(BusinessConflictException.class, () -> teamService.createTeam(request, leaderId));
@@ -182,9 +182,9 @@ class TeamServiceImplLeadershipTest {
         when(teamsRepository.findByEventIdAndTeamNameIgnoreCaseForUpdate(eventId, "RejectTeam"))
                 .thenReturn(List.of(staleTeam));
         when(teamMembersRepository.findByTeamIdAndActiveTrue(oldTeamId)).thenReturn(List.of(oldLeader));
-        when(eventParticipantRepository.findByEventIdAndUserId(eventId, oldLeaderId))
-                .thenReturn(Optional.of(rejectedParticipant()));
-        when(teamMembersRepository.existsByUserIdAndTeam_EventIdAndActiveTrue(leaderId, eventId))
+        when(eventParticipantRepository.findParticipantStatusNameByEventIdAndUserId(eventId, oldLeaderId))
+                .thenReturn(Optional.of("REJECTED"));
+        when(teamMembersRepository.existsActiveMembershipInEvent(leaderId, eventId))
                 .thenReturn(false);
         when(teamsRepository.save(any(Teams.class))).thenAnswer(invocation -> {
             Teams saved = invocation.getArgument(0);
@@ -453,7 +453,7 @@ class TeamServiceImplLeadershipTest {
         when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
                 .thenReturn(Optional.of(member));
-        when(eventParticipantRepository.findByEventIdAndUserId(team.getEventId(), memberId))
+        when(eventParticipantRepository.findParticipantStatusNameByEventIdAndUserId(team.getEventId(), memberId))
                 .thenReturn(Optional.empty());
 
         TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, organizerId, true);
