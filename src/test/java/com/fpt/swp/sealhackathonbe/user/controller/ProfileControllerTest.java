@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.user.controller;
 
 import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.settings.service.FptStudentCodePrefixService;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateMyProfileRequest;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -35,6 +37,8 @@ class ProfileControllerTest {
     private AuthenticationServiceImpl authService;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private FptStudentCodePrefixService fptStudentCodePrefixService;
 
     @InjectMocks
     private ProfileController controller;
@@ -69,6 +73,7 @@ class ProfileControllerTest {
         User user = user("FPT Student");
         when(authService.getCurrentUser()).thenReturn(user);
         when(userRepository.save(any(User.class))).thenReturn(user);
+        when(fptStudentCodePrefixService.profileIssues(user)).thenReturn(List.of());
 
         controller.updateMe(request("New Name", "0912345678", null));
 
@@ -114,6 +119,7 @@ class ProfileControllerTest {
         User user = user("Mentor");
         when(authService.getCurrentUser()).thenReturn(user);
         when(userRepository.save(any(User.class))).thenReturn(user);
+        when(fptStudentCodePrefixService.profileIssues(user)).thenReturn(List.of());
 
         controller.updateMe(request(null, null, ""));
 

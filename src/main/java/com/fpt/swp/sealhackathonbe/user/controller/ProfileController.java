@@ -3,6 +3,8 @@ package com.fpt.swp.sealhackathonbe.user.controller;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.auth.service.impl.AuthenticationServiceImpl;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
+import com.fpt.swp.sealhackathonbe.settings.service.FptStudentCodePrefixService;
+import com.fpt.swp.sealhackathonbe.settings.service.impl.FptStudentCodePrefixServiceImpl;
 import com.fpt.swp.sealhackathonbe.user.dto.UpdateMyProfileRequest;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
@@ -27,6 +29,7 @@ public class ProfileController {
 
     private final AuthenticationServiceImpl authService;
     private final UserRepository userRepository;
+    private final FptStudentCodePrefixService fptStudentCodePrefixService;
 
     @Operation(summary = "Get current user profile")
     @GetMapping
@@ -70,14 +73,13 @@ public class ProfileController {
             String code = request.getFptStudentCode().trim();
             String newCode = code.isEmpty() ? null : code;
             if (newCode != null && !newCode.equals(user.getFptStudentCode())) {
-                if (!com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isValidFptStudentCode(newCode)) {
-                    throw new BadRequestException(
-                            com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.MSG_FPT_CODE);
+                if (!fptStudentCodePrefixService.isValidActiveFptStudentCode(newCode)) {
+                    throw new BadRequestException(FptStudentCodePrefixServiceImpl.MSG_FPT_CODE);
                 }
                 if (userRepository.existsByFptStudentCodeAndIsDeletedFalseAndUserIdNot(newCode, user.getUserId())) {
                     throw new BadRequestException("FPT student code already exists.");
                 }
-                user.setFptStudentCode(newCode);
+                user.setFptStudentCode(fptStudentCodePrefixService.normalizeFptStudentCode(newCode));
             }
         }
         if (isExternalStudentRole && request.getExternalStudentCode() != null) {
@@ -129,8 +131,8 @@ public class ProfileController {
                 .accountStatus(toApiName(statusName))
                 .accountStatusName(statusName)
                 .createdAt(user.getCreatedAt())
-                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
-                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
+                .profileCompliant(fptStudentCodePrefixService.profileIssues(user).isEmpty())
+                .profileIssues(fptStudentCodePrefixService.profileIssues(user))
                 .build();
     }
 

@@ -24,6 +24,16 @@ public class TeamResponse {
     private Boolean membersInfoComplete;
     private Boolean canRequestApproval;
     private List<String> approvalIssues;
+    private String disqualifiedReason;
+    private UUID disqualifiedById;
+    private String disqualifiedByName;
+    private String disqualifiedByEmail;
+    private LocalDateTime disqualifiedAt;
+    private String withdrawnReason;
+    private UUID withdrawnById;
+    private String withdrawnByName;
+    private String withdrawnByEmail;
+    private LocalDateTime withdrawnAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<TeamMemberResponse> members;

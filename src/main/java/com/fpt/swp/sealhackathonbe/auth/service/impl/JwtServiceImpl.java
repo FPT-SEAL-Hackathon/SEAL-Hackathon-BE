@@ -35,8 +35,19 @@ import java.util.Map;
  */
 @Service
 public class JwtServiceImpl implements JwtService {
-    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 2;
-    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24;
+    /**
+     * Han token doc tu cau hinh de doi duoc khong can build lai.
+     * Mac dinh: access 60 phut (3.600.000 ms), refresh 7 ngay (604.800.000 ms).
+     *
+     * LUU Y ve refresh: han trong JWT phai khop voi han cua ROW trong bang RefreshTokens
+     * (UserService.issueSession dat plusDays(7)). Truoc day JWT ghi 24h nhung row ghi
+     * 7 ngay, va refresh() chi doc row nen 24h la dead code — nay hai ben da khop.
+     */
+    @Value("${jwt.access-token-expiration-ms:3600000}")
+    private long accessTokenExpirationMs;
+
+    @Value("${jwt.refresh-token-expiration-ms:604800000}")
+    private long refreshTokenExpirationMs;
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
@@ -75,7 +86,7 @@ public class JwtServiceImpl implements JwtService {
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION)
+                        new Date(System.currentTimeMillis() + accessTokenExpirationMs)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
@@ -91,7 +102,7 @@ public class JwtServiceImpl implements JwtService {
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION)
+                        new Date(System.currentTimeMillis() + refreshTokenExpirationMs)
                 )
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();

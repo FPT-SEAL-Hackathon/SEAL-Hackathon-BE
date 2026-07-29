@@ -86,10 +86,12 @@ public class AuthController {
     /**
      * Đăng xuất bằng cách thu hồi refresh token của phiên hiện tại.
      */
+    // Bo @RequestHeader("Authorization") bat buoc: no khong duoc dung trong than method,
+    // nhung thieu header thi Spring nem MissingRequestHeaderException -> khong co handler
+    // rieng -> HTTP 500 tren mot luong rat de xay ra (logout khi token da het han).
+    // Logout la idempotent nen khong can header.
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(
-            @RequestBody LogoutRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<String> logout(@Valid @RequestBody LogoutRequest request) {
 
         userService.logout(request.getRefreshToken());
 
@@ -102,7 +104,7 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(
-            @RequestBody RefreshTokenRequest request) {
+            @Valid @RequestBody RefreshTokenRequest request) {
 
         return ResponseEntity.ok(
                 jwtServiceImpl. refresh(request)

@@ -100,6 +100,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MentorProfileResponse> getMentorsOfCategory(UUID categoryId) {
         return categoryMentorRepository.findByCategory_CategoryId(categoryId).stream()
                 .map(MentorProfileResponse::from)
@@ -107,6 +108,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AssignedCategoryResponse> getAssignedCategoriesForMentor(User mentor) {
         List<ConsultationStatus> openStatuses = List.of(
                 ConsultationStatus.PENDING,
@@ -131,6 +133,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<TeamSummaryForMentorResponse> getTeamsForMentorCategory(User mentor, UUID categoryId) {
         // Xác nhận mentor được assign vào category này
         categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(categoryId, mentor.getUserId())
@@ -153,6 +156,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ConsultationRequestResponse> getMentorRequests(User mentor, UUID categoryId, UUID teamId, String status,
             String priority, Pageable pageable) {
         // Basic implementation, filters can be extended with specifications
@@ -352,6 +356,11 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "You are not assigned to this request's category"));
 
+        if (req.getStatus() != ConsultationStatus.ACCEPTED && req.getStatus() != ConsultationStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Notes can only be updated for accepted consultation requests");
+        }
+
         TeamMentorNote note = teamMentorNoteRepository.findByTeamIdAndMentorId(req.getTeam().getTeamId(), mentor.getUserId())
                 .orElse(null);
 
@@ -388,6 +397,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public java.util.List<TeamMentorNoteResponse> getMyTeamMentorNotes(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
@@ -425,6 +435,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MentorProfileResponse> getMyMentors(User user) {
         Teams team = getActiveTeamForUser(user);
         List<CategoryMentor> mentors = categoryMentorRepository
@@ -494,6 +505,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ConsultationRequestResponse> getMyTeamRequests(User user, String status, Pageable pageable) {
         Teams team = getActiveTeamForUser(user);
         Page<ConsultationRequest> requests = requestRepository.findByTeam_TeamId(team.getTeamId(), pageable);
@@ -522,6 +534,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ConsultationRequestResponse getConsultationRequestDetail(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -530,6 +543,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ConsultationMessageResponse> getConsultationMessages(User user, UUID requestId) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -546,9 +560,9 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
         checkRequestAccess(user, req);
 
-        if (req.getStatus() == ConsultationStatus.RESOLVED || req.getStatus() == ConsultationStatus.REJECTED
-                || req.getStatus() == ConsultationStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot send message in closed request");
+        if (req.getStatus() != ConsultationStatus.ACCEPTED && req.getStatus() != ConsultationStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot send message unless consultation request is ACCEPTED or IN_PROGRESS");
         }
 
         boolean senderIsMentor = isMentorRole(user);

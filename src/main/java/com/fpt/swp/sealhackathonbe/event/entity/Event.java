@@ -32,7 +32,7 @@ public class Event {
     @Column(name = "BannerImageURL")
     private String bannerImageUrl;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "EventStatusID", nullable = false)
     private EventStatus eventStatus;
 

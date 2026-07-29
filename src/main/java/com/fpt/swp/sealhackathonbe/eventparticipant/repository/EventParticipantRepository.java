@@ -18,6 +18,18 @@ import java.util.UUID;
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, UUID> {
     boolean existsByEventIdAndUserId(UUID eventId, UUID userId);
 
+    @Query("""
+            SELECT status.statusName
+            FROM EventParticipant participant
+            JOIN ParticipantStatus status ON status.statusId = participant.participantStatusId
+            WHERE participant.eventId = :eventId
+              AND participant.userId = :userId
+            """)
+    Optional<String> findParticipantStatusNameByEventIdAndUserId(
+            @Param("eventId") UUID eventId,
+            @Param("userId") UUID userId
+    );
+
     @EntityGraph(attributePaths = {
             "participantStatus",
             "event",

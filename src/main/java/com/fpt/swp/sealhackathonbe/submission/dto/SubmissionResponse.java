@@ -34,4 +34,9 @@ public class SubmissionResponse {
     private String notes;
     private Boolean isScoreApproved;
     private Boolean isSampleSubmission;
+
+    private UUID activeDisqualificationId;
+    private String activeDisqualificationReason;
+    private UUID activeDisqualifiedById;
+    private LocalDateTime activeDisqualifiedAt;
 }

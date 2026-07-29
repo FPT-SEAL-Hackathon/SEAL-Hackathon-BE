@@ -7,6 +7,7 @@ import com.fpt.swp.sealhackathonbe.publicapi.service.PublicSummaryService;
 import com.fpt.swp.sealhackathonbe.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +18,7 @@ public class PublicSummaryServiceImpl implements PublicSummaryService {
     private final AwardService awardService;
 
     @Override
+    @Transactional(readOnly = true)
     public LandingSummaryResponse getLandingSummary() {
         return LandingSummaryResponse.builder()
                 .events(eventService.getPublicEvents())

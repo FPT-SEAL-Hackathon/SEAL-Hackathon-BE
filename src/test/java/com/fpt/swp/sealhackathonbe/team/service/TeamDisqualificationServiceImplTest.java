@@ -4,7 +4,10 @@ import com.fpt.swp.sealhackathonbe.eventparticipant.entity.EventParticipant;
 import com.fpt.swp.sealhackathonbe.eventparticipant.entity.ParticipantStatus;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.EventParticipantRepository;
 import com.fpt.swp.sealhackathonbe.eventparticipant.repository.ParticipantStatusRepository;
+import com.fpt.swp.sealhackathonbe.core.constant.SubmissionStatusConstants;
+import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
+import com.fpt.swp.sealhackathonbe.submission.service.SubmissionHistoryService;
 import com.fpt.swp.sealhackathonbe.team.dto.DisqualifyTeamRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
@@ -42,6 +45,9 @@ class TeamDisqualificationServiceImplTest {
     private SubmissionsRepository submissionsRepository;
 
     @Mock
+    private SubmissionHistoryService submissionHistoryService;
+
+    @Mock
     private TeamMembersRepository teamMembersRepository;
 
     @Mock
@@ -64,10 +70,16 @@ class TeamDisqualificationServiceImplTest {
         UUID memberId = UUID.randomUUID();
         UUID adminId = UUID.randomUUID();
         UUID suspendedStatusId = UUID.randomUUID();
+        UUID submissionId = UUID.randomUUID();
 
         Teams team = new Teams();
         team.setTeamId(teamId);
         team.setEventId(eventId);
+
+        Submissions submission = new Submissions();
+        submission.setSubmissionId(submissionId);
+        submission.setTeamId(teamId);
+        submission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
 
         TeamMembers leader = member(teamId, leaderId);
         TeamMembers member = member(teamId, memberId);
@@ -83,7 +95,7 @@ class TeamDisqualificationServiceImplTest {
 
         when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(disqualificationsRepository.findByTeamId(teamId)).thenReturn(List.of());
-        when(submissionsRepository.findByTeamId(teamId)).thenReturn(List.of());
+        when(submissionsRepository.findByTeamId(teamId)).thenReturn(List.of(submission));
         when(teamMembersRepository.findByTeamIdAndActiveTrue(teamId)).thenReturn(List.of(leader, member));
         when(participantStatusRepository.findByStatusNameIgnoreCase("SUSPENDED"))
                 .thenReturn(Optional.of(suspendedStatus));
@@ -100,12 +112,14 @@ class TeamDisqualificationServiceImplTest {
         service.disqualifyTeam(teamId, request, adminId);
 
         assertEquals(TEAM_STATUS_DISQUALIFIED, team.getTeamStatusId());
+        assertEquals(SubmissionStatusConstants.DISQUALIFIED, submission.getSubmissionStatusId());
         assertEquals(suspendedStatusId, leaderParticipant.getParticipantStatusId());
         assertEquals(suspendedStatus, leaderParticipant.getParticipantStatus());
         assertEquals(suspendedStatusId, memberParticipant.getParticipantStatusId());
         assertEquals(suspendedStatus, memberParticipant.getParticipantStatus());
 
         verify(eventParticipantRepository).saveAll(List.of(leaderParticipant, memberParticipant));
+        verify(submissionHistoryService).recordSnapshot(submission);
     }
 
     private TeamMembers member(UUID teamId, UUID userId) {

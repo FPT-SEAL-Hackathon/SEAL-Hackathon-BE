@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.fpt.swp.sealhackathonbe.notification.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
+@Transactional(readOnly = true)
 public class RoundJudgeServiceImpl implements RoundJudgeService {
     private final RoundRepository roundRepository;
     private final RoundJudgeRepository roundJudgeRepository;
@@ -46,6 +48,8 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Override
+    @Transactional
     public List<RoundJudgeResponse> assignJudges(UUID roundId, AssignJudgesRequest request) {
         Round round = roundRepository
                 .findById(roundId)
@@ -157,6 +161,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundJudgeResponse> getJudgesByRound(UUID roundId) {
         if (!roundRepository.existsById(roundId)) {
             throw new EntityNotFoundException("Round not found");
@@ -169,6 +174,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundResponse> getRoundsByJudge(UUID judgeId) {
         if (!userRepository.existsById(judgeId)) {
             throw new EntityNotFoundException("Judge not found");
@@ -200,6 +206,7 @@ public class RoundJudgeServiceImpl implements RoundJudgeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<JudgeResponse> getAllJudges() {
         return userRepository.findExpertsMentorsJudges()
                 .stream()

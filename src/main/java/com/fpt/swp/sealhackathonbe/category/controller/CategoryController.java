@@ -20,7 +20,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/category/{eventId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<CategoryResponse> create(
             @PathVariable UUID eventId,
             @Valid @RequestBody CreateCategoryRequest request) {
@@ -35,7 +35,7 @@ public class CategoryController {
     }
 
     @PutMapping("/category/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<CategoryResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateCategoryRequest request) {
@@ -43,7 +43,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/category/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         categoryService.delete(id);
         return ResponseEntity.ok().build();
