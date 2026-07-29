@@ -30,6 +30,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
+@Transactional(readOnly = true)
 public class CategoryMentorServiceImpl implements CategoryMentorService {
     private final CategoryRepository categoryRepository;
     private final CategoryMentorRepository categoryMentorRepository;
@@ -163,6 +164,7 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
     }
 
     @Override
+    @Transactional
     public void removeMentor(UUID categoryId, UUID mentorId) {
         CategoryMentor cm = categoryMentorRepository
                 .findByCategory_CategoryIdAndMentor_UserId(categoryId, mentorId)
