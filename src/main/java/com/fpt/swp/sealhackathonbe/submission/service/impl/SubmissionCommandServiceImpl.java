@@ -17,12 +17,10 @@ import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
+import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.ParameterMode;
-import jakarta.persistence.StoredProcedureQuery;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -49,7 +47,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRepository roundRepository;
     private final RoundRankingRepository roundRankingRepository;
-    private final EntityManager entityManager;
+    private final DisqualificationsRepository disqualificationsRepository;
     private final com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService;
     private final TransactionTemplate transactionTemplate;
 
@@ -60,7 +58,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             TeamMembersRepository teamMembersRepository,
             RoundRepository roundRepository,
             RoundRankingRepository roundRankingRepository,
-            EntityManager entityManager,
+            DisqualificationsRepository disqualificationsRepository,
             EventParticipantService eventParticipantService,
             com.fpt.swp.sealhackathonbe.integration.repository.service.SubmissionRepositoryService submissionRepositoryService,
             PlatformTransactionManager transactionManager) {
@@ -70,7 +68,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         this.teamMembersRepository = teamMembersRepository;
         this.roundRepository = roundRepository;
         this.roundRankingRepository = roundRankingRepository;
-        this.entityManager = entityManager;
+        this.disqualificationsRepository = disqualificationsRepository;
         this.submissionRepositoryService = submissionRepositoryService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
@@ -83,7 +81,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         // 3. Kiem tra round chua qua deadline nop bai.
         // 4. Fetch metadata GitHub NGOAI transaction (goi HTTP co the mat 15s,
         //    khong duoc giu ket noi/transaction DB trong luc do).
-        // 5. Mo MOT transaction ngan: sp_UpsertSubmission + history + metadata repository
+        // 5. Mo MOT transaction ngan: upsert submission + history + metadata repository
         //    duoc commit atomic — khong bao gio commit Submission ma thieu SubmissionRepository.
         Teams team = validateLeaderCanSubmit(request.getTeamId(), currentUserId);
         validateTeamCanSubmit(team);
@@ -100,11 +98,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             // Deadline co the vua troi qua trong luc goi GitHub: kiem tra lai trong transaction.
             validateRoundAcceptsTeamSubmission(round);
 
-            callUpsertSubmissionProcedure(request, currentUserId);
-
-            Submissions submission = submissionsRepository
-                    .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
-                    .orElseThrow(() -> new RuntimeException("Submission was not created or updated"));
+            Submissions submission = upsertSubmission(request, currentUserId);
 
             submissionHistoryService.recordSnapshot(submission);
 
@@ -301,39 +295,45 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
         }
     }
 
-    private void callUpsertSubmissionProcedure(CreateSubmissionRequest request, UUID currentUserId) {
-        // Stored procedure quyet dinh insert/update that su.
-        // Repository chi duoc dung sau do de lay lai ban ghi da persist.
-        StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("sp_UpsertSubmission");
+    private Submissions upsertSubmission(CreateSubmissionRequest request, UUID currentUserId) {
+        Submissions submission = submissionsRepository
+                .findByTeamIdAndRoundId(request.getTeamId(), request.getRoundId())
+                .orElseGet(Submissions::new);
+        validateSubmissionCanBeUpdated(submission);
+        LocalDateTime now = LocalDateTime.now();
 
-        query.registerStoredProcedureParameter("TeamID", UUID.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RoundID", UUID.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RepositoryURL", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("DemoURL", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("ReportURL", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("SlideURL", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("Notes", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RepoMetadataJSON", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RepoLastCommitAt", LocalDateTime.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RepoStarCount", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RepoForkCount", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("SubmittedByUserID", UUID.class, ParameterMode.IN);
+        submission.setTeamId(request.getTeamId());
+        submission.setRoundId(request.getRoundId());
+        submission.setSubmissionStatusId(SubmissionStatusConstants.SUBMITTED);
+        submission.setRepositoryUrl(request.getRepositoryUrl());
+        submission.setDemoUrl(request.getDemoUrl());
+        submission.setReportUrl(request.getReportUrl());
+        submission.setSlideUrl(request.getSlideUrl());
+        submission.setNotes(request.getNotes());
+        submission.setRepoMetadataJson(null);
+        submission.setRepoLastCommitAt(null);
+        submission.setRepoStarCount(null);
+        submission.setRepoForkCount(null);
+        submission.setSubmittedAt(now);
+        submission.setLastUpdatedAt(now);
+        submission.setSubmittedByUserId(currentUserId);
+        submission.setIsScoreApproved(false);
+        submission.setIsSampleSubmission(false);
 
-        query.setParameter("TeamID", request.getTeamId());
-        query.setParameter("RoundID", request.getRoundId());
-        query.setParameter("RepositoryURL", request.getRepositoryUrl());
-        query.setParameter("DemoURL", request.getDemoUrl());
-        query.setParameter("ReportURL", request.getReportUrl());
-        query.setParameter("SlideURL", request.getSlideUrl());
-        query.setParameter("Notes", request.getNotes());
-        query.setParameter("RepoMetadataJSON", null);
-        query.setParameter("RepoLastCommitAt", null);
-        query.setParameter("RepoStarCount", null);
-        query.setParameter("RepoForkCount", null);
-        query.setParameter("SubmittedByUserID", currentUserId);
+        return submissionsRepository.save(submission);
+    }
 
-        query.execute();
+    private void validateSubmissionCanBeUpdated(Submissions submission) {
+        if (submission.getSubmissionId() == null) {
+            return;
+        }
+
+        if (SubmissionStatusConstants.DISQUALIFIED.equals(submission.getSubmissionStatusId())
+                || !disqualificationsRepository
+                        .findActiveBySubmissionIdOrderByDisqualifiedAtDesc(submission.getSubmissionId())
+                        .isEmpty()) {
+            throw new BusinessConflictException("This submission has been disqualified and cannot be updated");
+        }
     }
 
     @Override

@@ -42,6 +42,18 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
         // Dam bao mot user khong tham gia hai team active trong cung event.
         boolean existsByUserIdAndTeam_EventIdAndActiveTrue(UUID userId, UUID eventId);
 
+        @Query("""
+                        SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END
+                        FROM TeamMembers tm
+                        JOIN Teams team ON team.teamId = tm.teamId
+                        WHERE tm.userId = :userId
+                          AND tm.active = true
+                          AND team.eventId = :eventId
+                        """)
+        boolean existsActiveMembershipInEvent(
+                        @Param("userId") UUID userId,
+                        @Param("eventId") UUID eventId);
+
         @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMembers tm WHERE tm.userId = :userId AND tm.active = true AND tm.team.eventId = :eventId AND tm.team.categoryId = :categoryId")
         boolean existsActiveMemberInEventCategory(
                         @Param("userId") UUID userId,
