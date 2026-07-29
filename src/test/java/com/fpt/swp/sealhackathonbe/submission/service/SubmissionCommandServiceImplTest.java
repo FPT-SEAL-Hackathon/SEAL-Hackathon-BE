@@ -192,24 +192,6 @@ class SubmissionCommandServiceImplTest {
     }
 
     @Test
-    void approveScoreRejectsDisqualifiedSubmission() {
-        UUID submissionId = UUID.randomUUID();
-        Submissions submission = new Submissions();
-        submission.setSubmissionId(submissionId);
-        submission.setSubmissionStatusId(SubmissionStatusConstants.DISQUALIFIED);
-
-        when(submissionsRepository.findById(submissionId)).thenReturn(Optional.of(submission));
-
-        BusinessConflictException exception = assertThrows(
-                BusinessConflictException.class,
-                () -> service.approveScore(submissionId, true)
-        );
-
-        assertEquals("Disqualified submissions cannot have scores approved or rejected", exception.getMessage());
-        verify(submissionsRepository, never()).save(org.mockito.ArgumentMatchers.any(Submissions.class));
-    }
-
-    @Test
     void upsertSubmissionUpdatesExistingSubmissionWithoutStoredProcedure() {
         UUID teamId = UUID.randomUUID();
         UUID roundId = UUID.randomUUID();

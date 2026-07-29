@@ -10,7 +10,6 @@ import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
-import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,7 +39,6 @@ public class SubmissionController {
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
     private final AuthenticationServiceImpl authenticationServiceImpl;
-    private final JudgingService judgingService;
 
     @Operation(
             summary = "Submit work",
@@ -187,35 +185,5 @@ public class SubmissionController {
 
     private UUID currentUserId() {
         return authenticationServiceImpl.getCurrentUser().getUserId();
-    }
-
-    @Operation(
-            summary = "Approve score",
-            description = "Approve or unapprove a submission's judging score"
-    )
-    @PostMapping("/admin/submissions/{submissionId}/approve")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
-    public ResponseEntity<SubmissionResponse> approveScore(
-            @PathVariable UUID submissionId,
-            @RequestBody java.util.Map<String, Boolean> request
-    ) {
-        boolean approve = request.getOrDefault("approve", true);
-        SubmissionResponse response = submissionCommandService.approveScore(submissionId, approve);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "Reject score",
-            description = "Reject a submission's judging score and require judges to score again"
-    )
-    @PostMapping("/admin/submissions/{submissionId}/reject-score")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
-    public ResponseEntity<Void> rejectScore(
-            @PathVariable UUID submissionId,
-            @RequestBody java.util.Map<String, String> request
-    ) {
-        String reason = request.getOrDefault("reason", "Scores rejected by admin");
-        judgingService.rejectSubmissionScores(submissionId, reason);
-        return ResponseEntity.ok().build();
     }
 }

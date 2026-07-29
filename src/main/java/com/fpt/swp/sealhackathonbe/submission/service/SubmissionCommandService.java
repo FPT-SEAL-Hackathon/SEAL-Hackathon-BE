@@ -10,5 +10,4 @@ public interface SubmissionCommandService {
     // Validate request/current user, upsert submission, then return the mapped record.
     SubmissionResponse submitWork(CreateSubmissionRequest request, UUID currentUserId);
     SubmissionResponse submitSampleWork(CreateSampleSubmissionRequest request, UUID currentUserId);
-    SubmissionResponse approveScore(UUID submissionId, boolean approve);
 }

@@ -335,36 +335,4 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
             throw new BusinessConflictException("This submission has been disqualified and cannot be updated");
         }
     }
-
-    @Override
-    @Transactional
-    public SubmissionResponse approveScore(UUID submissionId, boolean approve) {
-        Submissions submission = submissionsRepository.findById(submissionId)
-                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
-        validateSubmissionScoreCanBeChanged(submission);
-
-        submission.setIsScoreApproved(approve);
-        
-        if (approve) {
-            submission.setSubmissionStatusId(SubmissionStatusConstants.SCORED);
-        } else {
-            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
-        }
-        
-        submissionsRepository.save(submission);
-        return SubmissionMapper.toSubmissionResponse(submission);
-    }
-
-    private void validateSubmissionScoreCanBeChanged(Submissions submission) {
-        if (SubmissionStatusConstants.DISQUALIFIED.equals(submission.getSubmissionStatusId())) {
-            throw new BusinessConflictException("Disqualified submissions cannot have scores approved or rejected");
-        }
-
-        UUID teamStatusId = submission.getTeam() != null
-                ? submission.getTeam().getTeamStatusId()
-                : null;
-        if (TEAM_STATUS_DISQUALIFIED.equals(teamStatusId) || TEAM_STATUS_WITHDRAWN.equals(teamStatusId)) {
-            throw new BusinessConflictException("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected");
-        }
-    }
 }
