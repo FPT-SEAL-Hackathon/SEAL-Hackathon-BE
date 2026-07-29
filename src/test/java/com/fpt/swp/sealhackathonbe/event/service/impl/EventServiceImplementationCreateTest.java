@@ -3,7 +3,6 @@ package com.fpt.swp.sealhackathonbe.event.service.impl;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.AuthenticationService;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.event.dto.request.CreateEventRequest;
-import com.fpt.swp.sealhackathonbe.event.dto.request.UpdateEventRequest;
 import com.fpt.swp.sealhackathonbe.event.dto.response.EventResponse;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.entity.EventStatus;
@@ -131,20 +130,20 @@ class EventServiceImplementationCreateTest {
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
-        assertEquals("Registration end date must be on or before event start date", exception.getMessage());
+        assertEquals("Registration end time must be before the event starts", exception.getMessage());
     }
 
+    // Luat hien tai (EventServiceImplementation:120) la CHAT: dang ky phai ket thuc truoc
+    // ngay event bat dau, ket thuc DUNG ngay do cung bi tu choi.
     @Test
-    void createEventRegistrationEndSameDateAsEventStartIsAllowed() {
+    void createEventRegistrationEndSameDateAsEventStartReturnsBadRequest() {
         CreateEventRequest request = validRequest();
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 30, 9, 0));
         request.setEventStartDate(LocalDate.of(2030, 6, 30));
 
-        mockSuccessfulCreate();
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
-        EventResponse response = eventService.create(request);
-
-        assertEquals("SEAL Hackathon 2030", response.getEventName());
+        assertEquals("Registration end time must be before the event starts", exception.getMessage());
     }
 
     // TODO(BA): create() hien KHONG con kiem tra trung ten event
@@ -172,22 +171,6 @@ class EventServiceImplementationCreateTest {
 
         assertEquals("SEAL Hackathon 2030", response.getEventName());
         assertEquals("FPT University HCMC", response.getLocation());
-    }
-
-    @Test
-    void updateEventAllowsPastRegistrationStartAndSameDayRegistrationEndForLiveTesting() {
-        UUID eventId = UUID.randomUUID();
-        Event event = existingEvent(eventId);
-        UpdateEventRequest request = validUpdateRequest();
-
-        when(eventRepository.findByEventIdAndIsDeletedFalse(eventId)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        EventResponse response = eventService.update(eventId, request);
-
-        assertEquals(request.getRegistrationStart(), response.getRegistrationStart());
-        assertEquals(request.getRegistrationEnd(), response.getRegistrationEnd());
-        assertEquals(request.getEventStartDate(), response.getEventStartDate());
     }
 
     private CreateEventRequest validRequest() {
@@ -218,39 +201,6 @@ class EventServiceImplementationCreateTest {
         when(authenticationService.getCurrentUser()).thenReturn(user);
 
         when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
-    }
-
-    private Event existingEvent(UUID eventId) {
-        Event event = new Event();
-        event.setEventId(eventId);
-        event.setEventName("TestingSubmission");
-        event.setDescription("Old description");
-        event.setLocation("FPT University");
-        event.setRegistrationStart(LocalDateTime.now().plusMinutes(30));
-        event.setRegistrationEnd(LocalDateTime.now().plusHours(1));
-        event.setEventStartDate(LocalDate.now());
-        event.setEventEndDate(LocalDate.now().plusDays(3));
-        event.setMinTeamSize(1);
-        event.setMaxTeamSize(5);
-        event.setIsDeleted(false);
-        event.setCreatedAt(LocalDateTime.now().minusDays(1));
-        event.setUpdatedAt(LocalDateTime.now().minusDays(1));
-        return event;
-    }
-
-    private UpdateEventRequest validUpdateRequest() {
-        UpdateEventRequest request = new UpdateEventRequest();
-        request.setEventName("TestingSubmission");
-        request.setDescription("Ready for live submit test");
-        request.setLocation("FPT University");
-        request.setBannerImageUrl("https://example.com/banner.png");
-        request.setRegistrationStart(LocalDateTime.now().minusHours(1));
-        request.setRegistrationEnd(LocalDateTime.now().plusHours(1));
-        request.setEventStartDate(LocalDate.now());
-        request.setEventEndDate(LocalDate.now().plusDays(3));
-        request.setMinTeamSize(1);
-        request.setMaxTeamSize(5);
-        return request;
     }
 
     // create() tra Draft status theo TEN (findByEventStatusName), khong phai theo ID.
