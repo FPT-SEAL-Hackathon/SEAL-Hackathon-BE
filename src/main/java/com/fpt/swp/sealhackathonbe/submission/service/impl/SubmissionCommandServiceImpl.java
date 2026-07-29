@@ -254,7 +254,7 @@ public class SubmissionCommandServiceImpl implements SubmissionCommandService {
     }
 
     private Round findRound(UUID roundId) {
-        return roundRepository.findById(roundId)
+        return roundRepository.findByIdWithCategoryEventAndStatus(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
     }
 

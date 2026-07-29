@@ -118,8 +118,8 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (hasRegistrationDates && hasEventDates) {
-            if (!registrationEnd.toLocalDate().isBefore(eventStart)) {
-                throw new BadRequestException("Registration end time must be before the event starts");
+            if (registrationEnd.toLocalDate().isAfter(eventStart)) {
+                throw new BadRequestException("Registration end date must be on or before event start date");
             }
         }
     }
@@ -216,15 +216,6 @@ public class EventServiceImplementation implements EventService {
                 .findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
 
-        LocalDateTime newRegistrationStart = request.getRegistrationStart();
-        LocalDateTime oldRegistrationStart = event.getRegistrationStart();
-        //Check if registration start is provided and modified
-        if (newRegistrationStart != null && oldRegistrationStart != null && !newRegistrationStart.isEqual(oldRegistrationStart)) {
-            //If it's modified, the new time must not be in the past
-            if (newRegistrationStart.isBefore(LocalDateTime.now())) {
-                throw new IllegalArgumentException("When updating registration start date, the new time must be in the present or future");
-            }
-        }
         if (request.getRegistrationStart()!=null && request.getRegistrationEnd()!=null) {
             if(request.getRegistrationStart().isAfter(request.getRegistrationEnd())) {
                 throw new IllegalArgumentException("Registration start date must be before end date");
@@ -248,7 +239,7 @@ public class EventServiceImplementation implements EventService {
         }
 
         if (request.getRegistrationEnd()!=null && request.getEventStartDate()!=null) {
-            if (request.getRegistrationEnd().isAfter(request.getEventStartDate().atStartOfDay())) {
+            if (request.getRegistrationEnd().toLocalDate().isAfter(request.getEventStartDate())) {
                 throw new IllegalArgumentException("Registration end date must be on or before event start date");
             }
         }
