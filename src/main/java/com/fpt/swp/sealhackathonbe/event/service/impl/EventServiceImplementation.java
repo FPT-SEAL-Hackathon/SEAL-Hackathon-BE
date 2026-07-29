@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.DataFormatException;
 
 @Service
 @RequiredArgsConstructor
@@ -311,13 +312,14 @@ public class EventServiceImplementation implements EventService {
                 .findByEventIdAndIsDeletedFalse(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
 
-        if(event.getEventStatus().getEventStatusName().equalsIgnoreCase("ONGOING")){
-            throw new RuntimeException("Cannot delete ongoing event");
+        if (!event.getEventStatus().getEventStatusName().equalsIgnoreCase("Draft")) {
+            throw new BadRequestException("Only draft event can be deleted");
         }
+
         event.setIsDeleted(true);
         event.setUpdatedAt(LocalDateTime.now());
         eventRepository.save(event);
-    };
+    }
 
     private Map<UUID, EventParticipant> getCurrentUserParticipationByEventId(List<Event> events) {
         if (events.isEmpty()) {
