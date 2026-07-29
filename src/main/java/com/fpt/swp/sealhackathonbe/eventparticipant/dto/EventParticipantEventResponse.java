@@ -17,4 +17,5 @@ public class EventParticipantEventResponse {
     private LocalDateTime registrationEnd;
     private LocalDate eventStartDate;
     private LocalDate eventEndDate;
+    private String bannerImageUrl;
 }
