@@ -17,8 +17,10 @@ import com.fpt.swp.sealhackathonbe.core.exception.AccountLinkRequiredException;
 import com.fpt.swp.sealhackathonbe.core.exception.AccountRemovedException;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.BusinessConflictException;
+import com.fpt.swp.sealhackathonbe.core.exception.EmailNotVerifiedException;
 import com.fpt.swp.sealhackathonbe.core.utils.TokenHashUtil;
 import com.fpt.swp.sealhackathonbe.notification.service.EmailService;
+import com.fpt.swp.sealhackathonbe.settings.service.FptStudentCodePrefixService;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
@@ -35,6 +37,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -51,6 +54,10 @@ import java.util.UUID;
  */
 @Service
 public class UserService {
+    // Cung property voi JwtServiceImpl de han cua row RefreshTokens khop han trong JWT.
+    @Value("${jwt.refresh-token-expiration-ms:604800000}")
+    private long refreshTokenExpirationMs;
+
     private static final UUID FPT_STUDENT_ID =
             UserRoleConstants.ROLE_FPT_STUDENT;
     private static final UUID EXTERNAL_STUDENT_ID =
@@ -94,6 +101,9 @@ public class UserService {
     @Autowired
     private AccountLinkService accountLinkService;
 
+    @Autowired
+    private FptStudentCodePrefixService fptStudentCodePrefixService;
+
     private final BCryptPasswordEncoder encoder =
             new BCryptPasswordEncoder(12);
 
@@ -122,8 +132,10 @@ public class UserService {
             if ("UNVERIFIED".equalsIgnoreCase(
                     user.getAccountStatus().getStatusName())) {
 
-                throw new IllegalStateException(
-                        "Please verify your email before logging in or contact Admin support"
+                // Exception rieng (403 + code EMAIL_NOT_VERIFIED) thay vi IllegalStateException
+                // -> frontend phan biet duoc de goi y gui lai email xac minh.
+                throw new EmailNotVerifiedException(
+                        "Please verify your email address before signing in."
                 );
             }
 
@@ -144,9 +156,10 @@ public class UserService {
         }
         if (userRepo.findByEmailAndIsDeletedFalse(email).isEmpty()
                 && tombstoneRepository.existsByEmailIgnoreCaseAndExpiresAtAfter(email, LocalDateTime.now())) {
+            // Tieng Anh + KHONG tiet lo chi tiet noi bo: ban cu ghi "trong qua trinh
+            // phat trien" — thong tin danh cho team, khong danh cho nguoi dung that.
             throw new AccountRemovedException(
-                    "Tài khoản của bạn đã bị gỡ khỏi hệ thống trong quá trình phát triển. "
-                            + "Vui lòng tạo tài khoản mới.");
+                    "This account has been removed. Please create a new account.");
         }
     }
 
@@ -161,11 +174,13 @@ public class UserService {
         String refreshToken = jwtServiceImpl.generateRefreshToken(user);
 
         // Chỉ lưu HASH của refresh token: lộ DB không đồng nghĩa lộ phiên đăng nhập.
+        // Hạn của row lấy từ CÙNG property với hạn trong JWT (jwt.refresh-token-expiration-ms)
+        // — hardcode plusDays(7) như trước làm hai bên dễ lệch nhau khi đổi cấu hình.
         RefreshToken tokenEntity = RefreshToken.builder()
                 .user(user)
                 .tokenHash(tokenHashUtil.hash(refreshToken))
                 .issuedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusDays(7))
+                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationMs / 1000))
                 .revokedAt(null)
                 .deviceInfo("WEB")
                 .build();
@@ -204,8 +219,8 @@ public class UserService {
                 .accountStatus(toApiName(accountStatusName))
                 .accountStatusName(accountStatusName)
                 .createdAt(user.getCreatedAt())
-                .profileCompliant(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.isCompliant(user))
-                .profileIssues(com.fpt.swp.sealhackathonbe.user.util.ProfileValidation.profileIssues(user))
+                .profileCompliant(fptStudentCodePrefixService.profileIssues(user).isEmpty())
+                .profileIssues(fptStudentCodePrefixService.profileIssues(user))
                 .build();
     }
 
@@ -375,7 +390,11 @@ public class UserService {
         user.setCreatedAt(LocalDateTime.now());
 
         if (userType.getUserTypeId().equals(FPT_STUDENT_ID)) {
-            user.setFptStudentCode(request.getStudentCode());
+            if (!fptStudentCodePrefixService.isValidActiveFptStudentCode(request.getStudentCode())) {
+                throw new BadRequestException(
+                        com.fpt.swp.sealhackathonbe.settings.service.impl.FptStudentCodePrefixServiceImpl.MSG_FPT_CODE);
+            }
+            user.setFptStudentCode(fptStudentCodePrefixService.normalizeFptStudentCode(request.getStudentCode()));
         } else {
             user.setExternalStudentCode(request.getStudentCode());
         }

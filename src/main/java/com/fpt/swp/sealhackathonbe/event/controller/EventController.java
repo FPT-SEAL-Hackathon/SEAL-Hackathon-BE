@@ -28,7 +28,7 @@ public class EventController {
     }
 
     @PostMapping("/event")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -36,7 +36,7 @@ public class EventController {
     }
 
     @PutMapping("/event/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateEventRequest request) {
@@ -44,7 +44,7 @@ public class EventController {
     }
 
     @PatchMapping("/event/status/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateEventStatusRequest request
@@ -53,7 +53,7 @@ public class EventController {
     }
 
     @DeleteMapping("/event/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         eventService.delete(id);
         return ResponseEntity.noContent().build();
@@ -69,11 +69,16 @@ public class EventController {
     }
 
     @PostMapping("/event/publish/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventResponse> publishEvent(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.publishEvent(id));
     }
 
+    @PatchMapping("/event/cancel/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<EventResponse> cancelEvent(@PathVariable UUID id) {
+        return ResponseEntity.ok(eventService.cancelEvent(id));
+    }
 
 
 

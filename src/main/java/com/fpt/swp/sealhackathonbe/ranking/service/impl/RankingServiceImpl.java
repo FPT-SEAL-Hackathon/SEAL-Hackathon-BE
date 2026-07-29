@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class RankingServiceImpl implements RankingService {
 
     private final JudgingService judgingService;
@@ -70,8 +71,13 @@ public class RankingServiceImpl implements RankingService {
     public List<RoundRankingDTO> computeRoundRankings(UUID roundId, UUID categoryId) {
         List<RoundRanking> rankings = new ArrayList<>();
 
-        Round roundRef = entityManager.getReference(Round.class, roundId);
-        Category categoryRef = entityManager.getReference(Category.class, categoryId);
+        Round roundRef = entityManager.find(Round.class, roundId);
+        if (roundRef == null) throw new IllegalArgumentException("Round ID does not exist: " + roundId);
+        if (Boolean.TRUE.equals(roundRef.getIsCalibrationRound())) {
+            throw new IllegalStateException("Cannot compute rankings for a calibration round.");
+        }
+        Category categoryRef = entityManager.find(Category.class, categoryId);
+        if (categoryRef == null) throw new IllegalArgumentException("Category ID does not exist: " + categoryId);
         List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
 
         List<UUID> submissionIds = submissionsList.stream()
@@ -82,18 +88,22 @@ public class RankingServiceImpl implements RankingService {
                 .map(DisqualifiedSubmissionResponse::getSubmissionId)
                 .toList();
 
-
         List<UUID> disqualifiedTeamIds = teamDisqualificationService.getDisqualifiedTeams(roundId, categoryId)
                 .stream()
                 .map(DisqualifiedTeamResponse:: getTeamId)
                 .toList();
 
         // KIỂM TRA ĐIỂM ĐÃ ĐƯỢC DUYỆT (FINALIZED)
-        validateScoresFinalizedForRound(roundId, "compute");
+        validateScoresFinalizedForRound(submissionsList, disqualifiedSubIds, "compute");
 
         Map<UUID, UUID> submissionToTeamMap = submissionsList.stream().collect(Collectors.toMap(
                 SubmissionResponse::getSubmissionId,
                 SubmissionResponse::getTeamId
+        ));
+
+        Map<UUID, String> teamNameMap = submissionsList.stream().collect(Collectors.toMap(
+                SubmissionResponse::getTeamId,
+                SubmissionResponse::getTeamName
         ));
 
         // Lấy danh sách ranking hiện có để update thay vì insert mới (tránh lỗi UNIQUE KEY)
@@ -172,60 +182,54 @@ public class RankingServiceImpl implements RankingService {
         Integer topN = roundService.getAdvancementTopN(roundId);
         int advancementN = topN != null ? topN : 0;
         int validRankCount = 0;
-        
+        RoundRanking prevValid = null;
+
         for (int i = 0; i < rankings.size(); i++) {
-            boolean isDisqualified = disqualifiedSubIds.contains(rankings.get(i).getSubmission().getSubmissionId()) 
-                                  || disqualifiedTeamIds.contains(rankings.get(i).getTeam().getTeamId());
-            boolean hasZeroScore = rankings.get(i).getTotalScore().compareTo(BigDecimal.ZERO) == 0;
-            
+            RoundRanking current = rankings.get(i);
+            boolean isDisqualified = disqualifiedSubIds.contains(current.getSubmission().getSubmissionId()) 
+                                  || disqualifiedTeamIds.contains(current.getTeam().getTeamId());
+            boolean hasZeroScore = current.getTotalScore().compareTo(BigDecimal.ZERO) == 0;
+
             if (isDisqualified || hasZeroScore) {
-                rankings.get(i).setRankPosition(0);
-                rankings.get(i).setIsAdvanced(false);
+                current.setRankPosition(0);
+                current.setIsAdvanced(false);
                 continue;
             }
 
-            if (validRankCount > 0) {
-                RoundRanking prevValid = null;
-                for (int j = i - 1; j >= 0; j--) {
-                    if (rankings.get(j).getRankPosition() > 0) {
-                        prevValid = rankings.get(j);
-                        break;
-                    }
-                }
-                if (prevValid != null) {
-                    int scoreCompare = rankings.get(i).getTotalScore().compareTo(prevValid.getTotalScore());
-                    if (scoreCompare < 0) {
+            if (validRankCount > 0 && prevValid != null) {
+                int scoreCompare = current.getTotalScore().compareTo(prevValid.getTotalScore());
+                if (scoreCompare < 0) {
+                    currentRank = validRankCount + 1;
+                } else if (scoreCompare == 0) {
+                    LocalDateTime t1 = prevValid.getSubmission().getLastUpdatedAt();
+                    LocalDateTime t2 = current.getSubmission().getLastUpdatedAt();
+                    if (t1 != null && t2 != null && t2.isAfter(t1)) {
                         currentRank = validRankCount + 1;
-                    } else if (scoreCompare == 0) {
-                        LocalDateTime t1 = prevValid.getSubmission().getLastUpdatedAt();
-                        LocalDateTime t2 = rankings.get(i).getSubmission().getLastUpdatedAt();
-                        if (t1 != null && t2 != null && t2.isAfter(t1)) {
-                            currentRank = validRankCount + 1;
-                        }
                     }
                 }
             }
-            rankings.get(i).setRankPosition(currentRank);
+            current.setRankPosition(currentRank);
             if (currentRank <= advancementN) {
-                rankings.get(i).setIsAdvanced(true);
+                current.setIsAdvanced(true);
             } else {
-                rankings.get(i).setIsAdvanced(false);
+                current.setIsAdvanced(false);
             }
             validRankCount++;
+            prevValid = current;
         }
 
         // Save to DB
-        // Clear previous rankings for this round and category if needed, or update.
-        // For simplicity, we just save them (assuming caller manages cleanup or relies on unique constraint update)
         List<RoundRanking> savedRankings = roundRankingRepository.saveAll(rankings);
+
+        String categoryName = categoryRef.getCategoryName();
 
         return savedRankings.stream().map(r -> RoundRankingDTO.builder()
                 .id(r.getId())
                 .roundId(roundId)
                 .categoryId(categoryId)
-                .categoryName(r.getCategory().getCategoryName())
+                .categoryName(categoryName)
                 .teamId(r.getTeam().getTeamId())
-                .teamName(r.getTeam().getTeamName())
+                .teamName(teamNameMap.get(r.getTeam().getTeamId()))
                 .submissionId(r.getSubmission().getSubmissionId())
                 .totalScore(r.getTotalScore())
                 .averageScore(r.getAverageScore())
@@ -347,6 +351,10 @@ public class RankingServiceImpl implements RankingService {
             return Collections.emptyList();
         }
 
+        if (Boolean.TRUE.equals(finalRound.getIsCalibrationRound())) {
+            throw new IllegalStateException("Cannot compute event rankings because the final round is a calibration round.");
+        }
+
         List<UUID> teamIds = entityManager.createQuery(
                 "SELECT t.teamId FROM Teams t WHERE t.category.categoryId = :categoryId AND t.event.eventId = :eventId", UUID.class)
                 .setParameter("categoryId", categoryId)
@@ -364,14 +372,17 @@ public class RankingServiceImpl implements RankingService {
         Map<UUID, EventRanking> existingRankingMap = existingRankings.stream()
                 .collect(Collectors.toMap(r -> r.getTeam().getTeamId(), r -> r));
 
-        List<RoundRanking> finalRoundRankings = roundRankingRepository.findByRoundRoundIdAndTeamTeamIdIn(finalRound.getRoundId(), teamIds);
-        
+        List<RoundRanking> allRoundRankings = roundRankingRepository.findByCategory_CategoryId(categoryId);
+
+        UUID finalRoundId = finalRound.getRoundId();
+        List<RoundRanking> finalRoundRankings = allRoundRankings.stream()
+                .filter(r -> r.getRound().getRoundId().equals(finalRoundId) && teamIds.contains(r.getTeam().getTeamId()))
+                .collect(Collectors.toList());
+
         if (finalRoundRankings.isEmpty() && !teamIds.isEmpty()) {
             log.warn("Skipping Event Ranking computation for Category {} because final round rankings have not been computed.", categoryRef.getCategoryName());
             return Collections.emptyList();
         }
-
-        List<RoundRanking> allRoundRankings = roundRankingRepository.findByCategory_CategoryId(categoryId);
 
         // KIỂM TRA TẤT CẢ RANKING CỦA CÁC VÒNG ĐÃ ĐƯỢC DUYỆT CHƯA
         boolean allRoundsApproved = allRoundRankings.stream()
@@ -381,7 +392,7 @@ public class RankingServiceImpl implements RankingService {
         }
 
         allRoundRankings.sort(java.util.Comparator.comparing(r -> r.getRound().getRoundOrder()));
-        
+
         Map<UUID, BigDecimal> dScores = new java.util.HashMap<>();
         Map<UUID, Integer> dRoundOrders = new java.util.HashMap<>();
         Map<UUID, LocalDateTime> dSubmissionTimes = new java.util.HashMap<>();
@@ -389,6 +400,16 @@ public class RankingServiceImpl implements RankingService {
             dScores.put(rr.getTeam().getTeamId(), rr.getTotalScore());
             dRoundOrders.put(rr.getTeam().getTeamId(), rr.getRound().getRoundOrder());
             dSubmissionTimes.put(rr.getTeam().getTeamId(), rr.getSubmission().getLastUpdatedAt());
+        }
+
+        // Tối ưu N+1: Truy vấn tất cả Team Names của các đội trong bảng đấu bằng 1 câu lệnh IN duy nhất
+        Map<UUID, String> teamNameMap = Collections.emptyMap();
+        if (!teamIds.isEmpty()) {
+            List<Teams> teams = entityManager.createQuery(
+                    "SELECT t FROM Teams t WHERE t.teamId IN :teamIds", Teams.class)
+                    .setParameter("teamIds", teamIds)
+                    .getResultList();
+            teamNameMap = teams.stream().collect(Collectors.toMap(Teams::getTeamId, Teams::getTeamName));
         }
 
         for (UUID teamId : teamIds) {
@@ -434,58 +455,52 @@ public class RankingServiceImpl implements RankingService {
 
         int currentRank = 1;
         int validRankCount = 0;
+        EventRanking prevValidTeam = null;
+        int prevValidRoundOrder = -1;
+
         for (int i = 0; i < rankings.size(); i++) {
             EventRanking currentTeam = rankings.get(i);
-            
+
             boolean isCurrentDisqualified = disqualifiedTeamIds.contains(currentTeam.getTeam().getTeamId());
             boolean hasZeroScore = currentTeam.getFinalScore().compareTo(BigDecimal.ZERO) == 0;
-            
+
             if (isCurrentDisqualified || hasZeroScore) {
                 currentTeam.setRankPosition(0);
                 continue;
             }
 
-            if (validRankCount > 0) {
-                EventRanking prevValidTeam = null;
-                int prevValidRoundOrder = -1;
-                for (int j = i - 1; j >= 0; j--) {
-                    if (rankings.get(j).getRankPosition() > 0) {
-                        prevValidTeam = rankings.get(j);
-                        prevValidRoundOrder = dRoundOrders.getOrDefault(prevValidTeam.getTeam().getTeamId(), -1);
-                        break;
-                    }
-                }
-                
-                if (prevValidTeam != null) {
-                    int currentRoundOrder = dRoundOrders.getOrDefault(currentTeam.getTeam().getTeamId(), -1);
-                    if (currentRoundOrder < prevValidRoundOrder) {
+            if (validRankCount > 0 && prevValidTeam != null) {
+                int currentRoundOrder = dRoundOrders.getOrDefault(currentTeam.getTeam().getTeamId(), -1);
+                if (currentRoundOrder < prevValidRoundOrder) {
+                    currentRank = validRankCount + 1;
+                } else if (currentRoundOrder == prevValidRoundOrder) {
+                    int scoreCompare = currentTeam.getFinalScore().compareTo(prevValidTeam.getFinalScore());
+                    if (scoreCompare < 0) {
                         currentRank = validRankCount + 1;
-                    } else if (currentRoundOrder == prevValidRoundOrder) {
-                        int scoreCompare = currentTeam.getFinalScore().compareTo(prevValidTeam.getFinalScore());
-                        if (scoreCompare < 0) {
+                    } else if (scoreCompare == 0) {
+                        LocalDateTime t1 = dSubmissionTimes.get(prevValidTeam.getTeam().getTeamId());
+                        LocalDateTime t2 = currentTeam.getTeam().getTeamId() != null ? dSubmissionTimes.get(currentTeam.getTeam().getTeamId()) : null;
+                        if (t1 != null && t2 != null && t2.isAfter(t1)) {
                             currentRank = validRankCount + 1;
-                        } else if (scoreCompare == 0) {
-                            LocalDateTime t1 = dSubmissionTimes.get(prevValidTeam.getTeam().getTeamId());
-                            LocalDateTime t2 = dSubmissionTimes.get(currentTeam.getTeam().getTeamId());
-                            if (t1 != null && t2 != null && t2.isAfter(t1)) {
-                                currentRank = validRankCount + 1;
-                            }
                         }
                     }
                 }
             }
             currentTeam.setRankPosition(currentRank);
             validRankCount++;
+            prevValidTeam = currentTeam;
+            prevValidRoundOrder = dRoundOrders.getOrDefault(currentTeam.getTeam().getTeamId(), -1);
         }
 
         List<EventRanking> savedRankings = eventRankingRepository.saveAll(rankings);
 
+        final Map<UUID, String> finalTeamNameMap = teamNameMap;
         return savedRankings.stream().map(r -> EventRankingDTO.builder()
                 .id(r.getId())
                 .eventId(r.getEvent().getEventId())
                 .categoryId(r.getCategory().getCategoryId())
                 .teamId(r.getTeam().getTeamId())
-                .teamName(r.getTeam().getTeamName())
+                .teamName(finalTeamNameMap.get(r.getTeam().getTeamId()))
                 .finalScore(r.getFinalScore())
                 .rankPosition(r.getRankPosition())
                 .computedAt(r.getComputedAt() != null ? r.getComputedAt() : LocalDateTime.now())
@@ -650,11 +665,14 @@ public class RankingServiceImpl implements RankingService {
     }
 
     private void validateScoresFinalizedForRound(UUID roundId, String action) {
-        List<com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
+        List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
         List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
-                .map(com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse::getSubmissionId)
+                .map(DisqualifiedSubmissionResponse::getSubmissionId)
                 .toList();
+        validateScoresFinalizedForRound(submissionsList, disqualifiedSubIds, action);
+    }
 
+    private void validateScoresFinalizedForRound(List<SubmissionResponse> submissionsList, List<UUID> disqualifiedSubIds, String action) {
         boolean allScoresApproved = submissionsList.stream()
                 .filter(sub -> !disqualifiedSubIds.contains(sub.getSubmissionId()))
                 .allMatch(sub -> Boolean.TRUE.equals(sub.getIsScoreApproved()));

@@ -96,16 +96,6 @@
         .footer p {
             margin: 5px 0;
         }
-        .fallback-link {
-            font-size: 12px;
-            color: #6b7280;
-            word-break: break-all;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .fallback-link a {
-            color: #3b82f6;
-        }
     </style>
 </head>
 <body>
@@ -132,12 +122,6 @@
                     <!-- Action Button Block -->
                     <div th:if="${actionUrl != null}" class="button-wrapper">
                         <a th:href="${actionUrl}" class="action-button" th:text="${actionText}">Click Here</a>
-                    </div>
-                    
-                    <!-- Fallback Link Block -->
-                    <div th:if="${actionUrl != null}" class="fallback-link">
-                        <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                        <a th:href="${actionUrl}" th:text="${actionUrl}">https://example.com/link</a>
                     </div>
                 </td>
             </tr>

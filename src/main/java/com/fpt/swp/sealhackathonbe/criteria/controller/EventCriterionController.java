@@ -20,7 +20,7 @@ public class EventCriterionController {
     private final EventCriterionService eventCriterionService;
 
     @PostMapping("/event/criteria/import/{eventId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<EventCriterionResponse>> importCriteriaToEvent(
             @PathVariable UUID eventId,
             @RequestBody ImportCriteriaToEventRequest request) {
@@ -35,7 +35,7 @@ public class EventCriterionController {
     }
 
     @PutMapping("/event/criteria/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<EventCriterionResponse> updateEventCriterion(
             @PathVariable UUID id,
             @RequestBody UpdateEventCriterionRequest request
@@ -44,7 +44,7 @@ public class EventCriterionController {
     }
 
     @DeleteMapping("/event/criteria/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> removeEventCriterion(@PathVariable UUID id) {
         eventCriterionService.delete(id);
         return ResponseEntity.noContent().build();

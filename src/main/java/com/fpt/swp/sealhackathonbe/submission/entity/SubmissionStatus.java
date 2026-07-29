@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.submission.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Entity
 @Table(name = "SubmissionStatus")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SubmissionStatus {
     // Bang danh muc trang thai submission; Submissions chi luu khoa ngoai StatusID.
     @Id

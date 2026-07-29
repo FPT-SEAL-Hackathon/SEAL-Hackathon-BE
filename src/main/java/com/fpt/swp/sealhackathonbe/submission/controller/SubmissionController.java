@@ -10,7 +10,6 @@ import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionCommandService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionQueryService;
-import com.fpt.swp.sealhackathonbe.judging.service.JudgingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,11 +39,10 @@ public class SubmissionController {
     private final SubmissionQueryService submissionQueryService;
     private final SubmissionDisqualificationService submissionDisqualificationService;
     private final AuthenticationServiceImpl authenticationServiceImpl;
-    private final JudgingService judgingService;
 
     @Operation(
             summary = "Submit work",
-            description = "Submit or update a team's work for a round. This API calls sp_UpsertSubmission."
+            description = "Submit or update a team's work for a round."
     )
     @PostMapping("/submissions")
     public ResponseEntity<SubmissionResponse> submitWork(
@@ -62,7 +60,7 @@ public class SubmissionController {
             description = "Organizer creates or updates a sample submission for a calibration round."
     )
     @PostMapping("/admin/calibration-sample-submissions")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<SubmissionResponse> submitSampleWork(
             @Valid @RequestBody CreateSampleSubmissionRequest request
     ) {
@@ -117,7 +115,7 @@ public class SubmissionController {
             description = "Get all submissions in one round. Use an organizer account."
     )
     @GetMapping("/admin/rounds/{roundId}/submissions")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByRound(
             @PathVariable UUID roundId
     ) {
@@ -130,7 +128,7 @@ public class SubmissionController {
             description = "Get every saved version of one submission. Use an organizer or judge account."
     )
     @GetMapping("/admin/submissions/{submissionId}/history")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     public ResponseEntity<List<SubmissionHistoryResponse>> getSubmissionHistoryBySubmissionId(
             @PathVariable UUID submissionId
     ) {
@@ -144,7 +142,7 @@ public class SubmissionController {
             description = "Get submissions in one round that have not been scored yet."
     )
     @GetMapping("/admin/rounds/{roundId}/unreview-submissions")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER','ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
     public ResponseEntity<List<SubmissionResponse>> getUnreviewSubmissionByRound(
             @PathVariable UUID roundId
     ) {
@@ -157,7 +155,7 @@ public class SubmissionController {
             description = "Get all submissions from teams in one event. Use an organizer account."
     )
     @GetMapping("/admin/events/{eventId}/submissions")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByEvent(
             @PathVariable UUID eventId
     ) {
@@ -170,7 +168,7 @@ public class SubmissionController {
             description = "Mark one submission as disqualified and record the reason. Use an organizer account."
     )
     @PostMapping("/admin/submissions/{submissionId}/disqualify")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<SubmissionDisqualificationResponse> disqualifySubmission(
             @PathVariable UUID submissionId,
             @Valid @RequestBody DisqualifySubmissionRequest request
@@ -187,35 +185,5 @@ public class SubmissionController {
 
     private UUID currentUserId() {
         return authenticationServiceImpl.getCurrentUser().getUserId();
-    }
-
-    @Operation(
-            summary = "Approve score",
-            description = "Approve or unapprove a submission's judging score"
-    )
-    @PostMapping("/admin/submissions/{submissionId}/approve")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<SubmissionResponse> approveScore(
-            @PathVariable UUID submissionId,
-            @RequestBody java.util.Map<String, Boolean> request
-    ) {
-        boolean approve = request.getOrDefault("approve", true);
-        SubmissionResponse response = submissionCommandService.approveScore(submissionId, approve);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(
-            summary = "Reject score",
-            description = "Reject a submission's judging score and require judges to score again"
-    )
-    @PostMapping("/admin/submissions/{submissionId}/reject-score")
-    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER')")
-    public ResponseEntity<Void> rejectScore(
-            @PathVariable UUID submissionId,
-            @RequestBody java.util.Map<String, String> request
-    ) {
-        String reason = request.getOrDefault("reason", "Scores rejected by admin");
-        judgingService.rejectSubmissionScores(submissionId, reason);
-        return ResponseEntity.ok().build();
     }
 }

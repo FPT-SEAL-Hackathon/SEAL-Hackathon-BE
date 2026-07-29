@@ -6,6 +6,8 @@ import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.entity.Judging;
 
+import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,4 +23,5 @@ public interface JudgingService {
     List<EvaluationAuditLogDTO> getEvaluationAuditLogsByEvent(UUID eventId);
     void rejectSubmissionScores(UUID submissionId, String reason);
     void deleteJudging(UUID submissionId, String reason);
+    SubmissionResponse approveScore(UUID submissionId, boolean approve);
 }

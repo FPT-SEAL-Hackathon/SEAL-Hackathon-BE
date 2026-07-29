@@ -34,5 +34,7 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
 
     boolean existsByRoundJudge_RoundJudgeId(UUID roundJudgeId);
 
+    boolean existsBySubmission_SubmissionIdAndIsActiveTrue(UUID submissionId);
+
     List<Judging> findBySubmission_SubmissionId(UUID submissionId);
 }

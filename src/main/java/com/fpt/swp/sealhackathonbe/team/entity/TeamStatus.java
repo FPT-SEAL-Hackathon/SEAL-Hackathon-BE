@@ -1,5 +1,6 @@
 package com.fpt.swp.sealhackathonbe.team.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class TeamStatus {
 
     // Bang danh muc trang thai cua team; Teams chi luu khoa ngoai StatusID.

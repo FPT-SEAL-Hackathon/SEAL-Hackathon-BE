@@ -24,7 +24,7 @@ public class RoundJudgeController {
     @PostMapping("/round/judges/{roundId}")
     // RBAC:
     // Chỉ ORGANIZER được phân công judge cho round.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public List<RoundJudgeResponse> assignJudges(
             @PathVariable UUID roundId,
             @Valid @RequestBody AssignJudgesRequest request) {
@@ -39,7 +39,7 @@ public class RoundJudgeController {
     @GetMapping("/judge/rounds/{judgeId}")
     // RBAC:
     // Cho phép ORGANIZER hoặc chính judge xem round được phân công.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER') or #judgeId == principal.user.userId")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN') or #judgeId == principal.user.userId")
     public ResponseEntity<List<RoundResponse>> getRoundsByJudge(@PathVariable UUID judgeId) {
         return ResponseEntity.ok(roundJudgeService.getRoundsByJudge(judgeId));
     }
@@ -47,7 +47,7 @@ public class RoundJudgeController {
     @PatchMapping("/round/judge/{id}")
     // RBAC:
     // Chỉ ORGANIZER được disable judge.
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public void disableJudge(@PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "false") boolean force) {
         roundJudgeService.disableJudge(id, force);

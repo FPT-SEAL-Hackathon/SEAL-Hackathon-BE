@@ -22,7 +22,7 @@ public class CategoryMentorController {
     private final CategoryMentorService categoryMentorService;
 
     @PostMapping("/category/expert/{categoryId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<CategoryMentorResponse>> assignMentors(
             @PathVariable UUID categoryId,
             @Valid @RequestBody AssignMentorsRequest request) {
@@ -32,7 +32,7 @@ public class CategoryMentorController {
     }
 
     @DeleteMapping("/category/expert/{categoryId}/{mentorId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> removeMentor(
             @PathVariable UUID categoryId,
             @PathVariable UUID mentorId) {
@@ -51,7 +51,7 @@ public class CategoryMentorController {
     }
 
     @GetMapping("/{categoryId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
     public ResponseEntity<List<CategoryMentorResponse>> getCategoryMentors(
             @PathVariable UUID categoryId) {
         return ResponseEntity

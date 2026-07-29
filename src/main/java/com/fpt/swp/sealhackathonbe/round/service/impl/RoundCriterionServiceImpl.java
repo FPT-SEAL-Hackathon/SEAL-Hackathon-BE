@@ -16,6 +16,7 @@ import com.fpt.swp.sealhackathonbe.round.service.mapper.RoundMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     private final RoundMapper roundMapper;
 
     @Override
+    @Transactional
     public List<RoundCriterionResponse> importCriteriaFromEvent(UUID roundId, ImportCriteriaFromEventRequest request) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
@@ -61,6 +63,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional
     public RoundCriterionResponse updateImportedCriterion(UUID roundCriterionId, UpdateImportedCriterionRequest request) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
@@ -74,6 +77,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional
     public RoundCriterionResponse createSpecificCriterion(UUID roundId ,CreateSpecificCriterionRequest request) {
         RoundCriterion roundCriterion = RoundCriterion.builder()
                 .roundCriterionId(UUID.randomUUID())
@@ -88,6 +92,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional
     public RoundCriterionResponse updateSpecificCriterion(UUID roundCriterionId, UpdateSpecificCriterionRequest request) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
@@ -103,6 +108,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID roundCriterionId) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
@@ -118,6 +124,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public RoundCriterionResponse getById(UUID roundCriterionId) {
         RoundCriterion roundCriterion = roundCriterionRepository
                 .findById(roundCriterionId)
@@ -126,6 +133,7 @@ public class RoundCriterionServiceImpl implements RoundCriterionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RoundCriterionResponse> getByRound(UUID roundId) {
         return roundCriterionRepository.findByRoundRoundIdOrderBySortOrderAsc(roundId)
                 .stream()

@@ -3,6 +3,8 @@ package com.fpt.swp.sealhackathonbe.user.service;
 import com.fpt.swp.sealhackathonbe.auth.dto.UserResponse;
 import com.fpt.swp.sealhackathonbe.core.exception.BadRequestException;
 import com.fpt.swp.sealhackathonbe.core.exception.ProfileConflictException;
+import com.fpt.swp.sealhackathonbe.settings.service.FptStudentCodePrefixService;
+import com.fpt.swp.sealhackathonbe.settings.service.impl.FptStudentCodePrefixServiceImpl;
 import com.fpt.swp.sealhackathonbe.user.dto.CompleteProfileRequest;
 import com.fpt.swp.sealhackathonbe.user.entity.AccountStatus;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -32,17 +34,20 @@ public class UserProfileService {
     private final UserTypeRepository userTypeRepository;
     private final AccountStatusRepository accountStatusRepository;
     private final UserService userService;
+    private final FptStudentCodePrefixService fptStudentCodePrefixService;
 
     public UserProfileService(
             UserRepository userRepository,
             UserTypeRepository userTypeRepository,
             AccountStatusRepository accountStatusRepository,
-            UserService userService
+            UserService userService,
+            FptStudentCodePrefixService fptStudentCodePrefixService
     ) {
         this.userRepository = userRepository;
         this.userTypeRepository = userTypeRepository;
         this.accountStatusRepository = accountStatusRepository;
         this.userService = userService;
+        this.fptStudentCodePrefixService = fptStudentCodePrefixService;
     }
 
     @Transactional(readOnly = true)
@@ -91,8 +96,8 @@ public class UserProfileService {
         if (phone != null && !ProfileValidation.isValidVietnamesePhone(phone)) {
             throw new BadRequestException(ProfileValidation.MSG_PHONE);
         }
-        if (fptStudentCode != null && !ProfileValidation.isValidFptStudentCode(fptStudentCode)) {
-            throw new BadRequestException(ProfileValidation.MSG_FPT_CODE);
+        if (fptStudentCode != null && !fptStudentCodePrefixService.isValidActiveFptStudentCode(fptStudentCode)) {
+            throw new BadRequestException(FptStudentCodePrefixServiceImpl.MSG_FPT_CODE);
         }
         if (externalStudentCode != null && !ProfileValidation.isValidExternalStudentCode(externalStudentCode)) {
             throw new BadRequestException(ProfileValidation.MSG_EXTERNAL_CODE);
@@ -119,7 +124,7 @@ public class UserProfileService {
         currentUser.setPhone(phone);
         currentUser.setUserType(userType);
         if (ROLE_FPT_STUDENT.equals(normalizedRole)) {
-            currentUser.setFptStudentCode(fptStudentCode);
+            currentUser.setFptStudentCode(fptStudentCodePrefixService.normalizeFptStudentCode(fptStudentCode));
             currentUser.setExternalStudentCode(null);
             currentUser.setUniversityName(null);
         } else {
@@ -212,8 +217,8 @@ public class UserProfileService {
             throw new BadRequestException(ProfileValidation.MSG_PHONE);
         }
         if (fptStudentCode != null && !fptStudentCode.equals(currentUser.getFptStudentCode())
-                && !ProfileValidation.isValidFptStudentCode(fptStudentCode)) {
-            throw new BadRequestException(ProfileValidation.MSG_FPT_CODE);
+                && !fptStudentCodePrefixService.isValidActiveFptStudentCode(fptStudentCode)) {
+            throw new BadRequestException(FptStudentCodePrefixServiceImpl.MSG_FPT_CODE);
         }
         if (externalStudentCode != null && !externalStudentCode.equals(currentUser.getExternalStudentCode())
                 && !ProfileValidation.isValidExternalStudentCode(externalStudentCode)) {
@@ -237,7 +242,8 @@ public class UserProfileService {
 
         currentUser.setFullName(request.getFullName().trim());
         currentUser.setPhone(phone);
-        currentUser.setFptStudentCode(fptStudentCode);
+        currentUser.setFptStudentCode(fptStudentCode != null
+                ? fptStudentCodePrefixService.normalizeFptStudentCode(fptStudentCode) : null);
         currentUser.setExternalStudentCode(externalStudentCode);
         currentUser.setUniversityName(trimToNull(request.getUniversityName()));
         currentUser.setBio(trimToNull(request.getBio()));

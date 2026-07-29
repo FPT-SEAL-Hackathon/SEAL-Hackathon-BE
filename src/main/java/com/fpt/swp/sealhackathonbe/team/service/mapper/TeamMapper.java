@@ -24,6 +24,17 @@ import java.util.UUID;
 public class TeamMapper {
     // Mapper chỉ chuyển entity nội bộ sang DTO trả về API, không gọi repository và không chứa nghiệp vụ.
     public static TeamResponse toTeamResponse(Teams team, List<TeamMembers> members) {
+        Integer minTeamSize = team.getEvent() != null ? team.getEvent().getMinTeamSize() : null;
+        Integer maxTeamSize = team.getEvent() != null ? team.getEvent().getMaxTeamSize() : null;
+        return toTeamResponse(team, members, minTeamSize, maxTeamSize);
+    }
+
+    public static TeamResponse toTeamResponse(
+            Teams team,
+            List<TeamMembers> members,
+            Integer minTeamSize,
+            Integer maxTeamSize
+    ) {
         TeamResponse response = new TeamResponse();
         response.setTeamId(team.getTeamId());
         response.setEventId(team.getEventId());
@@ -43,8 +54,6 @@ public class TeamMapper {
 
         response.setMembers(memberResponses);
         long activeMemberCount = memberResponses.size();
-        Integer minTeamSize = team.getEvent() != null ? team.getEvent().getMinTeamSize() : null;
-        Integer maxTeamSize = team.getEvent() != null ? team.getEvent().getMaxTeamSize() : null;
         boolean minOk = minTeamSize == null || activeMemberCount >= minTeamSize;
         boolean maxOk = maxTeamSize == null || activeMemberCount <= maxTeamSize;
         List<String> approvalIssues = buildApprovalIssues(team, members, activeMemberCount, minTeamSize, maxTeamSize);
