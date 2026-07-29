@@ -650,9 +650,9 @@ public class RankingServiceImpl implements RankingService {
     }
 
     private void validateScoresFinalizedForRound(UUID roundId, String action) {
-        List<com.fpt.swp.sealhackathonbe.submission.dto.SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
+        List<SubmissionResponse> submissionsList = submissionQueryService.getSubmissionsByRound(roundId);
         List<UUID> disqualifiedSubIds = submissionDisqualificationService.getDisqualifiedSubmissions(roundId).stream()
-                .map(com.fpt.swp.sealhackathonbe.submission.dto.DisqualifiedSubmissionResponse::getSubmissionId)
+                .map(DisqualifiedSubmissionResponse::getSubmissionId)
                 .toList();
 
         boolean allScoresApproved = submissionsList.stream()
