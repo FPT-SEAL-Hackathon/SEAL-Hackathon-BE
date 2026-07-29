@@ -51,7 +51,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     );
 
     private final SystemSettingRepository repository;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Đọc tất cả setting từ DB, nếu thiếu key thì trả về default.

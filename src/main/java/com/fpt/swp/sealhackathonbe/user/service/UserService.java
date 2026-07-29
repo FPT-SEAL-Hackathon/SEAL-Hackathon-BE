@@ -129,7 +129,7 @@ public class UserService {
                     (UserPrincipal) authentication.getPrincipal();
 
             User user = userPrincipal.getUser();
-            if ("UNVERIFIED".equalsIgnoreCase(
+            if (user != null && user.getAccountStatus() != null && "UNVERIFIED".equalsIgnoreCase(
                     user.getAccountStatus().getStatusName())) {
 
                 // Exception rieng (403 + code EMAIL_NOT_VERIFIED) thay vi IllegalStateException
@@ -302,7 +302,7 @@ public class UserService {
     public void resendVerificationEmail(String email) {
         User user = userRepo.findByEmail(email);
 
-        if (user == null || !"UNVERIFIED".equalsIgnoreCase(user.getAccountStatus().getStatusName())) {
+        if (user == null || user.getAccountStatus() == null || !"UNVERIFIED".equalsIgnoreCase(user.getAccountStatus().getStatusName())) {
             return;
         }
 
@@ -407,8 +407,8 @@ public class UserService {
 
         User savedUser = userRepo.save(user);
 
-        String roleName = savedUser.getUserType().getTypeName();
-        String accountStatusName = savedUser.getAccountStatus().getStatusName();
+        String roleName = savedUser.getUserType() != null ? savedUser.getUserType().getTypeName() : null;
+        String accountStatusName = savedUser.getAccountStatus() != null ? savedUser.getAccountStatus().getStatusName() : null;
 
         createAndSendVerificationToken(savedUser);
 
