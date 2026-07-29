@@ -1,14 +1,20 @@
 package com.fpt.swp.sealhackathonbe.settings.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fpt.swp.sealhackathonbe.settings.dto.LandingPageSettingsDto;
 import com.fpt.swp.sealhackathonbe.settings.dto.SystemSettingsRequest;
 import com.fpt.swp.sealhackathonbe.settings.dto.SystemSettingsResponse;
 import com.fpt.swp.sealhackathonbe.settings.entity.SystemSetting;
 import com.fpt.swp.sealhackathonbe.settings.repository.SystemSettingRepository;
 import com.fpt.swp.sealhackathonbe.settings.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,6 +23,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SystemSettingServiceImpl implements SystemSettingService {
 
     private static final String KEY_PLATFORM_NAME           = "platformName";
@@ -27,6 +34,9 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     private static final String KEY_ALLOW_LATE_SUBMISSIONS  = "allowLateSubmissions";
     private static final String KEY_ENABLE_PUBLIC_LEADERBOARD = "enablePublicLeaderboard";
     private static final String KEY_REQUIRE_EMAIL_VERIFICATION = "requireEmailVerification";
+
+    private static final String KEY_LANDING_GALLERY         = "landing_gallery";
+    private static final String KEY_LANDING_FOOTER          = "landing_footer";
 
     // Default values khi chưa có bản ghi trong DB
     private static final Map<String, String> DEFAULTS = Map.of(
@@ -41,6 +51,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     );
 
     private final SystemSettingRepository repository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Đọc tất cả setting từ DB, nếu thiếu key thì trả về default.
@@ -87,6 +98,59 @@ public class SystemSettingServiceImpl implements SystemSettingService {
             upsert(KEY_REQUIRE_EMAIL_VERIFICATION, String.valueOf(request.getRequireEmailVerification()), "BOOLEAN");
 
         return getSettings();
+    }
+
+    @Override
+    public LandingPageSettingsDto getLandingSettings() {
+        SystemSetting gallerySetting = repository.findById(KEY_LANDING_GALLERY).orElse(null);
+        SystemSetting footerSetting = repository.findById(KEY_LANDING_FOOTER).orElse(null);
+
+        List<LandingPageSettingsDto.LandingGalleryItemDto> gallery = null;
+        if (gallerySetting != null && gallerySetting.getSettingValue() != null && !gallerySetting.getSettingValue().isBlank()) {
+            try {
+                gallery = objectMapper.readValue(gallerySetting.getSettingValue(), new TypeReference<List<LandingPageSettingsDto.LandingGalleryItemDto>>() {});
+            } catch (Exception e) {
+                log.error("Failed to parse landing gallery JSON from DB", e);
+            }
+        }
+
+        LandingPageSettingsDto.LandingFooterDto footer = null;
+        if (footerSetting != null && footerSetting.getSettingValue() != null && !footerSetting.getSettingValue().isBlank()) {
+            try {
+                footer = objectMapper.readValue(footerSetting.getSettingValue(), LandingPageSettingsDto.LandingFooterDto.class);
+            } catch (Exception e) {
+                log.error("Failed to parse landing footer JSON from DB", e);
+            }
+        }
+
+        return LandingPageSettingsDto.builder()
+                .gallery(gallery)
+                .footer(footer)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public LandingPageSettingsDto updateLandingSettings(LandingPageSettingsDto request) {
+        if (request.getGallery() != null) {
+            try {
+                String galleryJson = objectMapper.writeValueAsString(request.getGallery());
+                upsert(KEY_LANDING_GALLERY, galleryJson, "JSON");
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize landing gallery to JSON", e);
+            }
+        }
+
+        if (request.getFooter() != null) {
+            try {
+                String footerJson = objectMapper.writeValueAsString(request.getFooter());
+                upsert(KEY_LANDING_FOOTER, footerJson, "JSON");
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize landing footer to JSON", e);
+            }
+        }
+
+        return getLandingSettings();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
