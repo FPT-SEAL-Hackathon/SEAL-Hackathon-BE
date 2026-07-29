@@ -581,6 +581,7 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
         response.setRegistrationEnd(event.getRegistrationEnd());
         response.setEventStartDate(event.getEventStartDate());
         response.setEventEndDate(event.getEventEndDate());
+        response.setBannerImageUrl(event.getBannerImageUrl());
         return response;
     }
 }

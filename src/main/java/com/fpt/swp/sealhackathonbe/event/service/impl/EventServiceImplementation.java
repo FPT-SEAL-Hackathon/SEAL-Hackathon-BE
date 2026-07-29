@@ -39,6 +39,7 @@ import java.util.zip.DataFormatException;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EventServiceImplementation implements EventService {
 
     private static final List<String> PUBLIC_EVENT_STATUSES = List.of(
