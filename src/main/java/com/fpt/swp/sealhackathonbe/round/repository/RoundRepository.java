@@ -17,6 +17,16 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
 
     List<Round> findByCategoryCategoryIdOrderByRoundOrderAsc(UUID categoryId);
 
+    @Query("""
+            SELECT r
+            FROM Round r
+            JOIN FETCH r.category c
+            JOIN FETCH c.event
+            LEFT JOIN FETCH r.roundStatus
+            WHERE r.roundId = :roundId
+            """)
+    Optional<Round> findByIdWithCategoryEventAndStatus(@Param("roundId") UUID roundId);
+
     //Find max roundOrder by Category
     @Query("SELECT COALESCE(MAX(r.roundOrder), 0) FROM Round r WHERE r.category.categoryId = :categoryId")
     Integer findMaxRoundOrderByCategory(@Param("categoryId") UUID categoryId);
