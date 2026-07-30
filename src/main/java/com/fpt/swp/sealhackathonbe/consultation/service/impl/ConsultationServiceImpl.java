@@ -58,6 +58,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final AiKnowledgeBaseRepository aiKnowledgeBaseRepository;
     private final GeminiService geminiService;
     private final UserTypeRepository userTypeRepository;
+    private final org.springframework.context.ApplicationContext applicationContext;
 
     @Override
     @Transactional
@@ -582,11 +583,16 @@ public class ConsultationServiceImpl implements ConsultationService {
         // -- AI MENTOR INTERCEPTION LOGIC (executed OUTSIDE DB transaction) --
         if (!senderIsMentor) {
             String question = messageDto.getContent();
-            List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
-            aiResponse = geminiService.askAi(question, kb);
+            if (question != null && question.contains("✅ Milestone completed")) {
+                aiResponse = null; // Do not trigger AI reply for system/milestone messages
+            } else {
+                List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
+                aiResponse = geminiService.askAi(question, kb);
+            }
         }
 
-        return processSendMessageDb(user, requestId, messageDto, senderIsMentor, aiResponse);
+        ConsultationService self = applicationContext.getBean(ConsultationService.class);
+        return self.processSendMessageDb(user, requestId, messageDto, senderIsMentor, aiResponse);
     }
 
     @Transactional
@@ -594,6 +600,8 @@ public class ConsultationServiceImpl implements ConsultationService {
             User user, UUID requestId, MessageRequest messageDto, boolean senderIsMentor, String aiResponse) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        ConsultationMessage finalSavedMessage = null;
 
         if (!senderIsMentor && aiResponse != null) {
             String question = messageDto.getContent();
@@ -603,7 +611,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                     .content(question)
                     .attachmentUrl(messageDto.getAttachmentUrl())
                     .build();
-            messageRepository.save(studentMsg);
+            finalSavedMessage = messageRepository.save(studentMsg);
 
             if (aiResponse.startsWith("API_ERROR: ")) {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
@@ -611,28 +619,27 @@ public class ConsultationServiceImpl implements ConsultationService {
                         .sender(req.getEvent().getCreatedBy())
                         .content("[AI Mentor Error]: " + aiResponse)
                         .build();
-                messageRepository.save(aiMsg);
+                finalSavedMessage = messageRepository.save(aiMsg);
             } else if (!"UNKNOWN".equalsIgnoreCase(aiResponse)) {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
                         .request(req)
                         .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
                         .content("[AI Mentor]: " + aiResponse)
                         .build();
-                messageRepository.save(aiMsg);
+                finalSavedMessage = messageRepository.save(aiMsg);
 
                 req.setUpdatedAt(LocalDateTime.now());
                 requestRepository.save(req);
 
                 // Do NOT notify mentors. We intercepted the question successfully!
-                var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
-                return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
+                return ConsultationMessageResponse.from(finalSavedMessage);
             } else {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
                         .request(req)
                         .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
                         .content("[AI Mentor]: This question exceeds my knowledge base. The system has notified the human Mentors to assist you!")
                         .build();
-                messageRepository.save(aiMsg);
+                finalSavedMessage = messageRepository.save(aiMsg);
             }
         } else {
             ConsultationMessage msg = ConsultationMessage.builder()
@@ -641,7 +648,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                     .content(messageDto.getContent())
                     .attachmentUrl(messageDto.getAttachmentUrl())
                     .build();
-            messageRepository.save(msg);
+            finalSavedMessage = messageRepository.save(msg);
         }
 
         req.setUpdatedAt(LocalDateTime.now());
@@ -685,8 +692,7 @@ public class ConsultationServiceImpl implements ConsultationService {
             }
         }
 
-        var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
-        return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
+        return ConsultationMessageResponse.from(finalSavedMessage);
     }
 
     private void checkRequestAccess(User user, ConsultationRequest req) {

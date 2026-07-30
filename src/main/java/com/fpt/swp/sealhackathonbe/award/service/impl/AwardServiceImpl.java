@@ -267,7 +267,7 @@ public class AwardServiceImpl implements AwardService {
 
         if (roundId == null) {
             Category category = getCategory(categoryId);
-            List<EventRankingDTO> rankings = rankingService.getPublishedCategoryLeaderboard(category.getEvent().getEventId(), categoryId);
+            List<EventRankingDTO> rankings = rankingService.getApprovedCategoryLeaderboard(category.getEvent().getEventId(), categoryId);
             if (rankings.size() > limit) {
                 rankings = rankings.subList(0, limit);
             }
@@ -300,7 +300,7 @@ public class AwardServiceImpl implements AwardService {
                 ));
 
         if (roundId == null) {
-            List<EventRankingDTO> rankings = rankingService.getPublishedCategoryLeaderboard(event.getEventId(), categoryId);
+            List<EventRankingDTO> rankings = rankingService.getApprovedCategoryLeaderboard(event.getEventId(), categoryId);
             if (rankings.isEmpty()) {
                 throw new IllegalStateException("No ranking exists for this category.");
             }
