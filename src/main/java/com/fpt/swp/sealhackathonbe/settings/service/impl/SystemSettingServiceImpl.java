@@ -1,8 +1,10 @@
 package com.fpt.swp.sealhackathonbe.settings.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+// Jackson 3 bo JsonProcessingException; moi loi serialize/deserialize nem
+// JacksonException va no la UNCHECKED (extends RuntimeException).
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.settings.dto.LandingPageSettingsDto;
 import com.fpt.swp.sealhackathonbe.settings.dto.SystemSettingsRequest;
 import com.fpt.swp.sealhackathonbe.settings.dto.SystemSettingsResponse;
@@ -136,7 +138,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
             try {
                 String galleryJson = objectMapper.writeValueAsString(request.getGallery());
                 upsert(KEY_LANDING_GALLERY, galleryJson, "JSON");
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 log.error("Failed to serialize landing gallery to JSON", e);
             }
         }
@@ -145,7 +147,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
             try {
                 String footerJson = objectMapper.writeValueAsString(request.getFooter());
                 upsert(KEY_LANDING_FOOTER, footerJson, "JSON");
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 log.error("Failed to serialize landing footer to JSON", e);
             }
         }

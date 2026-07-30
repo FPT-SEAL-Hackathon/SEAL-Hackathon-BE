@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ai.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.ai.entity.AiKnowledgeBase;
 import com.fpt.swp.sealhackathonbe.ai.service.GeminiService;
 import lombok.extern.slf4j.Slf4j;
