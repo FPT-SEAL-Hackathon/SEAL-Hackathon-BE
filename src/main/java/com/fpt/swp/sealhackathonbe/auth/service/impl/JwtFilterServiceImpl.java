@@ -1,6 +1,6 @@
 package com.fpt.swp.sealhackathonbe.auth.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.auth.service.mapper.JwtFilterService;
 import com.fpt.swp.sealhackathonbe.core.exception.ErrorResponse;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
@@ -43,10 +43,9 @@ public class JwtFilterServiceImpl extends OncePerRequestFilter implements JwtFil
     @Autowired
     private UserRepository userRepository;
 
-    // KHONG @Autowired: du an nay khong co bean ObjectMapper nao (moi noi deu dung
-    // `new ObjectMapper()` — xem GeminiServiceImpl, GitHubRepositoryMetadataClient),
-    // va filter duoc khoi tao rat som trong vong doi servlet nen inject se lam
-    // app fail-to-start. ObjectMapper la thread-safe khi chi doc/ghi nen dung static.
+    // Jackson 3 (tools.jackson) — cung phien ban ma Spring Boot 4 dung cho HTTP.
+    // Giu static final thay vi @Autowired: filter duoc khoi tao rat som trong vong doi
+    // servlet nen tranh phu thuoc bean; ObjectMapper thread-safe khi chi doc/ghi.
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
