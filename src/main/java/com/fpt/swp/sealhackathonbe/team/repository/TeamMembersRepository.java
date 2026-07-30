@@ -54,6 +54,19 @@ public interface TeamMembersRepository extends JpaRepository<TeamMembers, UUID> 
                         @Param("userId") UUID userId,
                         @Param("eventId") UUID eventId);
 
+        @Query("""
+                        SELECT tm FROM TeamMembers tm
+                        JOIN FETCH tm.team team
+                        LEFT JOIN FETCH team.event
+                        LEFT JOIN FETCH team.category
+                        WHERE tm.userId = :userId
+                          AND tm.active = true
+                          AND team.eventId = :eventId
+                        """)
+        Optional<TeamMembers> findActiveMemberInEvent(
+                        @Param("eventId") UUID eventId,
+                        @Param("userId") UUID userId);
+
         @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMembers tm WHERE tm.userId = :userId AND tm.active = true AND tm.team.eventId = :eventId AND tm.team.categoryId = :categoryId")
         boolean existsActiveMemberInEventCategory(
                         @Param("userId") UUID userId,
