@@ -54,6 +54,10 @@ public class RoundServiceImpl implements RoundService {
         RoundStatus status = roundStatusRepository
                 .findById(request.getRoundStatusId())
                 .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
+        // roundOrder luôn do server sinh (max+1 trong category), CỐ Ý bỏ qua giá trị client gửi:
+        // thứ tự vòng phải liên tục và duy nhất vì RankingServiceImpl sắp xếp bảng xếp hạng
+        // chung cuộc theo nó, còn AwardServiceImpl dựa vào order lớn nhất để xác định vòng
+        // chung kết. Muốn đổi thứ tự thì dùng API update.
         int currentRound = roundRepository.findMaxRoundOrderByCategory(categoryId);
         int nextRound = currentRound + 1;
 
@@ -112,7 +116,13 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
         round.setRoundName(request.getRoundName());
         round.setDescription(request.getDescription());
-        round.setRoundOrder(request.getRoundOrder());
+        // roundOrder: null = giữ nguyên (client không gửi thì không được vô tình xoá thứ tự).
+        // Trước đây set thẳng giá trị request nên order null/0/âm/trùng đều lọt qua, làm hỏng
+        // sắp xếp bảng xếp hạng chung cuộc và việc xác định vòng chung kết.
+        if (request.getRoundOrder() != null) {
+            validateRoundOrder(round, request.getRoundOrder());
+            round.setRoundOrder(request.getRoundOrder());
+        }
         round.setRoundStatus(roundStatus);
         round.setStartDate(request.getStartDate());
         round.setEndDate(request.getEndDate());
@@ -167,6 +177,25 @@ public class RoundServiceImpl implements RoundService {
                 .findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         return round.getAdvancementTopN();
+    }
+
+    /**
+     * Thứ tự vòng phải >= 1 và duy nhất trong cùng category.
+     * Lý do nghiêm ngặt: RankingServiceImpl sắp xếp bảng xếp hạng chung cuộc theo roundOrder
+     * (và dùng -1/-2 làm giá trị đặc biệt cho đội bị loại), còn AwardServiceImpl xác định vòng
+     * chung kết bằng round có order lớn nhất — order âm hoặc trùng làm SAI KẾT QUẢ trao giải,
+     * không chỉ sai hiển thị. @Min(1) ở DTO đã chặn số âm, ở đây chặn tiếp trùng.
+     */
+    private void validateRoundOrder(Round round, Integer newOrder) {
+        if (newOrder < 1) {
+            throw new BadRequestException("Round order must be at least 1");
+        }
+        UUID categoryId = round.getCategory().getCategoryId();
+        if (roundRepository.existsByCategoryCategoryIdAndRoundOrderAndRoundIdNot(
+                categoryId, newOrder, round.getRoundId())) {
+            throw new BusinessConflictException(
+                    "Another round in this category already uses order " + newOrder + ".");
+        }
     }
 
     private void validateRoundTimeline(

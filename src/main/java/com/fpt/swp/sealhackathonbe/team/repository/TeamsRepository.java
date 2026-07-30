@@ -59,4 +59,15 @@ public interface TeamsRepository extends JpaRepository<Teams, UUID> {
     long countByCategoryId(UUID categoryId);
 
     long countByEventId(UUID eventId);
+
+    // Đếm team theo từng category trong một event bằng MỘT truy vấn (tránh N+1 khi trả danh
+    // sách category kèm teamCount). Trả về các cặp [categoryId, count]; category chưa có team
+    // nào sẽ KHÔNG xuất hiện — phía gọi phải mặc định 0.
+    @Query("""
+            select t.categoryId, count(t)
+            from Teams t
+            where t.eventId = :eventId
+            group by t.categoryId
+            """)
+    List<Object[]> countByCategoryGroupedForEvent(@Param("eventId") UUID eventId);
 }

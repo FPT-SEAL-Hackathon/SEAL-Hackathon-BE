@@ -80,9 +80,11 @@ public class RoundServiceValidationTest {
         roundStatusId = UUID.randomUUID();
 
         event = new Event();
-        // Event boundary 1 day: 25/07/2026 -> 25/07/2026
-        event.setEventStartDate(LocalDate.of(2026, 7, 25));
-        event.setEventEndDate(LocalDate.of(2026, 7, 25));
+        // Event boundary 1 day: 25/07/2026 00:00 -> 25/07/2026 cuoi ngay.
+        // eventStartDate/eventEndDate la LocalDateTime, nen mot event "tron 1 ngay" phai dung
+        // atStartOfDay()/atTime(MAX); de nguyen 00:00 o ca hai dau se khien moi round deu invalid.
+        event.setEventStartDate(LocalDate.of(2026, 7, 25).atStartOfDay());
+        event.setEventEndDate(LocalDate.of(2026, 7, 25).atTime(LocalTime.MAX));
 
         category = new Category();
         category.setCategoryId(categoryId);

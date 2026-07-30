@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,20 +31,33 @@ public class FptStudentCodePrefixController {
         return ResponseEntity.ok(service.list(false));
     }
 
+    // Danh sách Admin kèm usageCount (số tài khoản đang dùng từng prefix) để admin biết ảnh
+    // hưởng trước khi tắt một prefix.
     @GetMapping("/admin")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<FptStudentCodePrefixResponse>> adminList(
             @RequestParam(defaultValue = "false") boolean includeInactive
     ) {
-        return ResponseEntity.ok(service.list(includeInactive));
+        return ResponseEntity.ok(service.listWithUsage(includeInactive));
     }
 
+    // POST = TẠO MỚI (409 nếu prefix đã tồn tại). Trước đây đây là upsert nên thêm trùng sẽ
+    // ghi đè âm thầm bản ghi cũ; sửa prefix giờ phải gọi PUT bên dưới.
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<FptStudentCodePrefixResponse> upsert(
+    public ResponseEntity<FptStudentCodePrefixResponse> create(
             @Valid @RequestBody FptStudentCodePrefixRequest request
     ) {
-        return ResponseEntity.ok(service.upsert(request));
+        return ResponseEntity.ok(service.create(request));
+    }
+
+    @PutMapping("/{prefix}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<FptStudentCodePrefixResponse> update(
+            @PathVariable String prefix,
+            @Valid @RequestBody FptStudentCodePrefixRequest request
+    ) {
+        return ResponseEntity.ok(service.update(prefix, request));
     }
 
     @PatchMapping("/{prefix}/active")
