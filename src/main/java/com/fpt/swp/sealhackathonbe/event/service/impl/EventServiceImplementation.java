@@ -43,9 +43,12 @@ import java.util.zip.DataFormatException;
 public class EventServiceImplementation implements EventService {
 
     private static final List<String> PUBLIC_EVENT_STATUSES = List.of(
+            "Upcoming",
             "Registration Open",
+            "Registration Closed",
             "Ongoing",
-            "Completed"
+            "Completed",
+            "Cancelled"
     );
 
     private final EventRepository eventRepository;
