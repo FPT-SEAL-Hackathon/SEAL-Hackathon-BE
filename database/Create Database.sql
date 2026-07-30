@@ -924,7 +924,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[SystemSettings](
 	[SettingKey] [nvarchar](100) NOT NULL,
-	[SettingValue] [nvarchar](1000) NOT NULL,
+	[SettingValue] [nvarchar](max) NOT NULL,
 	[SettingType] [nvarchar](20) NULL,
 	[Description] [nvarchar](500) NULL,
 	[UpdatedAt] [datetime2](7) NULL,
