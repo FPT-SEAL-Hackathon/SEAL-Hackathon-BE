@@ -113,6 +113,16 @@ public class CategoryMentorServiceImpl implements CategoryMentorService {
             }
         }
 
+        // Cập nhật role sau khi gửi notification để tránh bị Lock Wait Timeout
+        // do transaction REQUIRES_NEW của NotificationService chờ S-lock trên bảng Users
+        for (User mentor : mentors) {
+            String currentRole = mentor.getUserType() != null ? mentor.getUserType().getTypeName() : "";
+            if ("Internal Judge".equalsIgnoreCase(currentRole) || "Guest Judge".equalsIgnoreCase(currentRole)) {
+                mentor.setUserType(expertType);
+            }
+        }
+        userRepository.saveAll(mentors);
+
         return categoryMentors.stream()
                 .map(categoryMapper::toCategoryMentorResponse)
                 .toList();
