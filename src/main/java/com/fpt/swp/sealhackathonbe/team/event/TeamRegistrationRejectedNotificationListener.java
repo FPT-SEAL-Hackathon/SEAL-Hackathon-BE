@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 @Slf4j
 public class TeamRegistrationRejectedNotificationListener {
+    // Gui thong bao reject sau commit de member chi nhan tin khi quyet dinh da luu DB.
 
     private final NotificationService notificationService;
 
@@ -25,11 +26,10 @@ public class TeamRegistrationRejectedNotificationListener {
                     event.organizerUserId(),
                     event.eventId(),
                     "Team Registration Rejected",
-                    "Your team " + event.teamName()
-                            + " was rejected by the organizer. You can create or join another team for this event."
-                            + reason
+                    "Your team " + event.teamName() + " was rejected by the organizer." + reason
             );
         } catch (Exception exception) {
+            // Loi notification chi ghi log; quyet dinh reject team van giu nguyen.
             log.error(
                     "Could not send team registration rejection notification for event {} to users {}",
                     event.eventId(),

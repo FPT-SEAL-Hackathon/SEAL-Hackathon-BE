@@ -8,7 +8,6 @@ import com.fpt.swp.sealhackathonbe.submission.dto.SubmissionDisqualificationResp
 import com.fpt.swp.sealhackathonbe.submission.entity.Submissions;
 import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import com.fpt.swp.sealhackathonbe.submission.service.SubmissionDisqualificationService;
-import com.fpt.swp.sealhackathonbe.submission.service.SubmissionHistoryService;
 import com.fpt.swp.sealhackathonbe.submission.service.mapper.SubmissionDisqualificationMapper;
 import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
@@ -27,7 +26,6 @@ public class SubmissionDisqualificationServiceImpl implements SubmissionDisquali
             SubmissionStatusConstants.DISQUALIFIED;
 
     private final SubmissionsRepository submissionsRepository;
-    private final SubmissionHistoryService submissionHistoryService;
     private final DisqualificationsRepository disqualificationsRepository;
 
     @Override
@@ -57,7 +55,6 @@ public class SubmissionDisqualificationServiceImpl implements SubmissionDisquali
         submission.setSubmissionStatusId(SUBMISSION_STATUS_DISQUALIFIED);
         submission.setLastUpdatedAt(LocalDateTime.now());
         submissionsRepository.save(submission);
-        submissionHistoryService.recordSnapshot(submission);
 
         Disqualifications disqualification = new Disqualifications();
         disqualification.setTeamId(null);

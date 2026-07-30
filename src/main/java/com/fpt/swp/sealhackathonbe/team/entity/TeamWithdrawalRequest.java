@@ -25,6 +25,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TeamWithdrawalRequest {
+    // Ban ghi lich su khi leader rut team khoi event/competition.
+    // Hien tai request duoc approve ngay, nhung van giu cac cot responded* de mo rong flow duyet sau nay.
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -51,6 +53,7 @@ public class TeamWithdrawalRequest {
     @Column(name = "RequestStatus", nullable = false, length = 20)
     private String requestStatus;
 
+    // Thoi diem leader gui yeu cau; dung de sap xep danh sach admin/member.
     @Column(name = "RequestedAt", nullable = false)
     private LocalDateTime requestedAt;
 

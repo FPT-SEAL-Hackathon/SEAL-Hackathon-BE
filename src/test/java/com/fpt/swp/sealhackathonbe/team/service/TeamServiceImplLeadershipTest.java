@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -550,7 +551,7 @@ class TeamServiceImplLeadershipTest {
     }
 
     @Test
-    void rejectingPendingTeamDeactivatesMembersSoTheyCanJoinAnotherTeam() {
+    void rejectingPendingTeamReturnsToFormingWithoutDeactivatingMembers() {
         UUID teamId = UUID.randomUUID();
         UUID leaderId = UUID.randomUUID();
         UUID memberId = UUID.randomUUID();
@@ -569,23 +570,22 @@ class TeamServiceImplLeadershipTest {
 
         TeamResponse response = teamService.rejectTeam(teamId, "Missing member profile", adminId);
 
-        assertEquals(REJECTED_STATUS, team.getTeamStatusId());
-        assertFalse(leader.getActive());
-        assertNotNull(leader.getLeftAt());
-        assertFalse(member.getActive());
-        assertNotNull(member.getLeftAt());
-        assertEquals(REJECTED_STATUS, response.getTeamStatusId());
-        verify(teamMembersRepository).saveAll(List.of(leader, member));
+        assertEquals(FORMING_STATUS, team.getTeamStatusId());
+        assertTrue(leader.getActive());
+        assertTrue(member.getActive());
+        assertEquals(FORMING_STATUS, response.getTeamStatusId());
+        verify(teamMembersRepository, never()).saveAll(any());
+        verify(teamJoinRequestCleaner, never()).rejectPendingRequestsForTeam(any(), any(), any());
 
         ArgumentCaptor<TeamRegistrationRejectedEvent> eventCaptor =
                 ArgumentCaptor.forClass(TeamRegistrationRejectedEvent.class);
         verify(eventPublisher).publishEvent(eventCaptor.capture());
-        TeamRegistrationRejectedEvent event = eventCaptor.getValue();
-        assertEquals(List.of(leaderId, memberId), event.recipientUserIds());
-        assertEquals(adminId, event.organizerUserId());
-        assertEquals(eventId, event.eventId());
-        assertEquals("Seal Squad", event.teamName());
-        assertEquals("Missing member profile", event.note());
+        TeamRegistrationRejectedEvent eventMessage = eventCaptor.getValue();
+        assertEquals(List.of(leaderId, memberId), eventMessage.recipientUserIds());
+        assertEquals(adminId, eventMessage.organizerUserId());
+        assertEquals(eventId, eventMessage.eventId());
+        assertEquals("Seal Squad", eventMessage.teamName());
+        assertEquals("Missing member profile", eventMessage.note());
     }
 
     private Teams team(UUID teamId, UUID leaderId) {

@@ -19,7 +19,6 @@ import com.fpt.swp.sealhackathonbe.team.entity.Disqualifications;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamMembers;
 import com.fpt.swp.sealhackathonbe.team.entity.TeamWithdrawalRequest;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
-import com.fpt.swp.sealhackathonbe.team.event.TeamRegistrationRejectedEvent;
 import com.fpt.swp.sealhackathonbe.team.repository.DisqualificationsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamJoinRequestsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
@@ -31,7 +30,6 @@ import com.fpt.swp.sealhackathonbe.team.service.mapper.TeamMapper;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,7 +62,6 @@ public class TeamServiceImpl implements TeamService {
     private final TeamEventRegistrationService teamEventRegistrationService;
     private final TeamJoinRequestCleaner teamJoinRequestCleaner;
     private final EventParticipantRepository eventParticipantRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
     private final DisqualificationsRepository disqualificationsRepository;
     private final TeamWithdrawalRequestRepository teamWithdrawalRequestRepository;
@@ -269,34 +266,46 @@ public class TeamServiceImpl implements TeamService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        team.setTeamStatusId(TEAM_STATUS_REJECTED);
+        team.setTeamStatusId(TEAM_STATUS_FORMING);
         team.setUpdatedAt(now);
         Teams savedTeam = teamsRepository.save(team);
         saveEligibilityRejectedAuditLog(savedTeam, note, adminUserId);
 
         List<TeamMembers> members = teamMembersRepository.findByTeamIdAndActiveTrue(savedTeam.getTeamId());
-        members.forEach(member -> {
-            member.setActive(false);
-            member.setLeftAt(now);
-        });
-        teamMembersRepository.saveAll(members);
 
-        // Team đã bị reject: đóng nốt mọi join request PENDING còn treo
-        // (roster khóa vĩnh viễn, leader không thể xử lý chúng nữa).
-        teamJoinRequestCleaner.rejectPendingRequestsForTeam(
-                savedTeam.getTeamId(), adminUserId, "Team registration was rejected");
-
-        eventPublisher.publishEvent(new TeamRegistrationRejectedEvent(
-                members.stream()
-                        .map(TeamMembers::getUserId)
-                        .distinct()
-                        .toList(),
-                adminUserId,
-                savedTeam.getEventId(),
-                savedTeam.getTeamName(),
-                note));
+        sendEligibilityRejectedNotification(savedTeam, members, note, adminUserId);
 
         return toTeamResponse(savedTeam, members);
+    }
+
+    private void sendEligibilityRejectedNotification(
+            Teams team,
+            List<TeamMembers> members,
+            String note,
+            UUID adminUserId
+    ) {
+        try {
+            String reason = note == null || note.isBlank()
+                    ? ""
+                    : " Reason: " + note.trim();
+            notificationService.sendBroadcastNotification(
+                    members.stream()
+                            .map(TeamMembers::getUserId)
+                            .distinct()
+                            .toList(),
+                    adminUserId,
+                    team.getEventId(),
+                    "Team Registration Rejected",
+                    "Your team " + team.getTeamName() + " was rejected by the organizer." + reason
+            );
+        } catch (Exception exception) {
+            log.error(
+                    "Could not send team registration rejection notification for event {} to users {}",
+                    team.getEventId(),
+                    members.stream().map(TeamMembers::getUserId).distinct().toList(),
+                    exception
+            );
+        }
     }
 
     @Override
@@ -420,8 +429,20 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private String resolveParticipantStatusName(Teams team, UUID userId) {
+        if (TEAM_STATUS_FORMING.equals(team.getTeamStatusId()) || TEAM_STATUS_PENDING.equals(team.getTeamStatusId())) {
+            return "Pending";
+        }
+
+        if (TEAM_STATUS_ACTIVE.equals(team.getTeamStatusId())) {
+            return "Active";
+        }
+
         if (TEAM_STATUS_DISQUALIFIED.equals(team.getTeamStatusId())) {
             return "Suspended";
+        }
+
+        if (TEAM_STATUS_WITHDRAWN.equals(team.getTeamStatusId())) {
+            return "Withdrawn";
         }
 
         return eventParticipantRepository

@@ -33,6 +33,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestService {
+    // Luong withdrawal hien duoc duyet ngay: leader rut team ACTIVE, team chuyen sang
+    // WITHDRAWN, participant cung event bi rut, submission chua cham trong round hien tai
+    // bi loai de khong tiep tuc vao judging/ranking.
     private static final UUID TEAM_STATUS_ACTIVE = TeamStatusConstants.ACTIVE;
     private static final UUID TEAM_STATUS_WITHDRAWN = TeamStatusConstants.WITHDRAWN;
     private static final UUID SUBMISSION_STATUS_DISQUALIFIED = SubmissionStatusConstants.DISQUALIFIED;
@@ -60,6 +63,7 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
             CreateTeamWithdrawalRequest request,
             UUID currentUserId
     ) {
+        // Lock team de tranh leader rut team dong thoi voi cac thao tac roster/registration khac.
         Teams team = teamsRepository.findByIdForUpdate(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
@@ -82,6 +86,8 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
         team.setTeamStatusId(TEAM_STATUS_WITHDRAWN);
         team.setUpdatedAt(now);
         teamsRepository.save(team);
+
+        // Withdrawal co hieu ung sang module registration va submission trong cung transaction.
         teamEventRegistrationService.markTeamParticipantsWithdrawn(team.getTeamId(), currentUserId);
         disqualifyUnjudgedSubmittedSubmissionsInCurrentRounds(team, currentUserId, now);
 
@@ -115,6 +121,7 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
             UUID organizerUserId,
             LocalDateTime now
     ) {
+        // Chi xu ly cac round dang mo nop bai/dang cham; cac round da ket thuc giu nguyen lich su.
         List<UUID> currentRoundIds = roundRepository.findRoundIdsByCategoryIdAndStatusNames(
                 team.getCategoryId(),
                 WITHDRAWAL_SUBMISSION_ROUND_STATUSES
@@ -128,6 +135,7 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
                 currentRoundIds
         );
         for (Submissions submission : submissions) {
+            // Da co diem/judging hoac da bi disqualify truoc do thi khong ghi de quyet dinh cu.
             if (submission.getSubmittedAt() == null
                     || SUBMISSION_STATUS_DISQUALIFIED.equals(submission.getSubmissionStatusId())
                     || judgingRepository.existsBySubmission_SubmissionIdAndIsActiveTrue(submission.getSubmissionId())
@@ -138,6 +146,8 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
             submission.setSubmissionStatusId(SUBMISSION_STATUS_DISQUALIFIED);
             submission.setLastUpdatedAt(now);
             submissionsRepository.save(submission);
+
+            // Snapshot sau khi doi status giup admin xem lai timeline submission.
             submissionHistoryService.recordSnapshot(submission);
 
             Disqualifications disqualification = new Disqualifications();
@@ -158,6 +168,7 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
     }
 
     private TeamWithdrawalRequestResponse toResponse(TeamWithdrawalRequest request) {
+        // Mapper co them team/requestedBy neu repository da fetch graph; neu khong thi van tra ID an toan.
         TeamWithdrawalRequestResponse response = new TeamWithdrawalRequestResponse();
         response.setRequestId(request.getRequestId());
         response.setTeamId(request.getTeamId());
@@ -182,6 +193,7 @@ public class TeamWithdrawalRequestServiceImpl implements TeamWithdrawalRequestSe
     }
 
     private void writeAuditLog(String actionType, TeamWithdrawalRequest request, UUID actorUserId) {
+        // Audit log ghi lai hanh dong rut team de organizer doi soat ve sau.
         AuditLog auditLog = new AuditLog();
         auditLog.setActionType(actionType);
         auditLog.setEntityType("TeamWithdrawalRequests");

@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class EligibilityDecisionRequest {
+    // Organizer gui quyet dinh duyet/tu choi eligibility cua team truoc khi thi dau.
     @NotNull(message = "Approved decision is required")
     private Boolean approved;
 

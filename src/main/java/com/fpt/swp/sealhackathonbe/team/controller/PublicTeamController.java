@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "Public Teams", description = "Public APIs for team statistics")
 public class PublicTeamController {
+    // Public endpoint khong can JWT, chi expose so lieu tong hop khong nhay cam.
 
     private final TeamService teamService;
 
