@@ -74,10 +74,9 @@ public class JwtServiceImpl implements JwtService {
 
         claims.put("userId", user.getUserId());
 
-        String role = user.getUserType()
-                .getTypeName()
-                .replace(" ", "_")
-                .toUpperCase();
+        String role = user.getUserType() != null && user.getUserType().getTypeName() != null
+                ? user.getUserType().getTypeName().replace(" ", "_").toUpperCase()
+                : "USER";
 
         claims.put("role", role);
 

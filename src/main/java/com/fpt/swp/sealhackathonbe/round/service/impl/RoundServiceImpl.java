@@ -185,8 +185,8 @@ public class RoundServiceImpl implements RoundService {
         }
 
         if (event != null) {
-            LocalDateTime earliestAllowed = event.getEventStartDate().atStartOfDay();
-            LocalDateTime latestAllowed = event.getEventEndDate().atTime(LocalTime.MAX);
+            LocalDateTime earliestAllowed = event.getEventStartDate();
+            LocalDateTime latestAllowed = event.getEventEndDate();
 
             // Event dates are date-only: rounds and appeal windows may use any minute inside those calendar days.
             if (startDate != null && startDate.isBefore(earliestAllowed)) {

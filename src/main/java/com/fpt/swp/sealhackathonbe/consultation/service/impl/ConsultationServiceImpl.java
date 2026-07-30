@@ -554,7 +554,6 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
-    @Transactional
     public ConsultationMessageResponse sendMessage(User user, UUID requestId, MessageRequest messageDto) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -566,14 +565,26 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
 
         boolean senderIsMentor = isMentorRole(user);
+        String aiResponse = null;
 
-        // -- AI MENTOR INTERCEPTION LOGIC --
+        // -- AI MENTOR INTERCEPTION LOGIC (executed OUTSIDE DB transaction) --
         if (!senderIsMentor) {
             String question = messageDto.getContent();
             List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
+            aiResponse = geminiService.askAi(question, kb);
+        }
 
-            String aiResponse = geminiService.askAi(question, kb);
+        return processSendMessageDb(user, requestId, messageDto, senderIsMentor, aiResponse);
+    }
 
+    @Transactional
+    public ConsultationMessageResponse processSendMessageDb(
+            User user, UUID requestId, MessageRequest messageDto, boolean senderIsMentor, String aiResponse) {
+        ConsultationRequest req = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        if (!senderIsMentor && aiResponse != null) {
+            String question = messageDto.getContent();
             ConsultationMessage studentMsg = ConsultationMessage.builder()
                     .request(req)
                     .sender(user)
@@ -596,7 +607,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                         .content("[AI Mentor]: " + aiResponse)
                         .build();
                 messageRepository.save(aiMsg);
-                
+
                 req.setUpdatedAt(LocalDateTime.now());
                 requestRepository.save(req);
 

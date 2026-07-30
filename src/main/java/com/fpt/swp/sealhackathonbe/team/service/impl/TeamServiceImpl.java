@@ -334,6 +334,9 @@ public class TeamServiceImpl implements TeamService {
                 event != null ? event.getMinTeamSize() : null,
                 event != null ? event.getMaxTeamSize() : null
         );
+        if (response.getEventName() == null && event != null) {
+            response.setEventName(event.getEventName());
+        }
         enrichLifecycleDetail(team, response);
         if (response.getMembers() == null) {
             return response;
