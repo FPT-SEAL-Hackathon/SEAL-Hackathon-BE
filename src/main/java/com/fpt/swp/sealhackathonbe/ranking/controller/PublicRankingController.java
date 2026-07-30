@@ -28,6 +28,16 @@ public class PublicRankingController {
         return ResponseEntity.ok(rankings);
     }
 
+    @GetMapping("/api/v1/public/leaderboard/{eventId}/{categoryId}/approved")
+    @Operation(summary = "Get approved leaderboard", description = "Retrieves the approved leaderboard for a specific event and category")
+    public ResponseEntity<List<EventRankingDTO>> getApprovedEventLeaderboardByCategory(
+            @PathVariable("eventId") UUID eventId,
+            @PathVariable("categoryId") UUID categoryId) {
+
+        List<EventRankingDTO> rankings = rankingService.getApprovedCategoryLeaderboard(eventId,categoryId);
+        return ResponseEntity.ok(rankings);
+    }
+
     @GetMapping("/api/v1/public/leaderboard/rounds/{roundId}/{categoryId}")
     @Operation(summary = "Get public round leaderboard", description = "Retrieves the public leaderboard for a specific round and category")
     public ResponseEntity<List<RoundRankingDTO>> getRoundLeaderboardByCategory(

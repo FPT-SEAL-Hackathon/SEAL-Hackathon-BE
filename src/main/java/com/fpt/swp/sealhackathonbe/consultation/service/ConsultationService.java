@@ -36,4 +36,5 @@ public interface ConsultationService {
     ConsultationRequestResponse getConsultationRequestDetail(User user, UUID requestId);
     List<ConsultationMessageResponse> getConsultationMessages(User user, UUID requestId);
     ConsultationMessageResponse sendMessage(User user, UUID requestId, MessageRequest messageDto);
+    ConsultationMessageResponse processSendMessageDb(User user, UUID requestId, MessageRequest messageDto, boolean senderIsMentor, String aiResponse);
 }
