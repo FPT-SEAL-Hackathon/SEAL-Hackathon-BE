@@ -114,8 +114,8 @@ class EventServiceImplementationCreateTest {
     @Test
     void createEventStartDateAfterEndDateReturnsBadRequest() {
         CreateEventRequest request = validRequest();
-        request.setEventStartDate(LocalDate.of(2030, 7, 3));
-        request.setEventEndDate(LocalDate.of(2030, 7, 2));
+        request.setEventStartDate(LocalDate.of(2030, 7, 3).atStartOfDay());
+        request.setEventEndDate(LocalDate.of(2030, 7, 2).atStartOfDay());
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
@@ -126,7 +126,7 @@ class EventServiceImplementationCreateTest {
     void createEventRegistrationEndAfterEventStartDateReturnsBadRequest() {
         CreateEventRequest request = validRequest();
         request.setRegistrationEnd(LocalDateTime.of(2030, 7, 1, 9, 0));
-        request.setEventStartDate(LocalDate.of(2030, 6, 30));
+        request.setEventStartDate(LocalDate.of(2030, 6, 30).atStartOfDay());
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
@@ -139,7 +139,7 @@ class EventServiceImplementationCreateTest {
     void createEventRegistrationEndSameDateAsEventStartReturnsBadRequest() {
         CreateEventRequest request = validRequest();
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 30, 9, 0));
-        request.setEventStartDate(LocalDate.of(2030, 6, 30));
+        request.setEventStartDate(LocalDate.of(2030, 6, 30).atStartOfDay());
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
@@ -184,8 +184,8 @@ class EventServiceImplementationCreateTest {
         // Dang ky phai KET THUC TRUOC ngay event bat dau (EventServiceImplementation:120
         // dung !registrationEnd.toLocalDate().isBefore(eventStart)) -> khong duoc trung ngay.
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 29, 9, 0));
-        request.setEventStartDate(LocalDate.of(2030, 6, 30));
-        request.setEventEndDate(LocalDate.of(2030, 7, 2));
+        request.setEventStartDate(LocalDate.of(2030, 6, 30).atStartOfDay());
+        request.setEventEndDate(LocalDate.of(2030, 7, 2).atStartOfDay());
         request.setMinTeamSize(2);
         request.setMaxTeamSize(5);
         return request;

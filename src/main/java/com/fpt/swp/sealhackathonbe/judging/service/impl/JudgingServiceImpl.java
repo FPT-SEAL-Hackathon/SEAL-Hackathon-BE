@@ -614,18 +614,18 @@ public class JudgingServiceImpl implements JudgingService {
                     .filter(j -> j.getRoundJudge() != null && j.getRoundJudge().getJudge() != null)
                     .collect(Collectors.groupingBy(j -> j.getRoundJudge().getJudge().getUserId()));
 
+            boolean atLeastOneJudgeFullyScored = false;
             for (RoundJudge rj : activeRoundJudges) {
                 UUID judgeId = rj.getJudge().getUserId();
-                String judgeName = rj.getJudge().getFullName() != null ? rj.getJudge().getFullName() : rj.getJudge().getEmail();
-
                 List<Judging> scores = judgeScoresMap.get(judgeId);
-                if (scores == null || scores.isEmpty()) {
-                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not submitted any scores.");
+                if (scores != null && scores.size() >= criteria.size()) {
+                    atLeastOneJudgeFullyScored = true;
+                    break;
                 }
+            }
 
-                if (scores.size() < criteria.size()) {
-                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not scored all criteria.");
-                }
+            if (!atLeastOneJudgeFullyScored) {
+                throw new IllegalStateException("Cannot finalize score because no judge has fully scored all criteria for this submission.");
             }
         }
 
@@ -652,5 +652,97 @@ public class JudgingServiceImpl implements JudgingService {
         if (TeamStatusConstants.DISQUALIFIED.equals(teamStatusId) || TeamStatusConstants.WITHDRAWN.equals(teamStatusId)) {
             throw new BusinessConflictException("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected");
         }
+    }
+
+    @Override
+    @Transactional
+    public void rejectSubmissionScoreForJudge(UUID submissionId, UUID judgeId, String reason) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+
+        Teams team = submission.getTeam();
+        validateSubmissionScoreCanBeChanged(submission);
+
+        Event event = resolveEvent(submission);
+
+        List<Judging> activeJudgings = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, judgeId)
+                .stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                .collect(Collectors.toList());
+
+        if (activeJudgings.isEmpty()) {
+            throw new IllegalStateException("No active scores found for this judge and submission.");
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+
+        for (Judging judging : activeJudgings) {
+            judging.setIsActive(false);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setScore(judging);
+            auditLog.setReason(reason);
+            auditLogs.add(auditLog);
+        }
+
+        judgingRepository.saveAll(activeJudgings);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+
+        submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        submission.setIsScoreApproved(false);
+        submissionRepository.save(submission);
+    }
+
+    @Override
+    @Transactional
+    public void rejectJudgeScoresInRound(UUID roundId, UUID judgeId, String reason) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        List<Judging> activeJudgings = judgingRepository.findActiveByRoundIdAndJudgeUserId(roundId, judgeId);
+        if (activeJudgings.isEmpty()) {
+            return;
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+        Set<Submissions> submissionsToUpdate = new java.util.HashSet<>();
+
+        for (Judging judging : activeJudgings) {
+            judging.setIsActive(false);
+
+            Submissions submission = judging.getSubmission();
+            Teams team = submission.getTeam();
+            Event event = resolveEvent(submission);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setScore(judging);
+            auditLog.setReason(reason);
+            auditLogs.add(auditLog);
+
+            submission.setIsScoreApproved(false);
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+            submissionsToUpdate.add(submission);
+        }
+
+        judgingRepository.saveAll(activeJudgings);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+        submissionRepository.saveAll(submissionsToUpdate);
     }
 }

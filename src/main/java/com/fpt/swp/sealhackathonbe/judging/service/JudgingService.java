@@ -24,4 +24,6 @@ public interface JudgingService {
     void rejectSubmissionScores(UUID submissionId, String reason);
     void deleteJudging(UUID submissionId, String reason);
     SubmissionResponse approveScore(UUID submissionId, boolean approve);
+    void rejectSubmissionScoreForJudge(UUID submissionId, UUID judgeId, String reason);
+    void rejectJudgeScoresInRound(UUID roundId, UUID judgeId, String reason);
 }
