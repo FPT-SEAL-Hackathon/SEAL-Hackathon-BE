@@ -64,8 +64,7 @@ public class RoundServiceImpl implements RoundService {
                 request.getJudgingDeadline(),
                 request.getAppealStartTime(),
                 request.getAppealEndTime(),
-                category.getEvent()
-        );
+                category.getEvent());
 
         Round round = Round.builder()
                 .roundId(UUID.randomUUID())
@@ -110,7 +109,7 @@ public class RoundServiceImpl implements RoundService {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         RoundStatus roundStatus = roundStatusRepository.findById(request.getRoundStatusId())
-                        .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
         round.setRoundName(request.getRoundName());
         round.setDescription(request.getDescription());
         round.setRoundOrder(request.getRoundOrder());
@@ -131,8 +130,7 @@ public class RoundServiceImpl implements RoundService {
                 round.getJudgingDeadline(),
                 round.getAppealStartTime(),
                 round.getAppealEndTime(),
-                round.getCategory().getEvent()
-        );
+                round.getCategory().getEvent());
 
         return roundMapper.toRoundResponse(roundRepository.save(round));
     }
@@ -172,14 +170,13 @@ public class RoundServiceImpl implements RoundService {
     }
 
     private void validateRoundTimeline(
-            LocalDateTime startDate, 
-            LocalDateTime endDate, 
-            LocalDateTime submissionDeadline, 
-            LocalDateTime judgingDeadline, 
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            LocalDateTime submissionDeadline,
+            LocalDateTime judgingDeadline,
             LocalDateTime appealStartTime,
             LocalDateTime appealEndTime,
-            Event event
-    ) {
+            Event event) {
         if (startDate != null && endDate != null && !startDate.isBefore(endDate)) {
             throw new BadRequestException("Start date must be strictly before end date");
         }
@@ -188,7 +185,8 @@ public class RoundServiceImpl implements RoundService {
             LocalDateTime earliestAllowed = event.getEventStartDate();
             LocalDateTime latestAllowed = event.getEventEndDate();
 
-            // Event dates are date-only: rounds and appeal windows may use any minute inside those calendar days.
+            // Event dates are date-only: rounds and appeal windows may use any minute
+            // inside those calendar days.
             if (startDate != null && startDate.isBefore(earliestAllowed)) {
                 throw new BadRequestException("Round start date cannot be before event start date");
             }
@@ -218,12 +216,12 @@ public class RoundServiceImpl implements RoundService {
             } else if (startDate != null && judgingDeadline.isBefore(startDate)) {
                 throw new BadRequestException("Judging deadline must be after or equal to start date");
             }
-            
+
             if (endDate != null && judgingDeadline.isAfter(endDate)) {
                 throw new BadRequestException("Judging deadline must be before or equal to end date");
             }
         }
-        
+
         if (appealStartTime != null) {
             if (judgingDeadline != null && appealStartTime.isBefore(judgingDeadline)) {
                 throw new BadRequestException("Appeal start time must be after or equal to judging deadline");
@@ -242,9 +240,11 @@ public class RoundServiceImpl implements RoundService {
     }
 
     private void ensureRoundHasNoDeleteBlockers(UUID roundId) {
-        // Round delete is a hard delete, so every FK-backed setup/result record must be removed first.
+        // Round delete is a hard delete, so every FK-backed setup/result record must be
+        // removed first.
         if (roundCriterionRepository.existsByRoundRoundId(roundId)) {
-            throw new BusinessConflictException("Cannot delete round because it already has criteria. Remove criteria first.");
+            throw new BusinessConflictException(
+                    "Cannot delete round because it already has criteria. Remove criteria first.");
         }
         removeInactiveJudgeAssignmentsOrBlock(roundId);
         if (submissionsRepository.existsByRoundId(roundId)) {
@@ -268,13 +268,15 @@ public class RoundServiceImpl implements RoundService {
                 throw new BusinessConflictException("Cannot delete round because it already has assigned judges.");
             }
             if (judgingRepository.existsByRoundJudge_RoundJudgeId(roundJudge.getRoundJudgeId())) {
-                throw new BusinessConflictException("Cannot delete round because it already has judge scoring history.");
+                throw new BusinessConflictException(
+                        "Cannot delete round because it already has judge scoring history.");
             }
             inactiveAssignments.add(roundJudge);
         }
 
         if (!inactiveAssignments.isEmpty()) {
-            // Removed judges without scoring are setup-only rows; delete them so the round FK can be removed safely.
+            // Removed judges without scoring are setup-only rows; delete them so the round
+            // FK can be removed safely.
             roundJudgeRepository.deleteAll(inactiveAssignments);
         }
     }
