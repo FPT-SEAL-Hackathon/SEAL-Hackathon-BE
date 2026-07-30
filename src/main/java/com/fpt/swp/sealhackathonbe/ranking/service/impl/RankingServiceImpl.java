@@ -243,7 +243,7 @@ public class RankingServiceImpl implements RankingService {
                 .isPublished(r.getIsPublished())
                 .isApproved(r.getIsApproved())
                 .build()
-        ).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
     }
 
     @Override
@@ -511,7 +511,7 @@ public class RankingServiceImpl implements RankingService {
                 .isPublished(r.getIsPublished())
                 .isApproved(r.getIsApproved())
                 .build()
-        ).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
     }
 
     @Override
