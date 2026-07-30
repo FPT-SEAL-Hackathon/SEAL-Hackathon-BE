@@ -366,6 +366,30 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage(), null);
     }
 
+    @ExceptionHandler({
+            org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNotFound(Exception ex) {
+        return build(
+                HttpStatus.NOT_FOUND,
+                "NOT_FOUND",
+                ex.getMessage() != null ? ex.getMessage() : "Resource not found",
+                null
+        );
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return build(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "METHOD_NOT_ALLOWED",
+                ex.getMessage() != null ? ex.getMessage() : "HTTP method not supported",
+                null
+        );
+    }
+
+
     // Hai request cùng sửa/xóa một bản ghi (ví dụ 2 organizer hard-delete cùng
     // email): trả 409 để client retry, thay vì 500 do StaleObjectState.
     @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)

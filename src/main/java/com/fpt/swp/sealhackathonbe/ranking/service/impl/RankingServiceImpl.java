@@ -136,16 +136,16 @@ public class RankingServiceImpl implements RankingService {
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
                 if (!judgings.isEmpty()) {
-                    int validScoreCount = 0;
+                    Set<UUID> judgeIds = new HashSet<>();
                     for (Judging j : judgings) {
                         // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
                         if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
                             totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
-                            validScoreCount++;
+                            judgeIds.add(j.getRoundJudge().getRoundJudgeId());
                         }
                     }
-                    if (validScoreCount > 0) {
-                        averageScore = totalScore.divide(BigDecimal.valueOf(validScoreCount), 4, RoundingMode.HALF_UP);
+                    if (!judgeIds.isEmpty()) {
+                        averageScore = totalScore.divide(BigDecimal.valueOf(judgeIds.size()), 4, RoundingMode.HALF_UP);
                     }
                 }
             }
@@ -166,9 +166,11 @@ public class RankingServiceImpl implements RankingService {
             rankings.add(ranking);
         }
 
-        // Sort by total score descending, tie-breaker: submission time ascending
+        // Sort by average score descending, tie-breaker: submission time ascending
         rankings.sort((r1, r2) -> {
-            int scoreCompare = r2.getTotalScore().compareTo(r1.getTotalScore());
+            BigDecimal s1 = r1.getAverageScore() != null ? r1.getAverageScore() : BigDecimal.ZERO;
+            BigDecimal s2 = r2.getAverageScore() != null ? r2.getAverageScore() : BigDecimal.ZERO;
+            int scoreCompare = s2.compareTo(s1);
             if (scoreCompare != 0) return scoreCompare;
             LocalDateTime t1 = r1.getSubmission().getLastUpdatedAt();
             LocalDateTime t2 = r2.getSubmission().getLastUpdatedAt();
@@ -188,7 +190,7 @@ public class RankingServiceImpl implements RankingService {
             RoundRanking current = rankings.get(i);
             boolean isDisqualified = disqualifiedSubIds.contains(current.getSubmission().getSubmissionId()) 
                                   || disqualifiedTeamIds.contains(current.getTeam().getTeamId());
-            boolean hasZeroScore = current.getTotalScore().compareTo(BigDecimal.ZERO) == 0;
+            boolean hasZeroScore = current.getAverageScore() == null || current.getAverageScore().compareTo(BigDecimal.ZERO) == 0;
 
             if (isDisqualified || hasZeroScore) {
                 current.setRankPosition(0);
@@ -197,7 +199,9 @@ public class RankingServiceImpl implements RankingService {
             }
 
             if (validRankCount > 0 && prevValid != null) {
-                int scoreCompare = current.getTotalScore().compareTo(prevValid.getTotalScore());
+                BigDecimal cScore = current.getAverageScore() != null ? current.getAverageScore() : BigDecimal.ZERO;
+                BigDecimal pScore = prevValid.getAverageScore() != null ? prevValid.getAverageScore() : BigDecimal.ZERO;
+                int scoreCompare = cScore.compareTo(pScore);
                 if (scoreCompare < 0) {
                     currentRank = validRankCount + 1;
                 } else if (scoreCompare == 0) {
@@ -320,7 +324,7 @@ public class RankingServiceImpl implements RankingService {
         Event eventRef = entityManager.find(Event.class, eventId);
         if (eventRef == null) throw new IllegalArgumentException("Event ID does not exist: " + eventId);
         
-        List<Category> categories = categoryRepository.findByEventEventId(eventId);
+        List<Category> categories = categoryRepository.findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(eventId);
         List<EventRankingDTO> allComputedRankings = new ArrayList<>();
 
         for (Category categoryRef : categories) {
@@ -397,7 +401,7 @@ public class RankingServiceImpl implements RankingService {
         Map<UUID, Integer> dRoundOrders = new java.util.HashMap<>();
         Map<UUID, LocalDateTime> dSubmissionTimes = new java.util.HashMap<>();
         for (RoundRanking rr : allRoundRankings) {
-            dScores.put(rr.getTeam().getTeamId(), rr.getTotalScore());
+            dScores.put(rr.getTeam().getTeamId(), rr.getAverageScore() != null ? rr.getAverageScore() : BigDecimal.ZERO);
             dRoundOrders.put(rr.getTeam().getTeamId(), rr.getRound().getRoundOrder());
             dSubmissionTimes.put(rr.getTeam().getTeamId(), rr.getSubmission().getLastUpdatedAt());
         }
