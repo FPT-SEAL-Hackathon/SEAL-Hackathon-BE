@@ -2,14 +2,11 @@ package com.fpt.swp.sealhackathonbe.event.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.URL;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -27,8 +24,8 @@ public class UpdateEventRequest {
     private LocalDateTime registrationStart;
     private LocalDateTime registrationEnd;
 
-    private LocalDate eventStartDate;
-    private LocalDate eventEndDate;
+    private LocalDateTime eventStartDate;
+    private LocalDateTime eventEndDate;
 
     @Min(value = 1, message = "Max team size must be greater than 0")
     private Integer maxTeamSize;

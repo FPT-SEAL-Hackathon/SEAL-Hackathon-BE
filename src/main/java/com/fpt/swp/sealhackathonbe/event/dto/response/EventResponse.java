@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fpt.swp.sealhackathonbe.event.entity.EventStatus;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,8 +25,8 @@ public class EventResponse {
     private LocalDateTime registrationStart;
     private LocalDateTime registrationEnd;
 
-    private LocalDate eventStartDate;
-    private LocalDate eventEndDate;
+    private LocalDateTime eventStartDate;
+    private LocalDateTime eventEndDate;
 
     private Integer maxTeamSize;
     private Integer minTeamSize;

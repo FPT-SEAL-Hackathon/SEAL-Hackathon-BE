@@ -8,9 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.URL;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -34,9 +32,9 @@ public class CreateEventRequest {
     private LocalDateTime registrationEnd;
 
     @FutureOrPresent(message = "Event start time must be in the present or future")
-    private LocalDate eventStartDate;
+    private  LocalDateTime eventStartDate;
 
-    private LocalDate eventEndDate;
+    private LocalDateTime eventEndDate;
 
     @NotNull(message = "Max team size is required")
     @Min(value = 1, message = "Max team size must be greater than 0")
