@@ -38,6 +38,24 @@ class TeamMapperTest {
         assertTrue(response.getApprovalIssues().isEmpty());
     }
 
+    @Test
+    void mapsEventNameAndCategoryNameWhenPresent() {
+        Teams team = team(TeamStatusConstants.FORMING);
+        com.fpt.swp.sealhackathonbe.event.entity.Event event = new com.fpt.swp.sealhackathonbe.event.entity.Event();
+        event.setEventName("AI Hackathon 2026");
+        team.setEvent(event);
+
+        com.fpt.swp.sealhackathonbe.category.entity.Category category = new com.fpt.swp.sealhackathonbe.category.entity.Category();
+        category.setCategoryName("AI / ML");
+        team.setCategory(category);
+
+        List<TeamMembers> members = List.of(member(team), member(team));
+        TeamResponse response = TeamMapper.toTeamResponse(team, members);
+
+        org.junit.jupiter.api.Assertions.assertEquals("AI Hackathon 2026", response.getEventName());
+        org.junit.jupiter.api.Assertions.assertEquals("AI / ML", response.getCategoryName());
+    }
+
     private Teams team(UUID statusId) {
         Teams team = new Teams();
         team.setTeamId(UUID.randomUUID());

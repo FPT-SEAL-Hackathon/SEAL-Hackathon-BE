@@ -18,8 +18,11 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FptStudentCodePrefixServiceImpl implements FptStudentCodePrefixService {
 
     public static final String MSG_FPT_CODE =
@@ -32,10 +35,21 @@ public class FptStudentCodePrefixServiceImpl implements FptStudentCodePrefixServ
     @Override
     @Transactional(readOnly = true)
     public List<FptStudentCodePrefixResponse> list(boolean includeInactive) {
-        List<FptStudentCodePrefix> rows = includeInactive
-                ? repository.findAllByOrderByMajorGroupAscPrefixAsc()
-                : repository.findByIsActiveTrueOrderByMajorGroupAscPrefixAsc();
-        return rows.stream().map(this::toResponse).toList();
+        try {
+            List<FptStudentCodePrefix> rows = includeInactive
+                    ? repository.findAllByOrderByMajorGroupAscPrefixAsc()
+                    : repository.findByIsActiveTrueOrderByMajorGroupAscPrefixAsc();
+            if (rows == null) {
+                return List.of();
+            }
+            return rows.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(this::toResponse)
+                    .toList();
+        } catch (Exception ex) {
+            log.error("Failed to fetch FPT student code prefixes: {}", ex.getMessage(), ex);
+            return List.of();
+        }
     }
 
     @Override
@@ -107,6 +121,9 @@ public class FptStudentCodePrefixServiceImpl implements FptStudentCodePrefixServ
     }
 
     private FptStudentCodePrefixResponse toResponse(FptStudentCodePrefix row) {
+        if (row == null) {
+            return null;
+        }
         return FptStudentCodePrefixResponse.builder()
                 .prefix(row.getPrefix())
                 .englishName(row.getEnglishName())
@@ -114,7 +131,7 @@ public class FptStudentCodePrefixServiceImpl implements FptStudentCodePrefixServ
                 .majorGroup(row.getMajorGroup())
                 .majorCode(row.getMajorCode())
                 .note(row.getNote())
-                .active(row.getIsActive())
+                .active(Boolean.TRUE.equals(row.getIsActive()))
                 .createdAt(row.getCreatedAt())
                 .updatedAt(row.getUpdatedAt())
                 .build();

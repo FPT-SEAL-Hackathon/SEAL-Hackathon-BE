@@ -12,7 +12,9 @@ public class TeamResponse {
     // DTO tổng hợp thông tin team và danh sách member active để trả về API.
     private UUID teamId;
     private UUID eventId;
+    private String eventName;
     private UUID categoryId;
+    private String categoryName;
     private String teamName;
     private UUID teamStatusId;
     private String teamStatusName;

@@ -8,66 +8,335 @@
             margin: 0;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #fdfbf7;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
             margin: 0;
-            padding: 50px;
+            padding: 24px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cert-container {
+            position: relative;
+            background-color: #ffffff;
+            border: 3px solid #ea580c;
+            outline: 2px solid #d97706;
+            outline-offset: -8px;
+            border-radius: 12px;
+            padding: 32px 48px;
+            height: 100%;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        /* Corner Ornaments */
+        .corner {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border-color: #d97706;
+            border-style: solid;
+        }
+        .corner-tl { top: 16px; left: 16px; border-width: 3px 0 0 3px; }
+        .corner-tr { top: 16px; right: 16px; border-width: 3px 3px 0 0; }
+        .corner-bl { bottom: 16px; left: 16px; border-width: 0 0 3px 3px; }
+        .corner-br { bottom: 16px; right: 16px; border-width: 0 3px 3px 0; }
+
+
+
+        .content-layer {
+            position: relative;
+            z-index: 5;
             text-align: center;
-            border: 20px solid #d4af37;
-            height: 85%;
         }
 
-        .title {
-            font-size: 42px;
-            color: #1a365d;
-            margin-top: 50px;
-            font-weight: bold;
+        /* Header Table */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
         }
 
-        .subtitle {
-            font-size: 20px;
-            color: #4a5568;
-            font-style: italic;
+        .brand-logo {
+            height: 48px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .brand-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #0f172a;
+            vertical-align: middle;
+            text-transform: uppercase;
+        }
+
+        .brand-seal {
+            color: #ea580c;
+            font-weight: 900;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            color: #d97706;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .divider-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, #ea580c 30%, #d97706 50%, #ea580c 70%, transparent 100%);
+            margin: 10px auto 20px auto;
+            width: 85%;
+        }
+
+        .cert-main-title {
+            font-size: 34px;
+            font-weight: 900;
+            color: #c2410c;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .cert-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            margin-bottom: 16px;
         }
 
         .team-name {
-            font-size: 36px;
-            color: #d4af37;
-            margin: 30px 0;
-            font-weight: bold;
+            font-size: 30px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 8px 0;
+            letter-spacing: 1px;
+            padding: 6px 20px;
+            display: inline-block;
+            white-space: nowrap;
+            border-bottom: 2px solid #ea580c;
+        }
+
+        .citation {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-top: 14px;
+            font-style: italic;
         }
 
         .award-title {
-            font-size: 24px;
-            color: #2d3748;
-            margin-bottom: 50px;
+            font-size: 26px;
+            font-weight: 800;
+            color: #d97706;
+            margin: 12px 0 6px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .event-name {
-            font-size: 18px;
-            color: #718096;
+        .event-info {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 6px;
         }
 
-        .footer {
-            margin-top: 100px;
-            font-size: 14px;
-            color: #718096;
+        .badge-pill {
+            display: inline-block;
+            background-color: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #c2410c;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* Footer Table */
+        .footer-table {
+            width: 100%;
+            margin-top: 36px;
+            border-collapse: collapse;
+        }
+
+        .footer-cell {
+            vertical-align: bottom;
+            width: 33.33%;
+        }
+
+        .meta-box {
+            text-align: left;
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.6;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px;
+            border-radius: 6px;
+        }
+
+        .meta-label {
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        .meta-value {
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .seal-center {
+            text-align: center;
+        }
+
+        .gold-seal-badge {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid #b45309;
+            background-color: #ea580c;
+            margin: 0 auto;
+            color: #ffffff;
+            display: inline-block;
+            text-align: center;
+            line-height: 1.1;
+            padding-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .seal-text-top {
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #fef08a;
+            text-transform: uppercase;
+        }
+
+        .seal-text-main {
+            font-size: 11px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+            margin-top: 2px;
+        }
+
+        .signature-box {
+            text-align: right;
+            font-size: 12px;
+            color: #334155;
+        }
+
+        .sig-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #c2410c;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+
+        .sig-line {
+            width: 160px;
+            height: 1px;
+            background-color: #94a3b8;
+            margin-left: auto;
+            margin-bottom: 4px;
+        }
+
+        .sig-sub {
+            font-size: 11px;
+            color: #64748b;
         }
     </style>
 </head>
 <body>
-<div class="title">Certificate</div>
-<div class="subtitle">The contest organizers are proudly presenting this to the team:</div>
+<div class="cert-container">
+    <!-- Corner Ornaments -->
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
 
-<div class="team-name" th:text="${teamName}">Team Name</div>
-<div class="award-title" th:text="${'Has excellently won the award: ' + awardTitle}">Award Title</div>
 
-<div class="event-name" th:text="${'Event: ' + eventName}">Event Name</div>
 
-<div class="footer">
-    <span th:text="${'Certificate ID: ' + certCode}">Certificate ID: CERT-001</span> |
-    <span th:text="${'Issued Date: ' + issuedDate}">Issued Date: [Date]</span>
+    <div class="content-layer">
+        <!-- Header -->
+        <table class="header-table">
+            <tr>
+                <td style="text-align: center;">
+                    <img th:if="${brandLogoBase64 != null and brandLogoBase64 != ''}" th:src="${brandLogoBase64}" class="brand-logo" alt="SEAL Logo"/>
+                    <span class="brand-title"><span class="brand-seal">SEAL</span> HACKATHON</span>
+                    <div class="brand-sub" th:text="${certMainTitle != null ? certMainTitle : 'Official Certificate of Achievement'}">Official Certificate of Achievement</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="divider-line"></div>
+
+        <!-- Certificate Heading -->
+        <div class="cert-main-title" th:text="${certMainTitle != null ? certMainTitle : 'Certificate of Excellence'}">Certificate of Excellence</div>
+        <div class="cert-subtitle" th:text="${certSubtitle != null ? certSubtitle : 'This certificate is proudly presented to'}">This certificate is proudly presented to</div>
+
+        <!-- Recipient -->
+        <div class="team-name" th:text="${teamName}">TEAM NAME</div>
+
+        <!-- Citation -->
+        <div class="citation" th:text="${citation != null ? citation : 'for outstanding performance and successfully winning the award'}">for outstanding performance and successfully winning the award</div>
+        <div class="award-title" th:text="${awardTitle}">AWARD TITLE</div>
+
+        <!-- Event and Category Details -->
+        <div class="event-info">
+            <span th:text="${'Event: ' + eventName}">Event Name</span>
+            <span th:if="${categoryName != null and categoryName != ''}" th:text="${' • Category: ' + categoryName}"></span>
+        </div>
+
+        <div class="badge-pill" th:if="${awardTierName != null and awardTierName != ''}" th:text="${awardTierName}">
+            HONORABLE AWARD
+        </div>
+
+        <!-- Footer -->
+        <table class="footer-table">
+            <tr>
+                <td class="footer-cell">
+                    <div class="meta-box">
+                        <div><span class="meta-label">Certificate ID:</span> <span class="meta-value" th:text="${certCode}">CERT-001</span></div>
+                        <div style="margin-top: 3px;"><span class="meta-label">Issued Date:</span> <span class="meta-value" th:text="${issuedDate}">01/01/2026</span></div>
+                        <div style="margin-top: 3px;"><span class="meta-label">Verification:</span> <span class="meta-value">SEAL Platform Auth</span></div>
+                    </div>
+                </td>
+                <td class="footer-cell seal-center">
+                    <div class="gold-seal-badge">
+                        <div class="seal-text-top">SEAL</div>
+                        <div class="seal-text-main">VERIFIED</div>
+                    </div>
+                </td>
+                <td class="footer-cell">
+                    <div class="signature-box">
+                        <div class="sig-title">Board of Organizers</div>
+                        <div class="sig-line"></div>
+                        <div class="sig-sub">SEAL Hackathon Platform</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
 </div>
 </body>
 </html>
