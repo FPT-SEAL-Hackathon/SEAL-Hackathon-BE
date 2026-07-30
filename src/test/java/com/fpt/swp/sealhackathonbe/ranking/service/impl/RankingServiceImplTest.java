@@ -338,7 +338,7 @@ public class RankingServiceImplTest {
         roundRanking.setRound(round);
         roundRanking.setTeam(team);
         roundRanking.setSubmission(submission);
-        roundRanking.setTotalScore(BigDecimal.valueOf(8.5));
+        roundRanking.setAverageScore(BigDecimal.valueOf(8.5));
         roundRanking.setCategory(category);
         roundRanking.setIsApproved(true); // Must be approved
 

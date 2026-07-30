@@ -164,4 +164,36 @@ public class JudgingController {
         judgingService.rejectSubmissionScores(submissionId, reason);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(
+            summary = "Reject score for a specific judge and submission",
+            description = "Reject a judge's score for a specific submission"
+    )
+    @PostMapping("/admin/submissions/{submissionId}/judges/{judgeId}/reject-score")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<Void> rejectSubmissionScoreForJudge(
+            @PathVariable UUID submissionId,
+            @PathVariable UUID judgeId,
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String reason = request.getOrDefault("reason", "Judge scores rejected by admin");
+        judgingService.rejectSubmissionScoreForJudge(submissionId, judgeId, reason);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(
+            summary = "Reject all scores of a judge in a round",
+            description = "Reject all scores submitted by a judge in a round"
+    )
+    @PostMapping("/admin/rounds/{roundId}/judges/{judgeId}/reject-scores")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    public ResponseEntity<Void> rejectJudgeScoresInRound(
+            @PathVariable UUID roundId,
+            @PathVariable UUID judgeId,
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        String reason = request.getOrDefault("reason", "All judge scores in round rejected by admin");
+        judgingService.rejectJudgeScoresInRound(roundId, judgeId, reason);
+        return ResponseEntity.ok().build();
+    }
 }

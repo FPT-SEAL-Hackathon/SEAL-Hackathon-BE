@@ -250,6 +250,24 @@ public class CertificateServiceImpl implements CertificateService {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+
+            // Register fonts from classpath for Vietnamese character support
+            builder.useFont(() -> {
+                InputStream is = CertificateServiceImpl.class.getResourceAsStream("/fonts/arial.ttf");
+                if (is == null) {
+                    throw new RuntimeException("Font resource /fonts/arial.ttf not found!");
+                }
+                return is;
+            }, "Arial");
+
+            builder.useFont(() -> {
+                InputStream is = CertificateServiceImpl.class.getResourceAsStream("/fonts/times.ttf");
+                if (is == null) {
+                    throw new RuntimeException("Font resource /fonts/times.ttf not found!");
+                }
+                return is;
+            }, "Times New Roman");
+
             builder.withHtmlContent(htmlContent, "/");
             builder.toStream(outputStream);
             builder.run();
