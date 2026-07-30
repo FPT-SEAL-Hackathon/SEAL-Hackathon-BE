@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class SubmissionHistoryResponse {
+    // DTO tra ve tung version snapshot cua submission cho member/admin xem lich su nop bai.
     private UUID submissionHistoryId;
     private UUID submissionId;
     private Integer versionNumber;
@@ -32,5 +33,6 @@ public class SubmissionHistoryResponse {
     private String notes;
     private Boolean isScoreApproved;
     private Boolean isSampleSubmission;
+    // Thoi diem he thong ghi snapshot, khac voi submittedAt cua bai nop goc.
     private LocalDateTime snapshotCreatedAt;
 }

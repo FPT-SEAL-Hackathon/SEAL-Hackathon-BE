@@ -13,6 +13,7 @@ import java.util.UUID;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class MilestoneResponse {
+    // DTO hien thi milestone cua team cho man mentor/team progress.
     private UUID milestoneId;
     private UUID teamId;
     private UUID mentorUserId;

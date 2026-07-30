@@ -38,7 +38,9 @@ public class TeamMapper {
         TeamResponse response = new TeamResponse();
         response.setTeamId(team.getTeamId());
         response.setEventId(team.getEventId());
+        response.setEventName(team.getEvent() != null ? team.getEvent().getEventName() : null);
         response.setCategoryId(team.getCategoryId());
+        response.setCategoryName(team.getCategory() != null ? team.getCategory().getCategoryName() : null);
         response.setTeamName(team.getTeamName());
         response.setTeamStatusId(team.getTeamStatusId());
         response.setTeamStatusName(team.getTeamStatus() != null ? team.getTeamStatus().getStatusName() : null);

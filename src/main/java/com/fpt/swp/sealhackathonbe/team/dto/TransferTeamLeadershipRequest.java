@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class TransferTeamLeadershipRequest {
+    // User nhan quyen phai la active member cua cung team; service se validate.
     @NotNull(message = "New leader user ID is required")
     private UUID newLeaderUserId;
 }

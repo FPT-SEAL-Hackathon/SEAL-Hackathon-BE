@@ -4,7 +4,6 @@ import com.fpt.swp.sealhackathonbe.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -43,10 +42,10 @@ public class Event {
     private LocalDateTime registrationEnd;
 
     @Column(name = "EventStartDate")
-    private LocalDate eventStartDate;
+    private LocalDateTime eventStartDate;
 
     @Column(name = "EventEndDate")
-    private LocalDate eventEndDate;
+    private LocalDateTime eventEndDate;
 
     @Column(name = "MaxTeamSize", nullable = false)
     private Integer maxTeamSize;

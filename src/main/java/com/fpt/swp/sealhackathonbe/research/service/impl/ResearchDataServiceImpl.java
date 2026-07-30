@@ -16,15 +16,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -44,27 +46,41 @@ public class ResearchDataServiceImpl implements ResearchDataService {
         User exportedBy = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        ExportContent exportContent = buildExportContent(eventId, roundId, categoryId, bucketSize, type);
-        byte[] content = writeCsv(exportContent.header(), exportContent.rows());
+        String normalizedType = normalizeType(type);
+        byte[] content;
+        String filename;
+        String contentType;
+        int rowCount = 0;
+
+        if ("dashboard".equals(normalizedType)) {
+            content = buildDashboardZip(eventId, roundId, categoryId, bucketSize);
+            filename = "research-dashboard-" + eventId + ".zip";
+            contentType = "application/zip";
+            rowCount = 1; // Generic count for zip
+        } else {
+            ExportContent exportContent = buildExportContent(eventId, roundId, categoryId, bucketSize, type);
+            content = writeCsv(exportContent.header(), exportContent.rows());
+            filename = "research-" + normalizedType + "-" + eventId + ".csv";
+            contentType = CSV_CONTENT_TYPE;
+            rowCount = exportContent.rows().size();
+        }
 
         DataExportLog log = new DataExportLog();
         log.setEvent(event);
         log.setExportedBy(exportedBy);
-        log.setFileFormat("CSV");
-        log.setRowCount(exportContent.rows().size());
-        log.setNotes("Research export: " + normalizeType(type));
+        log.setFileFormat(contentType.equals("application/zip") ? "ZIP" : "CSV");
+        log.setRowCount(rowCount);
+        log.setNotes("Research export: " + normalizedType);
         dataExportLogRepository.save(log);
 
-        String filename = "research-" + normalizeType(type) + "-" + eventId + ".csv";
-        return new DownloadFileResponse(filename, CSV_CONTENT_TYPE, content);
+        return new DownloadFileResponse(filename, contentType, content);
     }
 
     private ExportContent buildExportContent(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize, String type) {
         return switch (normalizeType(type)) {
-            case "dashboard" -> buildDashboardExport(eventId, roundId, categoryId, bucketSize);
-            case "variance-report" -> buildVarianceExport(eventId, roundId, categoryId);
+            case "variance-report" -> buildVarianceExport(eventId, roundId, categoryId, false);
             case "score-distribution" -> buildDistributionExport(eventId, roundId, categoryId, bucketSize);
-            case "reliability-metrics" -> buildReliabilityExport(eventId, roundId, categoryId);
+            case "reliability-metrics" -> buildReliabilityExport(eventId, roundId, categoryId, false);
             default -> throw new IllegalArgumentException("Unsupported research export type: " + type);
         };
     }
@@ -74,101 +90,85 @@ public class ResearchDataServiceImpl implements ResearchDataService {
         return map.computeIfAbsent(id, k -> prefix + "_" + (map.size() + 1));
     }
 
-    private ExportContent buildDashboardExport(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
-        List<String[]> rows = new ArrayList<>();
+    private byte[] buildDashboardZip(UUID eventId, UUID roundId, UUID categoryId, BigDecimal bucketSize) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+            // 1. Variance Report (Anonymized)
+            ExportContent variance = buildVarianceExport(eventId, roundId, categoryId, true);
+            zos.putNextEntry(new ZipEntry("variance-report.csv"));
+            zos.write(writeCsv(variance.header(), variance.rows()));
+            zos.closeEntry();
+
+            // 2. Score Distribution
+            ExportContent distribution = buildDistributionExport(eventId, roundId, categoryId, bucketSize);
+            zos.putNextEntry(new ZipEntry("score-distribution.csv"));
+            zos.write(writeCsv(distribution.header(), distribution.rows()));
+            zos.closeEntry();
+
+            // 3. Reliability Metrics (Anonymized)
+            ExportContent reliability = buildReliabilityExport(eventId, roundId, categoryId, true);
+            zos.putNextEntry(new ZipEntry("reliability-metrics.csv"));
+            zos.write(writeCsv(reliability.header(), reliability.rows()));
+            zos.closeEntry();
+
+            // 4. Data Dictionary
+            zos.putNextEntry(new ZipEntry("data-dictionary.txt"));
+            zos.write(buildDataDictionary().getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            zos.finish();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate research dashboard ZIP", e);
+        }
+    }
+
+    private String buildDataDictionary() {
+        return "NOTES & DEFINITIONS\n\n" +
+               "Data Anonymization:\n" +
+               "All identifying UUIDs and names have been replaced with pseudo-IDs (e.g., TEAM_1, JUDGE_1) for research purposes.\n" +
+               "Fields like CategoryName, RoundName, TeamName, CriterionName, JudgeName will be empty.\n\n" +
+               "variance-report.csv\n" +
+               "Analyzes the spread of scores for a single submission across different judges.\n" +
+               "- JudgeCount: Number of judges who scored this criterion for this submission.\n" +
+               "- MeanScore: Average score given by all judges for this criterion.\n" +
+               "- StandardDeviation: Standard deviation indicating how spread out the scores are.\n" +
+               "- ScoreRange: Difference between highest and lowest score.\n" +
+               "- Variance: The variance of the scores, indicating judge agreement.\n\n" +
+               "score-distribution.csv\n" +
+               "Shows how many scores fall into specific score buckets.\n" +
+               "- ScoreCount: Number of scores in this bucket.\n" +
+               "- MinScore: Start of the score bucket.\n" +
+               "- MaxScore: End of the score bucket.\n" +
+               "- Percentage: Percentage of total scores in this bucket.\n\n" +
+               "reliability-metrics.csv\n" +
+               "Evaluates individual judge performance compared to their peers.\n" +
+               "- ScoredItemCount: Number of items scored by this judge.\n" +
+               "- AverageScore: The judge's average score across all their gradings.\n" +
+               "- Bias: How much higher/lower this judge scores compared to the average of other judges.\n" +
+               "- MeanAbsoluteDeviation: Average Absolute Deviation from the peer mean.\n" +
+               "- RMSD: Root Mean Square Deviation from the peer mean (penalizes large outliers more).\n";
+    }
+
+    private ExportContent buildVarianceExport(UUID eventId, UUID roundId, UUID categoryId, boolean isAnonymized) {
         Map<UUID, String> roundMap = new HashMap<>();
         Map<UUID, String> categoryMap = new HashMap<>();
         Map<UUID, String> submissionMap = new HashMap<>();
         Map<UUID, String> teamMap = new HashMap<>();
         Map<UUID, String> criterionMap = new HashMap<>();
-        Map<UUID, String> judgeMap = new HashMap<>();
 
-        for (VarianceReportResponse item : researchDashboardService.getVarianceReport(eventId, roundId, categoryId)) {
-            rows.add(new String[]{
-                    "variance-report",
-                    getPseudoId(roundMap, item.roundId(), "ROUND"),
-                    getPseudoId(categoryMap, item.categoryId(), "TRACK"),
-                    getPseudoId(submissionMap, item.submissionId(), "SUBMISSION"),
-                    getPseudoId(teamMap, item.teamId(), "TEAM"),
-                    getPseudoId(criterionMap, item.roundCriterionId(), "CRITERION"),
-                    valueOf(item.judgeCount()),
-                    valueOf(item.meanScore()),
-                    valueOf(item.standardDeviation()),
-                    valueOf(item.scoreRange()),
-                    valueOf(item.variance())
-            });
-        }
-        for (ScoreDistributionResponse item : researchDashboardService.getScoreDistribution(eventId, roundId, categoryId, bucketSize)) {
-            rows.add(new String[]{
-                    "score-distribution",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    valueOf(item.scoreCount()),
-                    valueOf(item.bucketStart()),
-                    valueOf(item.bucketEnd()),
-                    valueOf(item.percentage()),
-                    ""
-            });
-        }
-        for (ReliabilityMetricResponse item : researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId)) {
-            rows.add(new String[]{
-                    "reliability-metrics",
-                    getPseudoId(judgeMap, item.judgeUserId(), "JUDGE"),
-                    getPseudoId(judgeMap, item.judgeUserId(), "JUDGE"),
-                    "",
-                    "",
-                    "",
-                    valueOf(item.scoredItemCount()),
-                    valueOf(item.averageScore()),
-                    valueOf(item.biasFromPeerMean()),
-                    valueOf(item.averageAbsoluteDeviation()),
-                    valueOf(item.rootMeanSquareDeviation())
-            });
-        }
-
-        // Add notes section for context and definitions
-        rows.add(new String[]{"", "", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"NOTES & DEFINITIONS", "", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"Data Anonymization", "All identifying UUIDs and names have been replaced with pseudo-IDs (e.g., TEAM_1, JUDGE_1) for research purposes.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"variance-report", "Analyzes the spread of scores for a single submission across different judges.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Count: Number of judges who scored this criterion for this submission.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric1 (MeanScore): Average score given by all judges for this criterion.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric2 (StdDev): Standard deviation indicating how spread out the scores are.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric3 (ScoreRange): Difference between highest and lowest score.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric4 (Variance): The variance of the scores, indicating judge agreement.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"score-distribution", "Shows how many scores fall into specific score buckets.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Count: Number of scores in this bucket.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric1 (BucketStart): Start of the score bucket.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric2 (BucketEnd): End of the score bucket.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric3 (Percentage): Percentage of total scores in this bucket.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"reliability-metrics", "Evaluates individual judge performance compared to their peers.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Count: Number of items scored by this judge.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric1 (AverageScore): The judge's average score across all their gradings.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric2 (BiasFromPeerMean): How much higher/lower this judge scores compared to the average of other judges.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric3 (AAD): Average Absolute Deviation from the peer mean.", "", "", "", "", "", "", "", "", ""});
-        rows.add(new String[]{"", "- Metric4 (RMSD): Root Mean Square Deviation from the peer mean (penalizes large outliers more).", "", "", "", "", "", "", "", "", ""});
-
-        return new ExportContent(
-                new String[]{"Section", "RefID1", "RefID2", "SubmissionID", "TeamID", "CriterionID", "Count", "Metric1", "Metric2", "Metric3", "Metric4"},
-                rows
-        );
-    }
-
-    private ExportContent buildVarianceExport(UUID eventId, UUID roundId, UUID categoryId) {
         List<String[]> rows = researchDashboardService.getVarianceReport(eventId, roundId, categoryId).stream()
                 .map(item -> new String[]{
-                        valueOf(item.roundId()),
-                        valueOf(item.roundName()),
-                        valueOf(item.categoryId()),
-                        valueOf(item.categoryName()),
-                        valueOf(item.submissionId()),
-                        valueOf(item.teamId()),
-                        valueOf(item.teamName()),
-                        valueOf(item.roundCriterionId()),
-                        valueOf(item.criterionName()),
+                        isAnonymized ? getPseudoId(categoryMap, item.categoryId(), "CATEGORY") : valueOf(item.categoryId()),
+                        isAnonymized ? "" : valueOf(item.categoryName()),
+                        isAnonymized ? getPseudoId(roundMap, item.roundId(), "ROUND") : valueOf(item.roundId()),
+                        isAnonymized ? "" : valueOf(item.roundName()),
+                        isAnonymized ? getPseudoId(submissionMap, item.submissionId(), "SUBMISSION") : valueOf(item.submissionId()),
+                        isAnonymized ? getPseudoId(teamMap, item.teamId(), "TEAM") : valueOf(item.teamId()),
+                        isAnonymized ? "" : valueOf(item.teamName()),
+                        isAnonymized ? getPseudoId(criterionMap, item.roundCriterionId(), "CRITERION") : valueOf(item.roundCriterionId()),
+                        isAnonymized ? "" : valueOf(item.criterionName()),
                         valueOf(item.judgeCount()),
                         valueOf(item.meanScore()),
                         valueOf(item.standardDeviation()),
@@ -177,7 +177,7 @@ public class ResearchDataServiceImpl implements ResearchDataService {
                 })
                 .toList();
         return new ExportContent(
-                new String[]{"RoundID", "RoundName", "CategoryID", "CategoryName", "SubmissionID", "TeamID", "TeamName", "RoundCriterionID", "CriterionName", "JudgeCount", "MeanScore", "StandardDeviation", "ScoreRange", "Variance"},
+                new String[]{"CategoryID", "CategoryName", "RoundID", "RoundName", "SubmissionID", "TeamID", "TeamName", "RoundCriterionID", "CriterionName", "JudgeCount", "MeanScore", "StandardDeviation", "ScoreRange", "Variance"},
                 rows
         );
     }
@@ -192,16 +192,17 @@ public class ResearchDataServiceImpl implements ResearchDataService {
                 })
                 .toList();
         return new ExportContent(
-                new String[]{"BucketStart", "BucketEnd", "ScoreCount", "Percentage"},
+                new String[]{"MinScore", "MaxScore", "ScoreCount", "Percentage"},
                 rows
         );
     }
 
-    private ExportContent buildReliabilityExport(UUID eventId, UUID roundId, UUID categoryId) {
+    private ExportContent buildReliabilityExport(UUID eventId, UUID roundId, UUID categoryId, boolean isAnonymized) {
+        Map<UUID, String> judgeMap = new HashMap<>();
         List<String[]> rows = researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId).stream()
                 .map(item -> new String[]{
-                        valueOf(item.judgeUserId()),
-                        valueOf(item.judgeName()),
+                        isAnonymized ? getPseudoId(judgeMap, item.judgeUserId(), "JUDGE") : valueOf(item.judgeUserId()),
+                        isAnonymized ? "" : valueOf(item.judgeName()),
                         valueOf(item.scoredItemCount()),
                         valueOf(item.comparableScoreCount()),
                         valueOf(item.calibrationScoreCount()),
@@ -214,7 +215,7 @@ public class ResearchDataServiceImpl implements ResearchDataService {
                 })
                 .toList();
         return new ExportContent(
-                new String[]{"JudgeUserID", "JudgeName", "ScoredItemCount", "ComparableScoreCount", "CalibrationScoreCount", "AverageScore", "MinScore", "MaxScore", "BiasFromPeerMean", "AverageAbsoluteDeviation", "RootMeanSquareDeviation"},
+                new String[]{"JudgeUserID", "JudgeName", "ScoredItemCount", "ComparableScoreCount", "CalibrationScoreCount", "AverageScore", "MinScore", "MaxScore", "Bias", "MeanAbsoluteDeviation", "RMSD"},
                 rows
         );
     }

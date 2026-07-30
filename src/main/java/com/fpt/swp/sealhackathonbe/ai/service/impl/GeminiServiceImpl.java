@@ -1,7 +1,7 @@
 package com.fpt.swp.sealhackathonbe.ai.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.fpt.swp.sealhackathonbe.ai.entity.AiKnowledgeBase;
 import com.fpt.swp.sealhackathonbe.ai.service.GeminiService;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +10,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -43,7 +44,10 @@ public class GeminiServiceImpl implements GeminiService {
     private final ObjectMapper objectMapper;
 
     public GeminiServiceImpl() {
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000); // 5s connection timeout
+        requestFactory.setReadTimeout(10000);   // 10s read timeout
+        this.restTemplate = new RestTemplate(requestFactory);
         this.objectMapper = new ObjectMapper();
     }
 
@@ -61,10 +65,10 @@ public class GeminiServiceImpl implements GeminiService {
         contextBuilder.append("You are an AI Mentor assisting students participating in the event.\n");
         contextBuilder.append("Your ONLY task is to match the student's question with the KNOWLEDGE BASE below.\n");
         contextBuilder.append("CRITICAL MATCHING RULES:\n");
-        contextBuilder.append("1. If the student's question asks for a SPECIFIC detail, clarification, follow-up, or sub-topic (e.g. specific rule details, submission platform instructions, technical specs, edge cases) that is NOT fully and explicitly answered in the Standard Answer, YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
-        contextBuilder.append("2. If the student indicates they already know the general answer (e.g., \"I know but...\", \"I understand the general rule but...\") or asks a follow-up question beyond what the Standard Answer contains, DO NOT repeat a generic answer. YOU MUST REPLY WITH EXACTLY 1 WORD: UNKNOWN.\n");
-        contextBuilder.append("3. ONLY if a FAQ in the Knowledge Base directly, completely, and specifically answers what the student is asking, reply EXACTLY with the Standard Answer.\n");
-        contextBuilder.append("4. Absolutely no inferring, no fabricating information, no guessing, and no long explanations.\n\n");
+        contextBuilder.append("1. Find the FAQ in the Knowledge Base that best matches the student's question in meaning, intent, or keywords.\n");
+        contextBuilder.append("2. If a matching FAQ is found, you MUST reply with the EXACT 'Standard answer' of that FAQ and nothing else.\n");
+        contextBuilder.append("3. If the student's question is completely unrelated to any FAQ, or asks for information not present in the Knowledge Base at all, reply with EXACTLY 1 WORD: UNKNOWN.\n");
+        contextBuilder.append("4. Be flexible with phrasing. For example, if the student asks 'rule of the event' and there is an FAQ about 'event rules', that is a match. Do not be overly strict.\n\n");
         contextBuilder.append("--- KNOWLEDGE BASE ---\n");
 
         for (int i = 0; i < knowledgeBase.size(); i++) {

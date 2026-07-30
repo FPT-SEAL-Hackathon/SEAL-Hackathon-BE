@@ -23,8 +23,10 @@ import com.fpt.swp.sealhackathonbe.category.entity.Category;
 import com.fpt.swp.sealhackathonbe.category.repository.CategoryRepository;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
+import com.fpt.swp.sealhackathonbe.ranking.dto.EventRankingDTO;
 import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
+import com.fpt.swp.sealhackathonbe.ranking.service.RankingService;
 import com.fpt.swp.sealhackathonbe.round.entity.Round;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
 import com.fpt.swp.sealhackathonbe.team.entity.Teams;
@@ -77,6 +79,7 @@ public class AwardServiceImpl implements AwardService {
     private final RoundRankingRepository roundRankingRepository;
     private final NotificationService notificationService;
     private final TeamMembersRepository teamMembersRepository;
+    private final RankingService rankingService;
 
     @Override
     @Transactional
@@ -260,6 +263,19 @@ public class AwardServiceImpl implements AwardService {
     @Override
     @Transactional(readOnly = true)
     public List<RankingAwardCandidateResponse> getTopRankingByCategory(UUID categoryId, UUID roundId, int limit) {
+        validateLimit(limit);
+
+        if (roundId == null) {
+            Category category = getCategory(categoryId);
+            List<EventRankingDTO> rankings = rankingService.getApprovedCategoryLeaderboard(category.getEvent().getEventId(), categoryId);
+            if (rankings.size() > limit) {
+                rankings = rankings.subList(0, limit);
+            }
+            return rankings.stream()
+                    .map(this::convertToRankingCandidateFromEventRanking)
+                    .collect(Collectors.toList());
+        }
+
         Round round = resolveRound(categoryId, roundId);
         return getTopRankings(round.getRoundId(), categoryId, limit).stream()
                 .map(this::convertToRankingCandidate)
@@ -273,12 +289,6 @@ public class AwardServiceImpl implements AwardService {
         Event event = category.getEvent();
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new EntityNotFoundException("Executor account does not exist."));
-        Round round = resolveRound(categoryId, roundId);
-
-        List<RoundRanking> rankings = getTopRankings(round.getRoundId(), categoryId, limit);
-        if (rankings.isEmpty()) {
-            throw new IllegalStateException("No ranking exists for this category/round.");
-        }
 
         Map<Integer, AwardPattern> patternByRank = awardPatternRepository
                 .findByCategoryCategoryIdAndIsActiveTrueOrderByRankPositionAsc(categoryId).stream()
@@ -288,6 +298,32 @@ public class AwardServiceImpl implements AwardService {
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
+
+        if (roundId == null) {
+            List<EventRankingDTO> rankings = rankingService.getApprovedCategoryLeaderboard(event.getEventId(), categoryId);
+            if (rankings.isEmpty()) {
+                throw new IllegalStateException("No ranking exists for this category.");
+            }
+            validateLimit(limit);
+            if (rankings.size() > limit) {
+                rankings = rankings.subList(0, limit);
+            }
+
+            validateAwardPatternsExistForCategory(rankings, patternByRank);
+            validateRankingAwardsNotAlreadyGrantedForCategory(event, category, rankings, patternByRank);
+
+            return rankings.stream()
+                    .map(ranking -> grantEventRankingAward(event, category, admin, ranking, patternByRank))
+                    .map(this::convertToResponse)
+                    .collect(Collectors.toList());
+        }
+
+        Round round = resolveRound(categoryId, roundId);
+        List<RoundRanking> rankings = getTopRankings(round.getRoundId(), categoryId, limit);
+        if (rankings.isEmpty()) {
+            throw new IllegalStateException("No ranking exists for this category/round.");
+        }
+
         validateAwardPatternsExist(rankings, patternByRank);
         validateRankingAwardsNotAlreadyGranted(event, category, rankings, patternByRank);
 
@@ -330,6 +366,40 @@ public class AwardServiceImpl implements AwardService {
         return savedAward;
     }
 
+    private Award grantEventRankingAward(
+            Event event,
+            Category category,
+            User admin,
+            EventRankingDTO ranking,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
+        if (pattern == null) {
+            throw new IllegalStateException("Award pattern has not been configured for rank " + ranking.getRankPosition());
+        }
+
+        Teams team = teamsRepository.findById(ranking.getTeamId())
+                .orElseThrow(() -> new EntityNotFoundException("Team not found with ID: " + ranking.getTeamId()));
+
+        Award award = new Award();
+        award.setEvent(event);
+        award.setCategory(category);
+        award.setTeam(team);
+        award.setAwardTier(pattern.getAwardTier());
+        award.setAwardTitle(pattern.getAwardTitle());
+        award.setDescription(pattern.getDescription());
+        award.setPrizeValue(pattern.getPrizeValue());
+        award.setPrizeCurrency(defaultCurrency(pattern.getPrizeCurrency()));
+        award.setAwardedAt(Instant.now());
+        award.setAwardedBy(admin);
+        award.setIsPublished(true);
+        award.setPublishedAt(Instant.now());
+
+        Award savedAward = awardRepository.save(award);
+        notifyTeamAboutAward(savedAward, admin.getUserId());
+        return savedAward;
+    }
+
     private void validateAwardTierNotAlreadyGranted(Event event, Category category, AwardTier tier) {
         // Cho phép các giải thưởng Đặc biệt (Special Award) được trao nhiều lần
         if (tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special")) {
@@ -354,6 +424,27 @@ public class AwardServiceImpl implements AwardService {
     ) {
         Set<UUID> requestedTierIds = new HashSet<>();
         for (RoundRanking ranking : rankings) {
+            AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
+            AwardTier tier = pattern.getAwardTier();
+
+            boolean isSpecialAward = tier.getTierName() != null && tier.getTierName().toLowerCase().contains("special");
+
+            if (!isSpecialAward && !requestedTierIds.add(tier.getId())) {
+                throw new IllegalStateException("Duplicate award tier in selected award patterns: " + tier.getTierName());
+            }
+
+            validateAwardTierNotAlreadyGranted(event, category, tier);
+        }
+    }
+
+    private void validateRankingAwardsNotAlreadyGrantedForCategory(
+            Event event,
+            Category category,
+            List<EventRankingDTO> rankings,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        Set<UUID> requestedTierIds = new HashSet<>();
+        for (EventRankingDTO ranking : rankings) {
             AwardPattern pattern = patternByRank.get(ranking.getRankPosition());
             AwardTier tier = pattern.getAwardTier();
 
@@ -454,6 +545,20 @@ public class AwardServiceImpl implements AwardService {
         }
     }
 
+    private void validateAwardPatternsExistForCategory(
+            List<EventRankingDTO> rankings,
+            Map<Integer, AwardPattern> patternByRank
+    ) {
+        List<Integer> missingRanks = rankings.stream()
+                .map(EventRankingDTO::getRankPosition)
+                .filter(rank -> !patternByRank.containsKey(rank))
+                .collect(Collectors.toList());
+
+        if (!missingRanks.isEmpty()) {
+            throw new IllegalStateException("Award pattern has not been configured for ranks: " + missingRanks);
+        }
+    }
+
     private AwardResponse convertToResponse(Award award) {
         AwardResponse response = new AwardResponse();
         response.setId(award.getId());
@@ -510,6 +615,22 @@ public class AwardServiceImpl implements AwardService {
         response.setAverageScore(ranking.getAverageScore());
         response.setRankPosition(ranking.getRankPosition());
         response.setIsAdvanced(ranking.getIsAdvanced());
+        return response;
+    }
+
+    private RankingAwardCandidateResponse convertToRankingCandidateFromEventRanking(EventRankingDTO ranking) {
+        RankingAwardCandidateResponse response = new RankingAwardCandidateResponse();
+        response.setRankingId(ranking.getId());
+        response.setRoundId(null);
+        response.setRoundName(null);
+        response.setCategoryId(ranking.getCategoryId());
+        response.setCategoryName(ranking.getCategoryName());
+        response.setTeamId(ranking.getTeamId());
+        response.setTeamName(ranking.getTeamName());
+        response.setTotalScore(ranking.getFinalScore());
+        response.setAverageScore(ranking.getFinalScore());
+        response.setRankPosition(ranking.getRankPosition());
+        response.setIsAdvanced(true);
         return response;
     }
 

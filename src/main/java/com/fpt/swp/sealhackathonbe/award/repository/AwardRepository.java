@@ -15,6 +15,7 @@ public interface AwardRepository extends JpaRepository<Award, UUID> {
     List<Award> findAllByEventEventId(UUID eventId);
     List<Award> findByIsPublishedTrueOrderByAwardedAtDesc();
     Optional<Award> findByIdAndIsPublishedTrue(UUID id);
+    List<Award> findByEventEventIdAndTeamTeamIdAndIsPublishedTrue(UUID eventId, UUID teamId);
 
     @Query("""
             select new com.fpt.swp.sealhackathonbe.award.dto.AwardPrizeTotalResponse(

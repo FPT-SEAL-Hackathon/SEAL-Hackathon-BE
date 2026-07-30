@@ -36,6 +36,9 @@ public class EmailService {
     @Value("${app.notification.mail.sender-name:SEAL Hackathon}")
     private String senderName;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     @Async
     public void sendEmail(String recipient, String subject, String content) {
         Context context = new Context();
@@ -119,6 +122,7 @@ public class EmailService {
 
         try {
             // Process the Thymeleaf template with the given context variables
+            context.setVariable("frontendUrl", frontendUrl);
             String htmlContent = templateEngine.process("email-template", context);
 
             MimeMessage message = mailSender.createMimeMessage();
@@ -130,6 +134,12 @@ public class EmailService {
             helper.setTo(recipient);
             helper.setSubject(subject);
             helper.setText(htmlContent, true); // true indicates HTML format
+
+            // Embed logo as an inline attachment
+            org.springframework.core.io.ClassPathResource logo = new org.springframework.core.io.ClassPathResource("static/logo_trans.png");
+            if (logo.exists()) {
+                helper.addInline("sealLogo", logo);
+            }
 
             mailSender.send(message);
         } catch (MessagingException exception) {

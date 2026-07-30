@@ -419,6 +419,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         response.setEventStatus(event != null && event.getEventStatus() != null
                 ? event.getEventStatus().getEventStatusName()
                 : null);
+        response.setBannerImageUrl(event != null ? event.getBannerImageUrl() : null);
         response.setStudentId(user != null ? user.getUserId() : participant.getUserId());
         response.setStudentName(user != null ? user.getFullName() : null);
         response.setStudentEmail(user != null ? user.getEmail() : null);
@@ -471,6 +472,7 @@ public class EventParticipantServiceImpl implements EventParticipantService {
         response.setRegistrationEnd(event.getRegistrationEnd());
         response.setEventStartDate(event.getEventStartDate());
         response.setEventEndDate(event.getEventEndDate());
+        response.setBannerImageUrl(event.getBannerImageUrl());
         return response;
     }
 
