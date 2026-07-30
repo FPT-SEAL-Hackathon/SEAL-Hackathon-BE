@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,6 +90,13 @@ class TeamServiceImplLeadershipTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    // TeamServiceImpl.rejectTeam KHONG con publish TeamRegistrationRejectedEvent nua ma goi
+    // thang notificationService.sendBroadcastNotification. Thieu mock nay thi dependency bi
+    // inject null, NPE bi nuot boi try/catch trong sendEligibilityRejectedNotification va test
+    // chi thay "khong co tuong tac nao" — rat kho lan ra nguyen nhan.
+    @Mock
+    private com.fpt.swp.sealhackathonbe.notification.service.NotificationService notificationService;
 
     @Mock
     private com.fpt.swp.sealhackathonbe.team.service.impl.TeamJoinRequestCleaner teamJoinRequestCleaner;
@@ -454,14 +462,19 @@ class TeamServiceImplLeadershipTest {
         when(teamsRepository.findById(teamId)).thenReturn(Optional.of(team));
         when(teamMembersRepository.findByTeamIdAndUserIdAndActiveTrue(teamId, memberId))
                 .thenReturn(Optional.of(member));
-        when(eventParticipantRepository.findParticipantStatusNameByEventIdAndUserId(team.getEventId(), memberId))
-                .thenReturn(Optional.empty());
+        // KHONG stub eventParticipantRepository o day: resolveParticipantStatusName suy trang
+        // thai tu TEAM STATUS truoc, chi tra bang EventParticipants khi team roi vao trang thai
+        // ngoai danh sach da biet. Team nay dang FORMING nen tra ve "Pending" ma khong cham vao
+        // repository — stub cu tro thanh thua va lam Mockito bao UnnecessaryStubbing.
 
         TeamMemberDetailResponse response = teamService.getTeamMemberDetail(teamId, memberId, organizerId, true);
 
         assertEquals(memberId, response.getUserId());
         assertEquals("Member One", response.getFullName());
+        assertEquals("Pending", response.getParticipantStatus());
         verify(teamMembersRepository, never()).findByTeamIdAndUserIdAndActiveTrue(teamId, organizerId);
+        verify(eventParticipantRepository, never())
+                .findParticipantStatusNameByEventIdAndUserId(any(), any());
     }
 
     @Test
@@ -577,15 +590,21 @@ class TeamServiceImplLeadershipTest {
         verify(teamMembersRepository, never()).saveAll(any());
         verify(teamJoinRequestCleaner, never()).rejectPendingRequestsForTeam(any(), any(), any());
 
-        ArgumentCaptor<TeamRegistrationRejectedEvent> eventCaptor =
-                ArgumentCaptor.forClass(TeamRegistrationRejectedEvent.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        TeamRegistrationRejectedEvent eventMessage = eventCaptor.getValue();
-        assertEquals(List.of(leaderId, memberId), eventMessage.recipientUserIds());
-        assertEquals(adminId, eventMessage.organizerUserId());
-        assertEquals(eventId, eventMessage.eventId());
-        assertEquals("Seal Squad", eventMessage.teamName());
-        assertEquals("Missing member profile", eventMessage.note());
+        // Bao cho ca doi biet team bi tu choi. Production da chuyen tu publish event sang goi
+        // truc tiep notificationService, nen test bam theo hanh vi hien tai cua production.
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<UUID>> recipientsCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).sendBroadcastNotification(
+                recipientsCaptor.capture(),
+                eq(adminId),
+                eq(eventId),
+                eq("Team Registration Rejected"),
+                messageCaptor.capture()
+        );
+        assertEquals(List.of(leaderId, memberId), recipientsCaptor.getValue());
+        assertTrue(messageCaptor.getValue().contains("Seal Squad"));
+        assertTrue(messageCaptor.getValue().contains("Missing member profile"));
     }
 
     private Teams team(UUID teamId, UUID leaderId) {

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,7 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fpt.swp.sealhackathonbe.judging.dto.BatchScoreRequestDTO;
 
+import com.fpt.swp.sealhackathonbe.judging.dto.CalibrationJudgeStatusResponse;
 import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
+import com.fpt.swp.sealhackathonbe.user.entity.UserPrincipal;
 import com.fpt.swp.sealhackathonbe.judging.dto.JudgingDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.ScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
@@ -122,6 +125,35 @@ public class JudgingController {
     public ResponseEntity<List<EvaluationAuditLogDTO>> getEvaluationAuditLogsByEvent(@PathVariable UUID eventId) {
         List<EvaluationAuditLogDTO> logs = judgingService.getEvaluationAuditLogsByEvent(eventId);
         return ResponseEntity.ok(logs);
+    }
+
+    // Ai da/chua cham xong bai mau cua vong hieu chuan. Truoc day khong co man hinh nao cho biet
+    // dieu nay: giam khao vang mat khong sinh ra dong du lieu nao nen khong xuat hien o bat ky
+    // bao cao gi, va Organizer tuong ca hoi dong da hieu chuan xong.
+    @GetMapping("/judging/rounds/{roundId}/calibration-status")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    @Operation(summary = "Get calibration completion status",
+            description = "Lists judges assigned to a calibration round and whether each has finished scoring every sample")
+    public ResponseEntity<List<CalibrationJudgeStatusResponse>> getCalibrationStatus(@PathVariable UUID roundId) {
+        return ResponseEntity.ok(judgingService.getCalibrationStatus(roundId));
+    }
+
+    @PostMapping("/judging/rounds/{roundId}/calibration-reminder")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    @Operation(summary = "Remind judges who have not finished calibration",
+            description = "Sends a notification to every assigned judge who has not scored all samples. Returns how many were reminded")
+    public ResponseEntity<Map<String, Object>> remindCalibrationJudges(
+            @PathVariable UUID roundId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UUID actorId = principal != null && principal.getUser() != null ? principal.getUser().getUserId() : null;
+        int reminded = judgingService.remindPendingCalibrationJudges(roundId, actorId);
+        return ResponseEntity.ok(Map.of(
+                "remindedCount", reminded,
+                "message", reminded == 0
+                        ? "All judges have completed the calibration round."
+                        : "Reminded " + reminded + " judge(s) who have not finished."
+        ));
     }
 
     @GetMapping(value = "/judging/events/{eventId}/calibration-metrics")

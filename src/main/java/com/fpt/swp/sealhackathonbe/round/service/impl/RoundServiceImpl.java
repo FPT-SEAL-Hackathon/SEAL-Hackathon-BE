@@ -54,16 +54,31 @@ public class RoundServiceImpl implements RoundService {
         RoundStatus status = roundStatusRepository
                 .findById(request.getRoundStatusId())
                 .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
+        // roundOrder luôn do server sinh (max+1 trong category), CỐ Ý bỏ qua giá trị client gửi:
+        // thứ tự vòng phải liên tục và duy nhất vì RankingServiceImpl sắp xếp bảng xếp hạng
+        // chung cuộc theo nó, còn AwardServiceImpl dựa vào order lớn nhất để xác định vòng
+        // chung kết. Muốn đổi thứ tự thì dùng API update.
         int currentRound = roundRepository.findMaxRoundOrderByCategory(categoryId);
         int nextRound = currentRound + 1;
+
+        boolean calibration = Boolean.TRUE.equals(request.getIsCalibrationRound());
+
+        // Vong hieu chuan chi cham BAI MAU do Organizer tao, khong co doi thi tham gia, nen
+        // han nop bai / so doi di tiep / cua so phuc khao deu vo nghia. Ep null ngay tu day de
+        // client cu hoac lenh goi API truc tiep cung khong set duoc gia tri rac.
+        // CHI ap dung cho nhanh calibration — round thuong giu nguyen hanh vi cu.
+        LocalDateTime submissionDeadline = calibration ? null : request.getSubmissionDeadline();
+        LocalDateTime appealStartTime = calibration ? null : request.getAppealStartTime();
+        LocalDateTime appealEndTime = calibration ? null : request.getAppealEndTime();
+        Integer advancementTopN = calibration ? null : request.getAdvancementTopN();
 
         validateRoundTimeline(
                 request.getStartDate(),
                 request.getEndDate(),
-                request.getSubmissionDeadline(),
+                submissionDeadline,
                 request.getJudgingDeadline(),
-                request.getAppealStartTime(),
-                request.getAppealEndTime(),
+                appealStartTime,
+                appealEndTime,
                 category.getEvent());
 
         Round round = Round.builder()
@@ -73,13 +88,13 @@ public class RoundServiceImpl implements RoundService {
                 .description(request.getDescription())
                 .roundOrder(nextRound)
                 .roundStatus(status)
-                .submissionDeadline(request.getSubmissionDeadline())
+                .submissionDeadline(submissionDeadline)
                 .judgingDeadline(request.getJudgingDeadline())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .appealStartTime(request.getAppealStartTime())
-                .appealEndTime(request.getAppealEndTime())
-                .advancementTopN(request.getAdvancementTopN())
+                .appealStartTime(appealStartTime)
+                .appealEndTime(appealEndTime)
+                .advancementTopN(advancementTopN)
                 .isCalibrationRound(request.getIsCalibrationRound())
                 .build();
         return roundMapper.toRoundResponse(roundRepository.save(round));
@@ -112,16 +127,27 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new EntityNotFoundException("Round status not found"));
         round.setRoundName(request.getRoundName());
         round.setDescription(request.getDescription());
-        round.setRoundOrder(request.getRoundOrder());
+        // roundOrder: null = giữ nguyên (client không gửi thì không được vô tình xoá thứ tự).
+        // Trước đây set thẳng giá trị request nên order null/0/âm/trùng đều lọt qua, làm hỏng
+        // sắp xếp bảng xếp hạng chung cuộc và việc xác định vòng chung kết.
+        if (request.getRoundOrder() != null) {
+            validateRoundOrder(round, request.getRoundOrder());
+            round.setRoundOrder(request.getRoundOrder());
+        }
         round.setRoundStatus(roundStatus);
         round.setStartDate(request.getStartDate());
         round.setEndDate(request.getEndDate());
-        round.setSubmissionDeadline(request.getSubmissionDeadline());
         round.setJudgingDeadline(request.getJudgingDeadline());
-        round.setAppealStartTime(request.getAppealStartTime());
-        round.setAppealEndTime(request.getAppealEndTime());
-        round.setAdvancementTopN(request.getAdvancementTopN());
         round.setIsCalibrationRound(request.getIsCalibrationRound());
+
+        // Xem ghi chu o create(): vong hieu chuan khong co han nop bai / doi di tiep / phuc khao.
+        // Dat null KE CA khi round vua duoc doi tu round thuong sang hieu chuan, de khong con
+        // sot lai gia tri cu vo nghia. Round thuong di theo nhanh else, hanh vi khong doi.
+        boolean calibration = Boolean.TRUE.equals(request.getIsCalibrationRound());
+        round.setSubmissionDeadline(calibration ? null : request.getSubmissionDeadline());
+        round.setAppealStartTime(calibration ? null : request.getAppealStartTime());
+        round.setAppealEndTime(calibration ? null : request.getAppealEndTime());
+        round.setAdvancementTopN(calibration ? null : request.getAdvancementTopN());
 
         validateRoundTimeline(
                 round.getStartDate(),
@@ -167,6 +193,25 @@ public class RoundServiceImpl implements RoundService {
                 .findById(roundId)
                 .orElseThrow(() -> new EntityNotFoundException("Round not found"));
         return round.getAdvancementTopN();
+    }
+
+    /**
+     * Thứ tự vòng phải >= 1 và duy nhất trong cùng category.
+     * Lý do nghiêm ngặt: RankingServiceImpl sắp xếp bảng xếp hạng chung cuộc theo roundOrder
+     * (và dùng -1/-2 làm giá trị đặc biệt cho đội bị loại), còn AwardServiceImpl xác định vòng
+     * chung kết bằng round có order lớn nhất — order âm hoặc trùng làm SAI KẾT QUẢ trao giải,
+     * không chỉ sai hiển thị. @Min(1) ở DTO đã chặn số âm, ở đây chặn tiếp trùng.
+     */
+    private void validateRoundOrder(Round round, Integer newOrder) {
+        if (newOrder < 1) {
+            throw new BadRequestException("Round order must be at least 1");
+        }
+        UUID categoryId = round.getCategory().getCategoryId();
+        if (roundRepository.existsByCategoryCategoryIdAndRoundOrderAndRoundIdNot(
+                categoryId, newOrder, round.getRoundId())) {
+            throw new BusinessConflictException(
+                    "Another round in this category already uses order " + newOrder + ".");
+        }
     }
 
     private void validateRoundTimeline(

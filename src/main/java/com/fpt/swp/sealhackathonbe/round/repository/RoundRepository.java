@@ -34,6 +34,15 @@ public interface RoundRepository extends JpaRepository<Round, UUID> {
     //Find final round
     Optional<Round> findTopByCategoryCategoryIdOrderByRoundOrderDesc(UUID categoryId);
 
+    // Chống trùng roundOrder trong cùng category khi cập nhật: roundOrder quyết định thứ tự
+    // xếp hạng chung cuộc (RankingServiceImpl) và xác định vòng chung kết (AwardServiceImpl),
+    // nên hai round cùng order sẽ làm sai kết quả chứ không chỉ sai hiển thị.
+    boolean existsByCategoryCategoryIdAndRoundOrderAndRoundIdNot(
+            UUID categoryId,
+            Integer roundOrder,
+            UUID roundId
+    );
+
     Optional<Round> findTopByCategoryCategoryIdAndRoundOrderLessThanAndIsCalibrationRoundFalseOrderByRoundOrderDesc(
             UUID categoryId,
             Integer roundOrder

@@ -2,6 +2,7 @@ package com.fpt.swp.sealhackathonbe.research.controller;
 
 import com.fpt.swp.sealhackathonbe.research.dto.ConsensusMatrixResponse;
 import com.fpt.swp.sealhackathonbe.research.dto.ReliabilityMetricResponse;
+import com.fpt.swp.sealhackathonbe.research.dto.VarianceReportResponse;
 import com.fpt.swp.sealhackathonbe.research.service.ResearchDataService;
 import com.fpt.swp.sealhackathonbe.research.service.impl.ResearchDashboardServiceImpl;
 import com.fpt.swp.sealhackathonbe.studentdownload.dto.DownloadFileResponse;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/research")
@@ -42,6 +46,25 @@ public class ResearchDashboardController {
             @RequestParam(required = false) UUID roundId
     ) {
         return ResponseEntity.ok(researchDashboardService.getReliabilityMetrics(eventId, roundId, categoryId));
+    }
+
+    /**
+     * Phuong sai diem giua cac giam khao theo TUNG TIEU CHI cua tung bai nop.
+     * Du lieu nay da duoc tinh san trong getVarianceReport tu truoc nhung chua he co endpoint
+     * JSON nao expose ra, nen dashboard khong hien thi duoc — chi lay gian tiep qua CSV.
+     * Chi ORGANIZER/ADMIN: no lo ra bai nop nao bi cham lech nhieu (kem ten doi), khong phai
+     * thong tin danh cho giam khao.
+     */
+    @GetMapping("/variance-report")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN')")
+    @Operation(summary = "Get score variance by criterion",
+            description = "Returns per-submission, per-criterion score variance across judges (excludes calibration scores)")
+    public ResponseEntity<List<VarianceReportResponse>> getVarianceReport(
+            @RequestParam(required = false) UUID eventId,
+            @RequestParam(required = false) UUID roundId,
+            @RequestParam(required = false) UUID categoryId
+    ) {
+        return ResponseEntity.ok(researchDashboardService.getVarianceReport(eventId, roundId, categoryId));
     }
 
     @GetMapping(value = "/events/{eventId}/export", produces = "text/csv")
@@ -72,11 +95,34 @@ public class ResearchDashboardController {
 
     @GetMapping({"/calibration/matrix/{roundId}"})
     @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_INTERNAL_JUDGE', 'ROLE_GUEST_JUDGE', 'ROLE_EXPERT')")
-    @Operation(summary = "Get consensus matrix", description = "Returns consensus matrix data for a specific round")
+    @Operation(summary = "Get consensus matrix",
+            description = "Returns consensus matrix per sample submission and criterion. Judges only see samples they have already scored")
     public ResponseEntity<List<ConsensusMatrixResponse>> getConsensusMatrix(
-            @PathVariable UUID roundId
+            @PathVariable UUID roundId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(researchDashboardService.getConsensusMatrix(roundId));
+        // Organizer/Admin xem toan bo; giam khao chi xem bai mau ma ho DA cham, de khong the
+        // nhin median roi cham theo (anchoring) — xem ghi chu o getConsensusMatrix.
+        boolean revealAll = hasAnyRole(principal, "ROLE_ORGANIZER", "ROLE_ADMIN");
+        UUID viewerId = principal != null && principal.getUser() != null
+                ? principal.getUser().getUserId()
+                : null;
+        return ResponseEntity.ok(researchDashboardService.getConsensusMatrix(roundId, viewerId, revealAll));
+    }
+
+    private boolean hasAnyRole(UserPrincipal principal, String... roles) {
+        if (principal == null || principal.getAuthorities() == null) {
+            return false;
+        }
+        Set<String> granted = principal.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        for (String role : roles) {
+            if (granted.contains(role)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @GetMapping(value = "/calibration/export/{roundId}", produces = "text/csv")

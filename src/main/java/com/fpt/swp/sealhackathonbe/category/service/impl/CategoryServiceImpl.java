@@ -10,13 +10,16 @@ import com.fpt.swp.sealhackathonbe.category.service.CategoryService;
 import com.fpt.swp.sealhackathonbe.event.entity.Event;
 import com.fpt.swp.sealhackathonbe.event.repository.EventRepository;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundRepository;
+import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryMapper categoryMapper;
     private final EventRepository eventRepository;
     private final RoundRepository roundRepository;
+    private final TeamsRepository teamsRepository;
 
     @Override
     @Transactional
@@ -58,10 +62,23 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryResponse> getByEvent(UUID eventId) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        // Gom số đội của mọi category trong event bằng 1 truy vấn rồi tra map, thay vì gọi
+        // countByCategoryId cho từng category (N+1 — đắt với pool chỉ 10 kết nối).
+        Map<UUID, Long> teamCounts = teamsRepository.countByCategoryGroupedForEvent(eventId)
+                .stream()
+                .filter(row -> row != null && row.length == 2 && row[0] != null)
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> ((Number) row[1]).longValue()
+                ));
+
         return categoryRepository
                 .findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(eventId)
                 .stream()
-                .map(categoryMapper::toCategoryResponse)
+                // Category chưa có đội nào không xuất hiện trong kết quả group by → mặc định 0.
+                .map(c -> categoryMapper.toCategoryResponse(
+                        c, teamCounts.getOrDefault(c.getCategoryId(), 0L)))
                 .toList();
     }
 
@@ -70,7 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse getById(UUID categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-        return categoryMapper.toCategoryResponse(category);
+        return categoryMapper.toCategoryResponse(category, teamsRepository.countByCategoryId(categoryId));
     }
 
     @Override

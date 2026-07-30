@@ -27,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -115,7 +116,7 @@ class EventServiceImplementationCreateTest {
     void createEventStartDateAfterEndDateReturnsBadRequest() {
         CreateEventRequest request = validRequest();
         request.setEventStartDate(LocalDate.of(2030, 7, 3).atStartOfDay());
-        request.setEventEndDate(LocalDate.of(2030, 7, 2).atStartOfDay());
+        request.setEventEndDate(LocalDate.of(2030, 7, 2).atTime(LocalTime.MAX));
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> eventService.create(request));
 
@@ -185,7 +186,7 @@ class EventServiceImplementationCreateTest {
         // dung !registrationEnd.toLocalDate().isBefore(eventStart)) -> khong duoc trung ngay.
         request.setRegistrationEnd(LocalDateTime.of(2030, 6, 29, 9, 0));
         request.setEventStartDate(LocalDate.of(2030, 6, 30).atStartOfDay());
-        request.setEventEndDate(LocalDate.of(2030, 7, 2).atStartOfDay());
+        request.setEventEndDate(LocalDate.of(2030, 7, 2).atTime(LocalTime.MAX));
         request.setMinTeamSize(2);
         request.setMaxTeamSize(5);
         return request;
