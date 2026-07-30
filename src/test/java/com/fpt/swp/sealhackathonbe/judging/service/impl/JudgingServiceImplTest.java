@@ -315,6 +315,52 @@ public class JudgingServiceImplTest {
     }
 
     @Test
+    void testRejectSubmissionScoreForJudge_Success() {
+        // Arrange
+        when(authenticationServiceImpl.getCurrentUser()).thenReturn(actor);
+        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+
+        Judging judging = new Judging();
+        judging.setIsActive(true);
+        when(judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, userId))
+                .thenReturn(List.of(judging));
+
+        // Act
+        assertDoesNotThrow(() -> judgingService.rejectSubmissionScoreForJudge(submissionId, userId, "Incorrect scoring"));
+
+        // Assert
+        assertFalse(judging.getIsActive());
+        assertFalse(submission.getIsScoreApproved());
+        assertEquals(SubmissionStatusConstants.IN_PROGRESS, submission.getSubmissionStatusId());
+        verify(judgingRepository, atLeastOnce()).saveAll(anyList());
+        verify(evaluationAuditLogRepository, atLeastOnce()).saveAll(anyList());
+        verify(submissionRepository, atLeastOnce()).save(submission);
+    }
+
+    @Test
+    void testRejectJudgeScoresInRound_Success() {
+        // Arrange
+        when(authenticationServiceImpl.getCurrentUser()).thenReturn(actor);
+
+        Judging judging = new Judging();
+        judging.setIsActive(true);
+        judging.setSubmission(submission);
+        when(judgingRepository.findActiveByRoundIdAndJudgeUserId(roundId, userId))
+                .thenReturn(List.of(judging));
+
+        // Act
+        assertDoesNotThrow(() -> judgingService.rejectJudgeScoresInRound(roundId, userId, "Judge bias"));
+
+        // Assert
+        assertFalse(judging.getIsActive());
+        assertFalse(submission.getIsScoreApproved());
+        assertEquals(SubmissionStatusConstants.IN_PROGRESS, submission.getSubmissionStatusId());
+        verify(judgingRepository, atLeastOnce()).saveAll(anyList());
+        verify(evaluationAuditLogRepository, atLeastOnce()).saveAll(anyList());
+        verify(submissionRepository, atLeastOnce()).saveAll(anySet());
+    }
+
+    @Test
     void testDeleteJudging_Success() {
         // Arrange
         when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
@@ -440,7 +486,7 @@ public class JudgingServiceImplTest {
         // Act & Assert
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
                 judgingService.approveScore(submissionId, true));
-        assertTrue(ex.getMessage().contains("Cannot finalize score because judge Judge One has not submitted any scores."));
+        assertTrue(ex.getMessage().contains("Cannot finalize score because no judge has fully scored all criteria for this submission."));
     }
 
     @Test
@@ -470,7 +516,7 @@ public class JudgingServiceImplTest {
         // Act & Assert
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
                 judgingService.approveScore(submissionId, true));
-        assertTrue(ex.getMessage().contains("Cannot finalize score because judge Judge One has not scored all criteria."));
+        assertTrue(ex.getMessage().contains("Cannot finalize score because no judge has fully scored all criteria for this submission."));
     }
 
     @Test
@@ -491,6 +537,45 @@ public class JudgingServiceImplTest {
         Judging score = new Judging();
         score.setIsActive(true);
         score.setRoundJudge(activeJudge);
+
+        when(judgingRepository.findBySubmission_SubmissionId(submissionId)).thenReturn(List.of(score));
+        when(submissionRepository.save(any(Submissions.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        SubmissionResponse response = judgingService.approveScore(submissionId, true);
+
+        // Assert
+        assertNotNull(response);
+        assertTrue(response.getIsScoreApproved());
+        assertEquals(SubmissionStatusConstants.SCORED, response.getSubmissionStatusId());
+    }
+
+    @Test
+    void testApproveScore_ApproveSuccess_MultipleJudgesOneScored() {
+        // Arrange
+        submission.setIsSampleSubmission(false);
+        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(submission));
+        when(roundCriterionRepository.findByRoundRoundIdOrderBySortOrderAsc(roundId)).thenReturn(List.of(criterion));
+
+        User judgeUser1 = new User();
+        judgeUser1.setUserId(userId);
+        judgeUser1.setFullName("Judge One");
+        RoundJudge activeJudge1 = new RoundJudge();
+        activeJudge1.setJudge(judgeUser1);
+
+        User judgeUser2 = new User();
+        judgeUser2.setUserId(UUID.randomUUID());
+        judgeUser2.setFullName("Judge Two");
+        RoundJudge activeJudge2 = new RoundJudge();
+        activeJudge2.setJudge(judgeUser2);
+
+        // Two active judges assigned to round
+        when(roundJudgeRepository.findActiveByRoundRoundId(roundId)).thenReturn(List.of(activeJudge1, activeJudge2));
+
+        // Only Judge One scored
+        Judging score = new Judging();
+        score.setIsActive(true);
+        score.setRoundJudge(activeJudge1);
 
         when(judgingRepository.findBySubmission_SubmissionId(submissionId)).thenReturn(List.of(score));
         when(submissionRepository.save(any(Submissions.class))).thenAnswer(inv -> inv.getArgument(0));
