@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public class SubmissionMapper {
     private SubmissionMapper() {
+        // Utility mapper, khong tao instance.
     }
 
     public static SubmissionResponse toSubmissionResponse(Submissions submission) {
@@ -45,6 +46,7 @@ public class SubmissionMapper {
         response.setRepoStarCount(submission.getRepoStarCount());
         response.setRepoForkCount(submission.getRepoForkCount());
 
+        // submittedBy relation co the chua fetch, nen fallback ve submittedByUserId da luu tren entity.
         response.setSubmittedAt(submission.getSubmittedAt());
         response.setLastUpdatedAt(submission.getLastUpdatedAt());
         response.setSubmittedByUserId(submission.getSubmittedByUser() != null
@@ -58,6 +60,7 @@ public class SubmissionMapper {
     }
 
     public static SubmissionHistoryResponse toSubmissionHistoryResponse(SubmissionHistory history) {
+        // Mapping history dung field snapshot; chi dung relation lazy neu da duoc fetch de enrich ten team/status.
         if (history == null) {
             return null;
         }
@@ -104,6 +107,7 @@ public class SubmissionMapper {
     }
 
     private static String resolveStatusName(UUID statusId, SubmissionStatus status) {
+        // Uu tien entity status khi da join; fallback constants giup DTO van co ten khi chi co statusId.
         if (status != null && statusId != null && statusId.equals(status.getStatusId())) {
             return status.getStatusName();
         }

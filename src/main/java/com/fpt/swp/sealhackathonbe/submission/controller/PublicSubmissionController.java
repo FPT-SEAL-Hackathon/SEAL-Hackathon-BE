@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "Public Submissions", description = "Public APIs for submission statistics")
 public class PublicSubmissionController {
+    // Public endpoint khong can JWT, chi tra so luong submission tong.
 
     private final SubmissionsRepository submissionsRepository;
 

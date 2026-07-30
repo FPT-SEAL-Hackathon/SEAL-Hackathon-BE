@@ -23,7 +23,9 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -55,6 +57,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final NotificationService notificationService;
     private final AiKnowledgeBaseRepository aiKnowledgeBaseRepository;
     private final GeminiService geminiService;
+    private final UserTypeRepository userTypeRepository;
 
     @Override
     @Transactional
@@ -64,8 +67,8 @@ public class ConsultationServiceImpl implements ConsultationService {
         User mentor = userRepository.findById(mentorId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mentor not found"));
 
-        if (!isMentorRole(mentor)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a mentor");
+        if (!isAllowedToBecomeMentor(mentor)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be a mentor, expert, or judge");
         }
 
         categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(categoryId, mentorId)
@@ -81,6 +84,15 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .anyMatch(r -> r.getCategory().getCategoryId().equals(categoryId));
         if (isJudgeInCategory) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is already a judge in this category");
+        }
+
+        // Transition role from Judge to Expert if they are a Judge
+        String currentRole = getRoleName(mentor);
+        if ("Internal Judge".equalsIgnoreCase(currentRole) || "Guest Judge".equalsIgnoreCase(currentRole)) {
+            UserType expertType = userTypeRepository.findByTypeName("Expert")
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Expert role not found"));
+            mentor.setUserType(expertType);
+            userRepository.save(mentor);
         }
 
         CategoryMentor cm = CategoryMentor.builder()
@@ -728,6 +740,14 @@ public class ConsultationServiceImpl implements ConsultationService {
     private boolean isMentorRole(User user) {
         String roleName = getRoleName(user);
         return "Mentor".equalsIgnoreCase(roleName) || "Expert".equalsIgnoreCase(roleName);
+    }
+
+    private boolean isAllowedToBecomeMentor(User user) {
+        String roleName = getRoleName(user);
+        return "Mentor".equalsIgnoreCase(roleName) 
+                || "Expert".equalsIgnoreCase(roleName)
+                || "Internal Judge".equalsIgnoreCase(roleName)
+                || "Guest Judge".equalsIgnoreCase(roleName);
     }
 
     /**

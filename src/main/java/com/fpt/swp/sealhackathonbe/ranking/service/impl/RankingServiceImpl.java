@@ -136,16 +136,16 @@ public class RankingServiceImpl implements RankingService {
                 List<Judging> judgings = judgingsMap.getOrDefault(submissionId, Collections.emptyList());
 
                 if (!judgings.isEmpty()) {
-                    int validScoreCount = 0;
+                    Set<UUID> judgeIds = new HashSet<>();
                     for (Judging j : judgings) {
                         // CHỈ CỘNG ĐIỂM THẬT: Bỏ qua các điểm được đánh dấu là chấm hiệu chuẩn (Calibration)
                         if (j.getScoreValue() != null && !Boolean.TRUE.equals(j.getIsCalibration())) {
                             totalScore = totalScore.add(j.getScoreValue().multiply(j.getRoundCriterion().getWeight()));
-                            validScoreCount++;
+                            judgeIds.add(j.getRoundJudge().getRoundJudgeId());
                         }
                     }
-                    if (validScoreCount > 0) {
-                        averageScore = totalScore.divide(BigDecimal.valueOf(validScoreCount), 4, RoundingMode.HALF_UP);
+                    if (!judgeIds.isEmpty()) {
+                        averageScore = totalScore.divide(BigDecimal.valueOf(judgeIds.size()), 4, RoundingMode.HALF_UP);
                     }
                 }
             }

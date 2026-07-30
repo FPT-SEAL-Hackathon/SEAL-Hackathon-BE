@@ -142,6 +142,9 @@ public class RankingServiceImplTest {
         when(roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId)).thenReturn(Collections.emptyList());
 
         Judging judging = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging.getRoundJudge()).thenReturn(rj);
+        org.mockito.Mockito.lenient().when(rj.getRoundJudgeId()).thenReturn(UUID.randomUUID());
         com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion criterion = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion.class);
         when(judging.getScoreValue()).thenReturn(BigDecimal.valueOf(8.5));
         when(judging.getIsCalibration()).thenReturn(false);
@@ -428,7 +431,14 @@ public class RankingServiceImplTest {
 
         // Both get the same score (8.5)
         Judging judging1 = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj1 = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging1.getRoundJudge()).thenReturn(rj1);
+        org.mockito.Mockito.lenient().when(rj1.getRoundJudgeId()).thenReturn(UUID.randomUUID());
+        
         Judging judging2 = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj2 = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging2.getRoundJudge()).thenReturn(rj2);
+        org.mockito.Mockito.lenient().when(rj2.getRoundJudgeId()).thenReturn(UUID.randomUUID());
         com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion criterion = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion.class);
 
         when(judging1.getScoreValue()).thenReturn(BigDecimal.valueOf(8.5));
@@ -520,7 +530,14 @@ public class RankingServiceImplTest {
         when(roundRankingRepository.findByRound_RoundIdAndCategory_CategoryId(roundId, categoryId)).thenReturn(Collections.emptyList());
 
         Judging judging1 = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj1 = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging1.getRoundJudge()).thenReturn(rj1);
+        org.mockito.Mockito.lenient().when(rj1.getRoundJudgeId()).thenReturn(UUID.randomUUID());
+        
         Judging judging2 = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj2 = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging2.getRoundJudge()).thenReturn(rj2);
+        org.mockito.Mockito.lenient().when(rj2.getRoundJudgeId()).thenReturn(UUID.randomUUID());
         com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion criterion = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion.class);
 
         when(judging1.getScoreValue()).thenReturn(BigDecimal.valueOf(8.5));
@@ -631,6 +648,9 @@ public class RankingServiceImplTest {
 
         // We only need to mock judging scores for Team 3 (since Team 1 and 2 are disqualified and their scores won't be queried)
         Judging judging3 = mock(Judging.class);
+        com.fpt.swp.sealhackathonbe.round.entity.RoundJudge rj3 = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundJudge.class);
+        org.mockito.Mockito.lenient().when(judging3.getRoundJudge()).thenReturn(rj3);
+        org.mockito.Mockito.lenient().when(rj3.getRoundJudgeId()).thenReturn(UUID.randomUUID());
         com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion criterion = mock(com.fpt.swp.sealhackathonbe.round.entity.RoundCriterion.class);
 
         when(judging3.getScoreValue()).thenReturn(BigDecimal.valueOf(5.0)); // Lower score than the hypothetical 9.0/9.5 of disqualified teams

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class TeamWithdrawalRequestResponse {
+    // Response cho ca admin list va leader xem lich su rut team cua minh.
     private UUID requestId;
     private UUID teamId;
     private String teamName;
@@ -19,5 +20,6 @@ public class TeamWithdrawalRequestResponse {
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;
     private UUID respondedById;
+    // Hien tai withdrawal approve ngay nen responseNote/responded* co the null.
     private String responseNote;
 }
