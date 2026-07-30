@@ -26,6 +26,7 @@ public class Submissions {
     @Column(name = "TeamID")
     private UUID teamId;
 
+    // Lazy relation chi de enrich response; source of truth khi write van la teamId.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TeamID", insertable = false, updatable = false)
     private Teams team;
@@ -55,6 +56,7 @@ public class Submissions {
     @Column(name = "RepoMetadataJSON", columnDefinition = "NVARCHAR(MAX)")
     private String repoMetadataJson;
 
+    // Cac field repo* la snapshot metadata tai thoi diem submit/resync, khong phai du lieu realtime.
     @Column(name = "RepoLastCommitAt")
     private LocalDateTime repoLastCommitAt;
 
@@ -83,6 +85,7 @@ public class Submissions {
     @Column(name = "IsScoreApproved", nullable = false)
     private Boolean isScoreApproved = false;
 
+    // True cho bai mau calibration do organizer tao, khong tinh nhu bai nop cua team.
     @Column(name = "IsSampleSubmission", nullable = false)
     private Boolean isSampleSubmission = false;
 }
