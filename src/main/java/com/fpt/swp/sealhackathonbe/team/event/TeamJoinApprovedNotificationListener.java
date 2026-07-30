@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 @Slf4j
 public class TeamJoinApprovedNotificationListener {
+    // Listener tach khoi transaction nghiep vu: approve join thanh cong roi moi gui notification.
 
     private final NotificationService notificationService;
 
@@ -25,6 +26,7 @@ public class TeamJoinApprovedNotificationListener {
                     "Your request to join team " + event.teamName() + " has been approved."
             );
         } catch (Exception exception) {
+            // Gui notification that bai khong duoc lam rollback ket qua approve join request.
             log.error(
                     "Could not send team join approval notification to user {} for event {}",
                     event.recipientUserId(),

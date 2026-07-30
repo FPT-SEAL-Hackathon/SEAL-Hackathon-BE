@@ -35,6 +35,7 @@ import com.fpt.swp.sealhackathonbe.round.service.RoundJudgeService;
 import com.fpt.swp.sealhackathonbe.round.repository.RoundJudgeRepository;
 import com.fpt.swp.sealhackathonbe.judging.dto.UpdateScoreSubmissionDTO;
 import com.fpt.swp.sealhackathonbe.judging.dto.EvaluationAuditLogDTO;
+import com.fpt.swp.sealhackathonbe.judging.dto.CalibrationJudgeStatusResponse;
 import com.fpt.swp.sealhackathonbe.ranking.entity.RoundRanking;
 import com.fpt.swp.sealhackathonbe.ranking.repository.RoundRankingRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
@@ -54,6 +55,7 @@ public class JudgingServiceImpl implements JudgingService {
     private final TeamMembersRepository teamMembersRepository;
     private final RoundRankingRepository roundRankingRepository;
     private final com.fpt.swp.sealhackathonbe.round.repository.RoundRepository roundRepository;
+    private final com.fpt.swp.sealhackathonbe.notification.service.NotificationService notificationService;
 
     // Event context của một submission suy từ ROUND (round -> category -> event) để hoạt động
     // cả với sample submission (calibration) vốn có TeamID = null (không lấy được qua team).
@@ -98,22 +100,9 @@ public class JudgingServiceImpl implements JudgingService {
         // 4. Check Judging Deadline and 3-layer tight validation
         Round round = judge.getRound();
         if (round != null) {
-            LocalDateTime now = LocalDateTime.now();
-            
-            // Layer 1: Time bounds
-            if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
-                throw new IllegalStateException("The judging period for this round has not started yet.");
-            }
-            if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
-                throw new IllegalStateException("The judging deadline for this round has passed.");
-            }
-            
-            // Layer 2: Round Status
-            if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
-                throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
-            }
+            enforceJudgingWindow(round);
         }
-        
+
         // Layer 3: Submission Score Finalize check
         if (Boolean.TRUE.equals(submission.getIsScoreApproved())) {
             throw new IllegalStateException("The score for this submission has been finalized by the Organizer and cannot be modified.");
@@ -125,6 +114,13 @@ public class JudgingServiceImpl implements JudgingService {
         if (event == null) {
             throw new IllegalStateException("Could not log evaluation audit because the submission's event context is missing.");
         }
+
+        // IsCalibration PHAI suy ra tu vong dau, KHONG lay tu client.
+        // Truoc day lay thang dto.getIsCalibration(): chi can FE gui thieu/sai co (ban cu, cache
+        // danh sach round cu, hoac goi API truc tiep) la diem cua giam khao do bien mat khoi
+        // Consensus Matrix va file CSV hieu chuan — ca hai deu loc WHERE IsCalibration = 1 —
+        // ma khong he bao loi. Vong nao thi co do, client khong duoc quyet dinh.
+        boolean calibrationRound = round != null && Boolean.TRUE.equals(round.getIsCalibrationRound());
 
         List<Judging> newJudgings = new ArrayList<>();
         List<EvaluationAuditLog> auditLogs = new ArrayList<>();
@@ -168,7 +164,7 @@ public class JudgingServiceImpl implements JudgingService {
             }
             newJudging.setScoreValue(dto.getScoreValue());
             newJudging.setComment(dto.getComment());
-            newJudging.setIsCalibration(dto.getIsCalibration() != null ? dto.getIsCalibration() : false);
+            newJudging.setIsCalibration(calibrationRound);
             newJudgings.add(newJudging);
 
             String formattedNewComment = dto.getComment() != null ? dto.getComment().replace("\"", "\\\"") : "";
@@ -228,20 +224,7 @@ public class JudgingServiceImpl implements JudgingService {
             // 4. Check Judging Deadline and 3-layer tight validation
             Round round = existingJudging.getRoundJudge().getRound();
             if (round != null) {
-                LocalDateTime now = LocalDateTime.now();
-                
-                // Layer 1: Time bounds
-                if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
-                    throw new IllegalStateException("The judging period for this round has not started yet.");
-                }
-                if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
-                    throw new IllegalStateException("The judging deadline for this round has passed.");
-                }
-                
-                // Layer 2: Round Status
-                if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
-                    throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
-                }
+                enforceJudgingWindow(round);
             }
             
             // Layer 3: Submission Score Finalize check
@@ -269,8 +252,12 @@ public class JudgingServiceImpl implements JudgingService {
             if (dto.getComment() != null) {
                 existingJudging.setComment(dto.getComment());
             }
-            if (dto.getIsCalibration() != null) {
-                existingJudging.setIsCalibration(dto.getIsCalibration());
+            // KHONG cho client sua co calibration khi cap nhat diem: no thuoc ve vong dau, khong
+            // thuoc ve lan cham. De client gui len thi mot ban FE cu co the lat nguoc mot diem
+            // hieu chuan da luu thanh diem thuong va lam no bien mat khoi ma tran dong thuan.
+            // Dong bo lai theo round de sua luon nhung ban ghi da bi ghi sai truoc day.
+            if (round != null) {
+                existingJudging.setIsCalibration(Boolean.TRUE.equals(round.getIsCalibrationRound()));
             }
 
             String formattedNewComment = existingJudging.getComment() != null ? existingJudging.getComment().replace("\"", "\\\"") : "";
@@ -448,10 +435,13 @@ public class JudgingServiceImpl implements JudgingService {
                 .map(log -> EvaluationAuditLogDTO.builder()
                         .id(log.getId())
                         .eventId(log.getEvent() != null ? log.getEvent().getEventId() : null)
+                        .eventName(log.getEvent() != null ? log.getEvent().getEventName() : null)
                         .actionType(log.getActionType())
                         .actorUserId(log.getActor() != null ? log.getActor().getUserId() : null)
+                        .actorName(log.getActor() != null ? log.getActor().getFullName() : null)
                         .judgingId(log.getScore() != null ? log.getScore().getId() : null)
                         .teamId(log.getTeam() != null ? log.getTeam().getTeamId() : null)
+                        .teamName(log.getTeam() != null ? log.getTeam().getTeamName() : null)
                         .submissionId(log.getSubmission() != null ? log.getSubmission().getSubmissionId() : null)
                         .oldValue(log.getOldValue())
                         .newValue(log.getNewValue())
@@ -614,18 +604,18 @@ public class JudgingServiceImpl implements JudgingService {
                     .filter(j -> j.getRoundJudge() != null && j.getRoundJudge().getJudge() != null)
                     .collect(Collectors.groupingBy(j -> j.getRoundJudge().getJudge().getUserId()));
 
+            boolean atLeastOneJudgeFullyScored = false;
             for (RoundJudge rj : activeRoundJudges) {
                 UUID judgeId = rj.getJudge().getUserId();
-                String judgeName = rj.getJudge().getFullName() != null ? rj.getJudge().getFullName() : rj.getJudge().getEmail();
-
                 List<Judging> scores = judgeScoresMap.get(judgeId);
-                if (scores == null || scores.isEmpty()) {
-                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not submitted any scores.");
+                if (scores != null && scores.size() >= criteria.size()) {
+                    atLeastOneJudgeFullyScored = true;
+                    break;
                 }
+            }
 
-                if (scores.size() < criteria.size()) {
-                    throw new IllegalStateException("Cannot finalize score because judge " + judgeName + " has not scored all criteria.");
-                }
+            if (!atLeastOneJudgeFullyScored) {
+                throw new IllegalStateException("Cannot finalize score because no judge has fully scored all criteria for this submission.");
             }
         }
 
@@ -653,4 +643,261 @@ public class JudgingServiceImpl implements JudgingService {
             throw new BusinessConflictException("Submissions from disqualified or withdrawn teams cannot have scores approved or rejected");
         }
     }
+
+    @Override
+    @Transactional
+    public void rejectSubmissionScoreForJudge(UUID submissionId, UUID judgeId, String reason) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        Submissions submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found"));
+
+        Teams team = submission.getTeam();
+        validateSubmissionScoreCanBeChanged(submission);
+
+        Event event = resolveEvent(submission);
+
+        List<Judging> activeJudgings = judgingRepository.findBySubmission_SubmissionIdAndRoundJudge_Judge_UserId(submissionId, judgeId)
+                .stream()
+                .filter(j -> Boolean.TRUE.equals(j.getIsActive()))
+                .collect(Collectors.toList());
+
+        if (activeJudgings.isEmpty()) {
+            throw new IllegalStateException("No active scores found for this judge and submission.");
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+
+        for (Judging judging : activeJudgings) {
+            judging.setIsActive(false);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setScore(judging);
+            auditLog.setReason(reason);
+            auditLogs.add(auditLog);
+        }
+
+        judgingRepository.saveAll(activeJudgings);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+
+        submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+        submission.setIsScoreApproved(false);
+        submissionRepository.save(submission);
+    }
+
+    @Override
+    @Transactional
+    public void rejectJudgeScoresInRound(UUID roundId, UUID judgeId, String reason) {
+        User actor = authenticationServiceImpl.getCurrentUser();
+        if (actor == null) {
+            throw new AccessDeniedException("Actor not found from token");
+        }
+
+        List<Judging> activeJudgings = judgingRepository.findActiveByRoundIdAndJudgeUserId(roundId, judgeId);
+        if (activeJudgings.isEmpty()) {
+            return;
+        }
+
+        List<EvaluationAuditLog> auditLogs = new ArrayList<>();
+        Set<Submissions> submissionsToUpdate = new java.util.HashSet<>();
+
+        for (Judging judging : activeJudgings) {
+            judging.setIsActive(false);
+
+            Submissions submission = judging.getSubmission();
+            Teams team = submission.getTeam();
+            Event event = resolveEvent(submission);
+
+            EvaluationAuditLog auditLog = new EvaluationAuditLog();
+            auditLog.setEvent(event);
+            auditLog.setActionType("SCORE_DELETED");
+            auditLog.setActor(actor);
+            auditLog.setTeam(team);
+            auditLog.setSubmission(submission);
+            auditLog.setScore(judging);
+            auditLog.setReason(reason);
+            auditLogs.add(auditLog);
+
+            submission.setIsScoreApproved(false);
+            submission.setSubmissionStatusId(SubmissionStatusConstants.IN_PROGRESS);
+            submissionsToUpdate.add(submission);
+        }
+
+        judgingRepository.saveAll(activeJudgings);
+        evaluationAuditLogRepository.saveAll(auditLogs);
+        submissionRepository.saveAll(submissionsToUpdate);
+    }
+
+    // ── Vong hieu chuan: theo doi tien do va nhac nho ────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CalibrationJudgeStatusResponse> getCalibrationStatus(UUID roundId) {
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new EntityNotFoundException("Round not found with ID: " + roundId));
+        if (!Boolean.TRUE.equals(round.getIsCalibrationRound())) {
+            throw new BusinessConflictException("This round is not a calibration round.");
+        }
+
+        List<Submissions> samples = sampleSubmissionsOf(roundId);
+        int criteriaCount = roundCriterionRepository.findByRoundRoundIdOrderBySortOrderAsc(roundId).size();
+        List<UUID> sampleIds = samples.stream().map(Submissions::getSubmissionId).toList();
+
+        // Diem cua MOI giam khao tren cac bai mau, gom mot lan roi chia theo giam khao.
+        Map<UUID, List<Judging>> scoresByJudge = sampleIds.isEmpty()
+                ? Map.of()
+                : judgingRepository.findBySubmission_SubmissionIdIn(sampleIds).stream()
+                        .filter(j -> !Boolean.FALSE.equals(j.getIsActive()))
+                        .filter(j -> j.getRoundJudge() != null && j.getRoundJudge().getJudge() != null)
+                        .collect(Collectors.groupingBy(j -> j.getRoundJudge().getJudge().getUserId()));
+
+        return roundJudgeRepository.findActiveByRoundRoundId(roundId).stream()
+                .filter(rj -> rj.getJudge() != null)
+                .map(rj -> {
+                    User judge = rj.getJudge();
+                    List<Judging> scores = scoresByJudge.getOrDefault(judge.getUserId(), List.of());
+
+                    // Mot bai mau chi tinh la xong khi da cham DU moi tieu chi cua vong; cham
+                    // do dang van hien ra o scoredCriterionCount de thay tien do that.
+                    long completedSamples = criteriaCount == 0 ? 0 : scores.stream()
+                            .collect(Collectors.groupingBy(j -> j.getSubmission().getSubmissionId(), Collectors.counting()))
+                            .values().stream()
+                            .filter(count -> count >= criteriaCount)
+                            .count();
+
+                    return CalibrationJudgeStatusResponse.builder()
+                            .judgeUserId(judge.getUserId())
+                            .judgeName(judge.getFullName())
+                            .email(judge.getEmail())
+                            .sampleCount(samples.size())
+                            .completedSampleCount((int) completedSamples)
+                            .scoredCriterionCount(scores.size())
+                            .expectedCriterionCount(samples.size() * criteriaCount)
+                            .completed(!samples.isEmpty() && completedSamples == samples.size())
+                            .lastScoredAt(scores.stream()
+                                    .map(Judging::getUpdatedAt)
+                                    .filter(Objects::nonNull)
+                                    .max(LocalDateTime::compareTo)
+                                    .orElse(null))
+                            .build();
+                })
+                .sorted(Comparator.comparing(CalibrationJudgeStatusResponse::isCompleted)
+                        .thenComparing(r -> r.getJudgeName() == null ? "" : r.getJudgeName()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public int remindPendingCalibrationJudges(UUID roundId, UUID actorUserId) {
+        List<CalibrationJudgeStatusResponse> statuses = getCalibrationStatus(roundId);
+        List<UUID> pending = statuses.stream()
+                .filter(s -> !s.isCompleted())
+                .map(CalibrationJudgeStatusResponse::getJudgeUserId)
+                .toList();
+        if (pending.isEmpty()) {
+            return 0;
+        }
+
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new EntityNotFoundException("Round not found with ID: " + roundId));
+        UUID eventId = round.getCategory() != null && round.getCategory().getEvent() != null
+                ? round.getCategory().getEvent().getEventId()
+                : null;
+
+        String deadline = round.getJudgingDeadline() != null
+                ? " Judging deadline: " + round.getJudgingDeadline() + "."
+                : "";
+        notificationService.sendBroadcastNotification(
+                pending,
+                actorUserId,
+                eventId,
+                "Calibration round not completed",
+                "Please score the sample submissions of round \"" + round.getRoundName() + "\" so the panel"
+                        + " can align on the scoring scale before judging real submissions." + deadline
+        );
+        return pending.size();
+    }
+
+    /**
+     * Cua so cham diem cua mot vong.
+     *
+     * Vong THI THAT: giu nguyen 3 lop kiem tra cu — chua toi startDate, qua judgingDeadline,
+     * hoac trang thai khac "Judging" deu bi chan. Rang buoc nay ton tai de dam bao CONG BANG
+     * GIUA CAC DOI, khong duoc noi long.
+     *
+     * Vong HIEU CHUAN: bo ca 3 lop. Vong nay khong sinh ra bat ky ket qua thi nao (doi khong
+     * nop bai duoc, khong tinh xep hang, khong cho di tiep, khong trao giai) nen khong co gi
+     * de dam bao cong bang — bo gio cham o day chi gay ma sat cho giam khao. startDate/endDate
+     * van duoc giu nguyen vi Schedule dung chung de ve tien do du kien.
+     *
+     * Doi lai co DUNG MOT dieu kien dong: khi cuoc thi da thuc su buoc vao cham. Sau thoi diem
+     * do viec hieu chuan khong con y nghia (hieu chuan xong moi di cham, khong ai hieu chuan
+     * giua chung). Organizer con mot loi dong thu cong: dat chinh vong hieu chuan sang
+     * "Completed" khi muon chot so lieu dong thuan.
+     */
+    private void enforceJudgingWindow(Round round) {
+        if (Boolean.TRUE.equals(round.getIsCalibrationRound())) {
+            enforceCalibrationWindow(round);
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Layer 1: Time bounds
+        if (round.getStartDate() != null && now.isBefore(round.getStartDate())) {
+            throw new IllegalStateException("The judging period for this round has not started yet.");
+        }
+        if (round.getJudgingDeadline() != null && now.isAfter(round.getJudgingDeadline())) {
+            throw new IllegalStateException("The judging deadline for this round has passed.");
+        }
+
+        // Layer 2: Round Status
+        if (round.getRoundStatus() != null && !"Judging".equalsIgnoreCase(round.getRoundStatus().getStatusName())) {
+            throw new IllegalStateException("This round is not currently in the 'Judging' phase.");
+        }
+    }
+
+    private void enforceCalibrationWindow(Round calibrationRound) {
+        if (isRoundStatus(calibrationRound, "Completed")) {
+            throw new IllegalStateException(
+                    "This calibration round has been closed by the organizer and no longer accepts scores.");
+        }
+
+        if (calibrationRound.getCategory() == null) {
+            return;
+        }
+
+        // "Da toi vong cham chinh thuc" = trong cung category co vong thi that dang Judging
+        // hoac da Completed.
+        boolean competitionJudgingStarted = roundRepository
+                .findByCategoryCategoryIdOrderByRoundOrderAsc(calibrationRound.getCategory().getCategoryId())
+                .stream()
+                .filter(r -> !Boolean.TRUE.equals(r.getIsCalibrationRound()))
+                .anyMatch(r -> isRoundStatus(r, "Judging") || isRoundStatus(r, "Completed"));
+
+        if (competitionJudgingStarted) {
+            throw new IllegalStateException(
+                    "Calibration scoring is closed because judging of the competition rounds has already started.");
+        }
+    }
+
+    private boolean isRoundStatus(Round round, String statusName) {
+        return round.getRoundStatus() != null
+                && statusName.equalsIgnoreCase(round.getRoundStatus().getStatusName());
+    }
+
+    private List<Submissions> sampleSubmissionsOf(UUID roundId) {
+        return submissionRepository.findByRoundId(roundId).stream()
+                .filter(s -> Boolean.TRUE.equals(s.getIsSampleSubmission()))
+                .toList();
+    }
+
 }

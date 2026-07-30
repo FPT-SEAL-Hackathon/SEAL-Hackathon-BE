@@ -23,7 +23,7 @@ public class SystemSetting {
     @Column(name = "SettingKey", nullable = false, length = 100)
     private String settingKey;
 
-    @Column(name = "SettingValue", nullable = false, length = 1000)
+    @Column(name = "SettingValue", nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String settingValue;
 
     @Column(name = "SettingType", length = 20)

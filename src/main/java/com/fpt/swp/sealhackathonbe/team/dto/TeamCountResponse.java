@@ -6,5 +6,6 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class TeamCountResponse {
+    // Public statistic nho gon cho landing/dashboard.
     private Long totalTeams;
 }

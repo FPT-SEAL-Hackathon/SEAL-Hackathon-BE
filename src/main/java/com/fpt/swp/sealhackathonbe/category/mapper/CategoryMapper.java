@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 public class CategoryMapper {
 
     public CategoryResponse toCategoryResponse(Category category) {
+        return toCategoryResponse(category, null);
+    }
+
+    /** teamCount = null khi lời gọi không cần (hoặc không tra cứu) số đội của category. */
+    public CategoryResponse toCategoryResponse(Category category, Long teamCount) {
         return CategoryResponse.builder()
                 .categoryId(category.getCategoryId())
                 .eventId(category.getEvent().getEventId())
@@ -19,6 +24,7 @@ public class CategoryMapper {
                 .description(category.getDescription())
                 .sortOrder(category.getSortOrder())
                 .isActive(category.getIsActive())
+                .teamCount(teamCount)
                 .build();
     }
 

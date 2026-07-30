@@ -24,6 +24,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "SubmissionHistory")
 public class SubmissionHistory {
+    // Snapshot bat bien cua Submissions tai moi lan tao/cap nhat/doi trang thai quan trong.
+    // Khong dung de chinh sua bai nop hien tai; dung cho audit, xem version va rollback logic neu can.
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "SubmissionHistoryID")
@@ -39,6 +41,7 @@ public class SubmissionHistory {
     @Column(name = "VersionNumber", nullable = false)
     private Integer versionNumber;
 
+    // TeamID co the null voi sample submission cua calibration round.
     @Column(name = "TeamID")
     private UUID teamId;
 
@@ -71,6 +74,7 @@ public class SubmissionHistory {
     @Column(name = "RepoMetadataJSON", columnDefinition = "NVARCHAR(MAX)")
     private String repoMetadataJson;
 
+    // Metadata GitHub tai thoi diem snapshot, giup lich su khong doi khi repo duoc resync sau nay.
     @Column(name = "RepoLastCommitAt")
     private LocalDateTime repoLastCommitAt;
 
@@ -99,6 +103,7 @@ public class SubmissionHistory {
     @Column(name = "IsScoreApproved", nullable = false)
     private Boolean isScoreApproved = false;
 
+    // Giu lai loai submission cua version nay, ke ca khi ban ghi hien tai thay doi ve sau.
     @Column(name = "IsSampleSubmission", nullable = false)
     private Boolean isSampleSubmission = false;
 

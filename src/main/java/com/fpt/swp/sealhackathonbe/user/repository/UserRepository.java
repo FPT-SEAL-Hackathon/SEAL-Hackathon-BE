@@ -267,4 +267,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
               AND LOWER(u.accountStatus.statusName) = 'active'
             """)
     long countActiveByRoleName(@Param("roleName") String roleName);
+
+    /**
+     * Dem so tai khoan theo 2 ky tu dau cua MSSV, gom mot lan cho toan bo prefix.
+     * Dung o man Admin quan ly FPT Student Code Prefixes de hien "dang co N tai khoan dung
+     * prefix nay" truoc khi tat mot prefix. Tra ve cac cap [prefix, count].
+     */
+    @Query("""
+            SELECT UPPER(SUBSTRING(u.fptStudentCode, 1, 2)), COUNT(u) FROM User u
+            WHERE (u.isDeleted = false OR u.isDeleted IS NULL)
+              AND u.fptStudentCode IS NOT NULL
+              AND LENGTH(u.fptStudentCode) >= 2
+            GROUP BY UPPER(SUBSTRING(u.fptStudentCode, 1, 2))
+            """)
+    List<Object[]> countGroupedByFptStudentCodePrefix();
 }

@@ -13,6 +13,7 @@ public class EventParticipantResponse {
     private UUID eventId;
     private String eventName;
     private String eventStatus;
+    private String bannerImageUrl;
     private UUID studentId;
     private String studentName;
     private String studentEmail;

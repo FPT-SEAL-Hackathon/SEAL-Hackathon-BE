@@ -23,7 +23,9 @@ import com.fpt.swp.sealhackathonbe.team.entity.Teams;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamsRepository;
 import com.fpt.swp.sealhackathonbe.team.repository.TeamMembersRepository;
 import com.fpt.swp.sealhackathonbe.user.entity.User;
+import com.fpt.swp.sealhackathonbe.user.entity.UserType;
 import com.fpt.swp.sealhackathonbe.user.repository.UserRepository;
+import com.fpt.swp.sealhackathonbe.user.repository.UserTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -55,6 +57,8 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final NotificationService notificationService;
     private final AiKnowledgeBaseRepository aiKnowledgeBaseRepository;
     private final GeminiService geminiService;
+    private final UserTypeRepository userTypeRepository;
+    private final org.springframework.context.ApplicationContext applicationContext;
 
     @Override
     @Transactional
@@ -64,8 +68,8 @@ public class ConsultationServiceImpl implements ConsultationService {
         User mentor = userRepository.findById(mentorId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mentor not found"));
 
-        if (!isMentorRole(mentor)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a mentor");
+        if (!isAllowedToBecomeMentor(mentor)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be a mentor, expert, or judge");
         }
 
         categoryMentorRepository.findByCategory_CategoryIdAndMentor_UserId(categoryId, mentorId)
@@ -81,6 +85,15 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .anyMatch(r -> r.getCategory().getCategoryId().equals(categoryId));
         if (isJudgeInCategory) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is already a judge in this category");
+        }
+
+        // Transition role from Judge to Expert if they are a Judge
+        String currentRole = getRoleName(mentor);
+        if ("Internal Judge".equalsIgnoreCase(currentRole) || "Guest Judge".equalsIgnoreCase(currentRole)) {
+            UserType expertType = userTypeRepository.findByTypeName("Expert")
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Expert role not found"));
+            mentor.setUserType(expertType);
+            userRepository.save(mentor);
         }
 
         CategoryMentor cm = CategoryMentor.builder()
@@ -554,7 +567,6 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
-    @Transactional
     public ConsultationMessageResponse sendMessage(User user, UUID requestId, MessageRequest messageDto) {
         ConsultationRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
@@ -566,21 +578,40 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
 
         boolean senderIsMentor = isMentorRole(user);
+        String aiResponse = null;
 
-        // -- AI MENTOR INTERCEPTION LOGIC --
+        // -- AI MENTOR INTERCEPTION LOGIC (executed OUTSIDE DB transaction) --
         if (!senderIsMentor) {
             String question = messageDto.getContent();
-            List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
+            if (question != null && question.contains("✅ Milestone completed")) {
+                aiResponse = null; // Do not trigger AI reply for system/milestone messages
+            } else {
+                List<AiKnowledgeBase> kb = aiKnowledgeBaseRepository.findByEvent_EventId(req.getEvent().getEventId());
+                aiResponse = geminiService.askAi(question, kb);
+            }
+        }
 
-            String aiResponse = geminiService.askAi(question, kb);
+        ConsultationService self = applicationContext.getBean(ConsultationService.class);
+        return self.processSendMessageDb(user, requestId, messageDto, senderIsMentor, aiResponse);
+    }
 
+    @Transactional
+    public ConsultationMessageResponse processSendMessageDb(
+            User user, UUID requestId, MessageRequest messageDto, boolean senderIsMentor, String aiResponse) {
+        ConsultationRequest req = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        ConsultationMessage finalSavedMessage = null;
+
+        if (!senderIsMentor && aiResponse != null) {
+            String question = messageDto.getContent();
             ConsultationMessage studentMsg = ConsultationMessage.builder()
                     .request(req)
                     .sender(user)
                     .content(question)
                     .attachmentUrl(messageDto.getAttachmentUrl())
                     .build();
-            messageRepository.save(studentMsg);
+            finalSavedMessage = messageRepository.save(studentMsg);
 
             if (aiResponse.startsWith("API_ERROR: ")) {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
@@ -588,28 +619,27 @@ public class ConsultationServiceImpl implements ConsultationService {
                         .sender(req.getEvent().getCreatedBy())
                         .content("[AI Mentor Error]: " + aiResponse)
                         .build();
-                messageRepository.save(aiMsg);
+                finalSavedMessage = messageRepository.save(aiMsg);
             } else if (!"UNKNOWN".equalsIgnoreCase(aiResponse)) {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
                         .request(req)
                         .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
                         .content("[AI Mentor]: " + aiResponse)
                         .build();
-                messageRepository.save(aiMsg);
-                
+                finalSavedMessage = messageRepository.save(aiMsg);
+
                 req.setUpdatedAt(LocalDateTime.now());
                 requestRepository.save(req);
 
                 // Do NOT notify mentors. We intercepted the question successfully!
-                var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
-                return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
+                return ConsultationMessageResponse.from(finalSavedMessage);
             } else {
                 ConsultationMessage aiMsg = ConsultationMessage.builder()
                         .request(req)
                         .sender(req.getEvent().getCreatedBy()) // Use event creator as system sender
                         .content("[AI Mentor]: This question exceeds my knowledge base. The system has notified the human Mentors to assist you!")
                         .build();
-                messageRepository.save(aiMsg);
+                finalSavedMessage = messageRepository.save(aiMsg);
             }
         } else {
             ConsultationMessage msg = ConsultationMessage.builder()
@@ -618,7 +648,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                     .content(messageDto.getContent())
                     .attachmentUrl(messageDto.getAttachmentUrl())
                     .build();
-            messageRepository.save(msg);
+            finalSavedMessage = messageRepository.save(msg);
         }
 
         req.setUpdatedAt(LocalDateTime.now());
@@ -662,8 +692,7 @@ public class ConsultationServiceImpl implements ConsultationService {
             }
         }
 
-        var msgs = messageRepository.findByRequest_RequestIdOrderByCreatedAtAsc(requestId);
-        return ConsultationMessageResponse.from(msgs.get(msgs.size() - 1));
+        return ConsultationMessageResponse.from(finalSavedMessage);
     }
 
     private void checkRequestAccess(User user, ConsultationRequest req) {
@@ -717,6 +746,14 @@ public class ConsultationServiceImpl implements ConsultationService {
     private boolean isMentorRole(User user) {
         String roleName = getRoleName(user);
         return "Mentor".equalsIgnoreCase(roleName) || "Expert".equalsIgnoreCase(roleName);
+    }
+
+    private boolean isAllowedToBecomeMentor(User user) {
+        String roleName = getRoleName(user);
+        return "Mentor".equalsIgnoreCase(roleName) 
+                || "Expert".equalsIgnoreCase(roleName)
+                || "Internal Judge".equalsIgnoreCase(roleName)
+                || "Guest Judge".equalsIgnoreCase(roleName);
     }
 
     /**

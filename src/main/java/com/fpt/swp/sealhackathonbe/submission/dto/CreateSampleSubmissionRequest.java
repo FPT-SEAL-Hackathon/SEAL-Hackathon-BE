@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Data
 public class CreateSampleSubmissionRequest {
+    // Organizer tao bai mau cho calibration round; khong gan teamId nhung van validate repo nhu bai that.
     @NotNull(message = "Round ID is required")
     private UUID roundId;
 
