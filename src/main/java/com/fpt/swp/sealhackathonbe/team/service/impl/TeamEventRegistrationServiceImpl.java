@@ -181,10 +181,20 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
             EventParticipant saved = eventParticipantRepository
                     .findByEventIdAndUserId(event.getEventId(), member.getUserId())
                     .map(existing -> {
-                        if (!isPendingStatus(currentStatusName(existing))) {
+                        String statusName = currentStatusName(existing);
+                        if (!isPendingStatus(statusName) && !isRejectedStatus(statusName)) {
                             throw new BusinessConflictException(
                                     "Member \"" + memberUser.getFullName()
                                             + "\" registration has already been processed for this event.");
+                        }
+                        if (isRejectedStatus(statusName)) {
+                            existing.setParticipantStatusId(pendingStatus.getStatusId());
+                            existing.setParticipantStatus(pendingStatus);
+                            existing.setApprovedAt(null);
+                            existing.setApprovedBy(null);
+                            existing.setRejectedReason(null);
+                            existing.setAppliedAt(now);
+                            return saveRegistration(existing);
                         }
                         return existing;
                     })
@@ -277,11 +287,13 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
         Teams team = teamsRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team not found"));
 
-        String targetStatus = approved ? STATUS_ACTIVE : STATUS_REJECTED;
         ParticipantStatus pendingStatus = getRegistrationPendingStatus();
-        ParticipantStatus newStatus = participantStatusRepository.findByStatusNameIgnoreCase(targetStatus)
-                .orElseThrow(() -> new BadRequestException(
-                        "Participant status lookup is not configured for " + targetStatus));
+        String targetStatus = approved ? STATUS_ACTIVE : STATUS_PENDING;
+        ParticipantStatus newStatus = approved
+                ? participantStatusRepository.findByStatusNameIgnoreCase(STATUS_ACTIVE)
+                        .orElseThrow(() -> new BadRequestException(
+                                "Participant status lookup is not configured for " + STATUS_ACTIVE))
+                : pendingStatus;
 
         for (TeamMembers member : teamMembersRepository.findByTeamIdAndActiveTrue(teamId)) {
             EventParticipant participant = eventParticipantRepository
@@ -308,14 +320,16 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
                 } else {
                     participant.setApprovedAt(null);
                     participant.setApprovedBy(null);
-                    participant.setRejectedReason(trimToNull(note));
+                    participant.setRejectedReason(null);
                 }
 
                 EventParticipant saved = eventParticipantRepository.save(participant);
                 writeAuditLog("EVENT_PARTICIPANT_STATUS_UPDATED", saved, team, organizerUserId);
 
                 try {
-                    notifyDecision(saved, oldStatusName, targetStatus, organizerUserId);
+                    if (STATUS_ACTIVE.equals(targetStatus)) {
+                        notifyDecision(saved, oldStatusName, targetStatus, organizerUserId);
+                    }
                 } catch (Exception ignored) {
                     // Không rollback quyết định duyệt vì lỗi notification.
                 }
@@ -499,6 +513,10 @@ public class TeamEventRegistrationServiceImpl implements TeamEventRegistrationSe
 
     private boolean isPendingStatus(String statusName) {
         return STATUS_PENDING.equalsIgnoreCase(statusName);
+    }
+
+    private boolean isRejectedStatus(String statusName) {
+        return STATUS_REJECTED.equalsIgnoreCase(statusName);
     }
 
     private ParticipantStatus getRegistrationPendingStatus() {

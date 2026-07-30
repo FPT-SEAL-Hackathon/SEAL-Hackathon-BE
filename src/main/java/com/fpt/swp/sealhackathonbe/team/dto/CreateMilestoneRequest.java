@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateMilestoneRequest {
+    // Payload mentor/leader dung de tao mot milestone theo doi tien do cua team.
 
     @NotBlank(message = "Label must not be blank")
     @Size(max = 255, message = "Label must not exceed 255 characters")

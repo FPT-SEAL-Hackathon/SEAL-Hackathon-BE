@@ -49,6 +49,7 @@ public class SubmissionController {
             @Valid @RequestBody CreateSubmissionRequest request
     ) {
         // Du lieu: request + user dang dang nhap -> command service -> stored procedure -> response.
+        // Command service se fetch repository metadata ngoai transaction truoc khi persist submission.
         SubmissionResponse response =
                 submissionCommandService.submitWork(request, currentUserId());
 
@@ -100,6 +101,7 @@ public class SubmissionController {
             @PathVariable UUID teamId,
             @PathVariable UUID roundId
     ) {
+        // Query service kiem tra user con quyen xem lich su cua team/round nay.
         List<SubmissionHistoryResponse> response =
                 submissionQueryService.getSubmissionHistoryByTeamAndRound(
                         teamId,
@@ -173,6 +175,7 @@ public class SubmissionController {
             @PathVariable UUID submissionId,
             @Valid @RequestBody DisqualifySubmissionRequest request
     ) {
+        // Disqualification duoc ghi rieng de co the hien thi ly do va nguoi thuc hien tren response.
         SubmissionDisqualificationResponse response =
                 submissionDisqualificationService.disqualifySubmission(
                         submissionId,
