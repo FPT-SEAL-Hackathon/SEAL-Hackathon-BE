@@ -135,6 +135,12 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlContent, true); // true indicates HTML format
 
+            // Embed logo as an inline attachment
+            org.springframework.core.io.ClassPathResource logo = new org.springframework.core.io.ClassPathResource("static/logo_trans.png");
+            if (logo.exists()) {
+                helper.addInline("sealLogo", logo);
+            }
+
             mailSender.send(message);
         } catch (MessagingException exception) {
             log.error("Failed to send HTML email to {}", recipient, exception);
