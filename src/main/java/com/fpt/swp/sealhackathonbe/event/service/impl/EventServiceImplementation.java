@@ -459,7 +459,7 @@ public class EventServiceImplementation implements EventService {
             throw new BadRequestException("Event must be published before registration start");
         }
 
-        List<Category> categories = categoryRepository.findByEventEventId(eventId);
+        List<Category> categories = categoryRepository.findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(eventId);
         if (categories.isEmpty()) {
             throw new BadRequestException("Cannot publish event because no category has been created.");
         }
