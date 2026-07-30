@@ -37,4 +37,7 @@ public interface JudgingRepository extends JpaRepository<Judging, UUID> {
     boolean existsBySubmission_SubmissionIdAndIsActiveTrue(UUID submissionId);
 
     List<Judging> findBySubmission_SubmissionId(UUID submissionId);
+
+    @Query("SELECT j FROM Judging j WHERE j.submission.roundId = :roundId AND j.roundJudge.judge.userId = :judgeId AND j.isActive = true")
+    List<Judging> findActiveByRoundIdAndJudgeUserId(@Param("roundId") UUID roundId, @Param("judgeId") UUID judgeId);
 }
