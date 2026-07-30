@@ -27,6 +27,7 @@ import javax.imageio.ImageIO;
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.Instant;
@@ -152,7 +153,7 @@ public class CertificateServiceImpl implements CertificateService {
         context.setVariable("issuedDate", formatter.format(Instant.now()));
 
         context.setVariable("brandLogoBase64", getLogoBase64WithAlpha(1.0f));
-        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.18f));
+        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.30f));
 
         String htmlContent = templateEngine.process("certificate", context);
         return renderPdf(htmlContent);
@@ -201,7 +202,7 @@ public class CertificateServiceImpl implements CertificateService {
         context.setVariable("issuedDate", formatter.format(certificate.getGeneratedAt()));
 
         context.setVariable("brandLogoBase64", getLogoBase64WithAlpha(1.0f));
-        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.18f));
+        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.30f));
 
         String htmlContent = templateEngine.process("certificate", context);
         return renderPdf(htmlContent);
@@ -210,13 +211,12 @@ public class CertificateServiceImpl implements CertificateService {
     private String getLogoBase64WithAlpha(float alpha) {
         try (InputStream is = getClass().getResourceAsStream("/static/logo_trans.png")) {
             if (is != null) {
-                BufferedImage original = ImageIO.read(is);
+                byte[] rawBytes = is.readAllBytes();
+                if (alpha >= 0.99f) {
+                    return "data:image/png;base64," + Base64.getEncoder().encodeToString(rawBytes);
+                }
+                BufferedImage original = ImageIO.read(new ByteArrayInputStream(rawBytes));
                 if (original != null) {
-                    if (alpha >= 0.99f) {
-                        ByteArrayOutputStream os = new ByteArrayOutputStream();
-                        ImageIO.write(original, "png", os);
-                        return "data:image/png;base64," + Base64.getEncoder().encodeToString(os.toByteArray());
-                    }
                     BufferedImage transparentImage = new BufferedImage(
                             original.getWidth(),
                             original.getHeight(),

@@ -14,8 +14,8 @@
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #070a12;
-            color: #f8fafc;
+            background-color: #f8fafc;
+            color: #0f172a;
             margin: 0;
             padding: 24px;
             width: 100%;
@@ -24,14 +24,14 @@
 
         .cert-container {
             position: relative;
-            background-color: #0f172a;
-            border: 3px solid #f97316;
-            outline: 2px solid #eab308;
+            background-color: #ffffff;
+            border: 3px solid #ea580c;
+            outline: 2px solid #d97706;
             outline-offset: -8px;
             border-radius: 12px;
             padding: 32px 48px;
             height: 100%;
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.05);
             overflow: hidden;
         }
 
@@ -40,7 +40,7 @@
             position: absolute;
             width: 32px;
             height: 32px;
-            border-color: #fbbf24;
+            border-color: #d97706;
             border-style: solid;
         }
         .corner-tl { top: 16px; left: 16px; border-width: 3px 0 0 3px; }
@@ -48,17 +48,7 @@
         .corner-bl { bottom: 16px; left: 16px; border-width: 0 0 3px 3px; }
         .corner-br { bottom: 16px; right: 16px; border-width: 0 3px 3px 0; }
 
-        /* Watermark Background Logo - Perfectly Centered and Soft Faded Opacity */
-        .watermark-logo {
-            position: absolute;
-            top: 145px;
-            left: 50%;
-            width: 400px;
-            margin-left: -200px;
-            opacity: 0.035;
-            z-index: 1;
-            pointer-events: none;
-        }
+
 
         .content-layer {
             position: relative;
@@ -83,19 +73,19 @@
             font-size: 22px;
             font-weight: 800;
             letter-spacing: 2px;
-            color: #ffffff;
+            color: #0f172a;
             vertical-align: middle;
             text-transform: uppercase;
         }
 
         .brand-seal {
-            color: #f97316;
+            color: #ea580c;
             font-weight: 900;
         }
 
         .brand-sub {
             font-size: 11px;
-            color: #fbbf24;
+            color: #d97706;
             letter-spacing: 3px;
             text-transform: uppercase;
             margin-top: 2px;
@@ -103,7 +93,7 @@
 
         .divider-line {
             height: 2px;
-            background: linear-gradient(90deg, transparent 0%, #f97316 30%, #fbbf24 50%, #f97316 70%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, #ea580c 30%, #d97706 50%, #ea580c 70%, transparent 100%);
             margin: 10px auto 20px auto;
             width: 85%;
         }
@@ -111,16 +101,15 @@
         .cert-main-title {
             font-size: 34px;
             font-weight: 900;
-            color: #fbbf24;
+            color: #c2410c;
             letter-spacing: 4px;
             text-transform: uppercase;
             margin-top: 10px;
-            text-shadow: 0 2px 8px rgba(251, 191, 36, 0.2);
         }
 
         .cert-subtitle {
             font-size: 12px;
-            color: #94a3b8;
+            color: #64748b;
             letter-spacing: 3px;
             text-transform: uppercase;
             margin-top: 10px;
@@ -128,19 +117,22 @@
         }
 
         .team-name {
-            font-size: 36px;
+            font-size: 30px;
             font-weight: 800;
-            color: #ffffff;
-            margin: 12px 0;
+            color: #0f172a;
+            margin: 8px 0;
             letter-spacing: 1px;
-            padding: 8px 24px;
+            padding: 6px 20px;
             display: inline-block;
-            border-bottom: 2px solid #f97316;
+            white-space: nowrap;
+            border-bottom: 2px solid #ea580c;
         }
 
         .citation {
-            font-size: 14px;
-            color: #cbd5e1;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
             margin-top: 14px;
             font-style: italic;
         }
@@ -148,24 +140,25 @@
         .award-title {
             font-size: 26px;
             font-weight: 800;
-            color: #fbbf24;
+            color: #d97706;
             margin: 12px 0 6px 0;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         .event-info {
-            font-size: 14px;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-top: 4px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 6px;
         }
 
         .badge-pill {
             display: inline-block;
-            background-color: rgba(249, 115, 22, 0.15);
-            border: 1px solid rgba(249, 115, 22, 0.4);
-            color: #fbbf24;
+            background-color: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #c2410c;
             padding: 4px 16px;
             border-radius: 20px;
             font-size: 12px;
@@ -188,10 +181,10 @@
         .meta-box {
             text-align: left;
             font-size: 11px;
-            color: #94a3b8;
+            color: #475569;
             line-height: 1.6;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
             padding: 10px 14px;
             border-radius: 6px;
         }
@@ -205,7 +198,7 @@
         }
 
         .meta-value {
-            color: #e2e8f0;
+            color: #0f172a;
             font-weight: 700;
         }
 
@@ -217,15 +210,15 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            border: 2px solid #fbbf24;
-            background: radial-gradient(circle, #f97316 0%, #7c2d12 100%);
+            border: 2px solid #b45309;
+            background-color: #ea580c;
             margin: 0 auto;
             color: #ffffff;
             display: inline-block;
             text-align: center;
             line-height: 1.1;
-            padding-top: 18px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .seal-text-top {
@@ -247,13 +240,13 @@
         .signature-box {
             text-align: right;
             font-size: 12px;
-            color: #cbd5e1;
+            color: #334155;
         }
 
         .sig-title {
             font-size: 11px;
             font-weight: 700;
-            color: #fbbf24;
+            color: #c2410c;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 30px;
@@ -262,14 +255,14 @@
         .sig-line {
             width: 160px;
             height: 1px;
-            background-color: #475569;
+            background-color: #94a3b8;
             margin-left: auto;
             margin-bottom: 4px;
         }
 
         .sig-sub {
             font-size: 11px;
-            color: #94a3b8;
+            color: #64748b;
         }
     </style>
 </head>
@@ -281,8 +274,7 @@
     <div class="corner corner-bl"></div>
     <div class="corner corner-br"></div>
 
-    <!-- Watermark Logo Background -->
-    <img th:if="${watermarkLogoBase64 != null and watermarkLogoBase64 != ''}" th:src="${watermarkLogoBase64}" class="watermark-logo" alt="Watermark Logo"/>
+
 
     <div class="content-layer">
         <!-- Header -->
@@ -309,7 +301,7 @@
         <div class="citation" th:text="${citation != null ? citation : 'for outstanding performance and successfully winning the award'}">for outstanding performance and successfully winning the award</div>
         <div class="award-title" th:text="${awardTitle}">AWARD TITLE</div>
 
-        <!-- Event & Category Details -->
+        <!-- Event and Category Details -->
         <div class="event-info">
             <span th:text="${'Event: ' + eventName}">Event Name</span>
             <span th:if="${categoryName != null and categoryName != ''}" th:text="${' • Category: ' + categoryName}"></span>
