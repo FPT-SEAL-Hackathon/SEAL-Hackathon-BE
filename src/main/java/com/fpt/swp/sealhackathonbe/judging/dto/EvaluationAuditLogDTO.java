@@ -15,10 +15,13 @@ import java.util.UUID;
 public class EvaluationAuditLogDTO {
     private UUID id;
     private UUID eventId;
+    private String eventName;
     private String actionType;
     private UUID actorUserId;
+    private String actorName;
     private UUID judgingId;
     private UUID teamId;
+    private String teamName;
     private UUID submissionId;
     private String oldValue;
     private String newValue;
