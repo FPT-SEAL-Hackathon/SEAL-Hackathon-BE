@@ -320,7 +320,7 @@ public class RankingServiceImpl implements RankingService {
         Event eventRef = entityManager.find(Event.class, eventId);
         if (eventRef == null) throw new IllegalArgumentException("Event ID does not exist: " + eventId);
         
-        List<Category> categories = categoryRepository.findByEventEventId(eventId);
+        List<Category> categories = categoryRepository.findByEventEventIdAndIsActiveTrueOrderBySortOrderAsc(eventId);
         List<EventRankingDTO> allComputedRankings = new ArrayList<>();
 
         for (Category categoryRef : categories) {
