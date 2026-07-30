@@ -1,4 +1,4 @@
-# SEAL Hackathon - Backend (BE)
+# SEAL Hackathon - Backend
 
 This is the robust RESTful API Backend for the **SEAL Hackathon Manager System**, built with Java and Spring Boot. It serves as the core engine for the application, handling complex business logic, database operations, and role-based access control.
 
@@ -8,6 +8,17 @@ This is the robust RESTful API Backend for the **SEAL Hackathon Manager System**
 - **Framework:** Spring Boot (Spring Web, Spring Security, Spring Data JPA)
 - **Database:** MySQL
 - **Build Tool:** Maven
+- **Architecture:** Layered Architecture (Controller, Service, Repository)
+
+## ✨ Key Features
+
+- **Role-Based Access Control (RBAC):** Secure authentication and authorization for different roles (Admin, Judge, Mentor, User/Participant) using Spring Security.
+- **Event & Category Management:** Endpoints for creating and managing hackathon events, competition categories, rounds, and criteria.
+- **Judging & Evaluation Engine:** Robust APIs to manage judges' batch scoring, score calibration, final round approvals, and dynamic leaderboards.
+- **Mentorship & Consultation:** Built-in module for managing mentor-team consultations, booking sessions, and tracking interactions.
+- **Awards & Prize Distribution:** Comprehensive logic for managing awards configurations and distributing them to top-ranking teams.
+- **Milestone & Submission Tracking:** APIs to manage team milestones, project submissions, and tracking round completion statuses.
+- **Concurrency Control:** Optimistic Locking implemented to handle concurrent updates and prevent data conflicts (e.g., during expert assignments or concurrent scoring).
 
 ## 📋 Prerequisites
 
@@ -18,11 +29,18 @@ Ensure you have the following installed:
 
 ## ⚙️ Setup & Installation
 
-1. **Database Configuration**
-   - Create a MySQL database (e.g., `seal_hackathon`).
-   - Update the `src/main/resources/application.properties` (or `application.yml`) file with your database credentials.
+1. **Database Initialization & Configuration**
+   - Create a SQL Server/MySQL database (e.g., `seal_hackathon`).
+   - **Crucial Step:** The project uses `spring.jpa.hibernate.ddl-auto=none`, meaning the schema is *not* auto-generated. You **must** execute the SQL scripts located in the `database/` directory (start with `Create Database.sql`) to initialize the tables. You can also run `seed_api_test_data.sql` to populate sample data.
 
-2. **Build the Application**
+2. **Environment Variables**
+   - The application requires several environment variables to run properly. Set these in your environment or IDE, or update `src/main/resources/application.properties` directly:
+     - **Database:** `DB_URL`, `DB_USER`, `DB_PASS`
+     - **URLs:** `FRONTEND_URL`, `BACKEND_URL`
+     - **Authentication:** `JWT_SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+     - **Services:** `GEMINI_API_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+
+3. **Build the Application**
    Navigate to the `SEAL-Hackathon-BE` directory and run:
    ```bash
    ./mvnw clean install
@@ -38,16 +56,8 @@ Ensure you have the following installed:
    ```
    The backend API will start on `http://localhost:8080`.
 
-## 📁 Key Features
-
-- **Role-Based Access Control (RBAC):** Secure authentication and authorization for different roles (Admin, Judge, Mentor, User/Participant).
-- **Event & Category Management:** Endpoints for creating and managing hackathon events, competition categories, and prize pools.
-- **Expert Assignments:** Business logic for assigning experts (Judges/Mentors) to specific categories without overlaps.
-- **Milestone & Submission Tracking:** APIs to manage team milestones, project submissions, and judge evaluations.
-- **Optimistic Locking:** Implemented to handle concurrent updates and prevent data conflicts (e.g., during expert assignments).
-
 ## 🔗 Related Projects
-- **[Frontend App](../FE/SEAL-Hackathon-FE)**: The React-based user interface for this backend.
+- **[Frontend App](../../FE/SEAL-Hackathon-FE)**: The React-based user interface for this backend.
 
 ## 📄 Notes
 This is a project from students of FPT University - Software Engineering major for the SWP391 course.

@@ -243,7 +243,7 @@ public class RankingServiceImpl implements RankingService {
                 .isPublished(r.getIsPublished())
                 .isApproved(r.getIsApproved())
                 .build()
-        ).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
     }
 
     @Override
@@ -511,7 +511,7 @@ public class RankingServiceImpl implements RankingService {
                 .isPublished(r.getIsPublished())
                 .isApproved(r.getIsApproved())
                 .build()
-        ).collect(Collectors.toList());
+        ).sorted(Comparator.comparingInt(r -> r.getRankPosition() > 0 ? r.getRankPosition() : Integer.MAX_VALUE)).collect(Collectors.toList());
     }
 
     @Override
@@ -600,6 +600,27 @@ public class RankingServiceImpl implements RankingService {
         }
         return rankings.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsPublished()))
+                .sorted((r1, r2) -> {
+                    int pos1 = r1.getRankPosition() > 0 ? r1.getRankPosition() : Integer.MAX_VALUE;
+                    int pos2 = r2.getRankPosition() > 0 ? r2.getRankPosition() : Integer.MAX_VALUE;
+                    return Integer.compare(pos1, pos2);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventRankingDTO> getApprovedCategoryLeaderboard(UUID eventId, UUID categoryId) {
+        List<EventRankingDTO> rankings = getCategoryLeaderboard(eventId, categoryId);
+        if (rankings.isEmpty()) {
+            return rankings;
+        }
+        boolean isApproved = rankings.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsApproved()));
+        if (!isApproved) {
+            throw new IllegalStateException("Leaderboard has not been approved yet.");
+        }
+        return rankings.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsApproved()))
                 .sorted((r1, r2) -> {
                     int pos1 = r1.getRankPosition() > 0 ? r1.getRankPosition() : Integer.MAX_VALUE;
                     int pos2 = r2.getRankPosition() > 0 ? r2.getRankPosition() : Integer.MAX_VALUE;
