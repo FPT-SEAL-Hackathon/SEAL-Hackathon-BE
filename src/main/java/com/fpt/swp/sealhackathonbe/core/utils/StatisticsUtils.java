@@ -49,11 +49,41 @@ public class StatisticsUtils {
 
     /**
      * Evaluates the consensus status based on the standard deviation.
+     *
+     * @deprecated Nguong tuyet doi nay khong tinh den thang diem cua tieu chi: tieu chi cham
+     * tren thang 100 thi SD > 1.5 xay ra gan nhu luon luon (=> luon DANGER), con thang 5 thi
+     * gan nhu khong bao gio (=> luon GOOD). Dung
+     * {@link #evaluateConsensusStatus(double, java.math.BigDecimal)} thay the.
      */
+    @Deprecated
     public static String evaluateConsensusStatus(double sd) {
         if (sd > 1.5) {
             return CONSENSUS_DANGER;
         } else if (sd >= 0.5) {
+            return CONSENSUS_WARNING;
+        } else {
+            return CONSENSUS_GOOD;
+        }
+    }
+
+    // Nguong tinh theo TY LE tren thang diem toi da cua tieu chi, nen so sanh duoc giua cac
+    // tieu chi khac thang. 15% cua thang la lech dang ke, 5% la con chap nhan duoc — quy doi
+    // tuong duong nguong cu (1.5 va 0.5) tren thang 10, la thang pho bien nhat cua he thong.
+    private static final double CONSENSUS_DANGER_RATIO = 0.15;
+    private static final double CONSENSUS_WARNING_RATIO = 0.05;
+
+    /**
+     * Danh gia muc dong thuan theo do lech chuan CHUAN HOA theo thang diem cua tieu chi.
+     * maxScore null hoac <= 0 -> quay ve nguong tuyet doi cu de khong vo du lieu cu.
+     */
+    public static String evaluateConsensusStatus(double sd, java.math.BigDecimal maxScore) {
+        if (maxScore == null || maxScore.doubleValue() <= 0) {
+            return evaluateConsensusStatus(sd);
+        }
+        double ratio = sd / maxScore.doubleValue();
+        if (ratio > CONSENSUS_DANGER_RATIO) {
+            return CONSENSUS_DANGER;
+        } else if (ratio >= CONSENSUS_WARNING_RATIO) {
             return CONSENSUS_WARNING;
         } else {
             return CONSENSUS_GOOD;

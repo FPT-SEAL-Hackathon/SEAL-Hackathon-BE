@@ -73,9 +73,11 @@ public class ResearchDashboardServiceImpl {
                         string(values[8]),
                         longValue(values[9]),
                         decimal(values[10]),
-                        decimal(values[11]),
+                        // SD/Variance = null khi bai chi co 1 giam khao cham (khong tinh duoc),
+                        // khac han voi 0 = "cac giam khao cham y het nhau".
+                        decimalOrNull(values[11]),
                         decimal(values[12]),
-                        decimal(values[13])
+                        decimalOrNull(values[13])
                 ))
                 .toList();
     }
@@ -126,6 +128,14 @@ public class ResearchDashboardServiceImpl {
                 .toList();
     }
 
+    /**
+     * Chi so do tin cay cua tung giam khao, tinh TREN DIEM HIEU CHUAN.
+     *
+     * Bo loc IsCalibration = 1 la bat buoc: day la so lieu cho man "Calibration Analytics".
+     * Truoc day khong loc nen avg/bias/deviation gop ca diem bai THAT trong cung round —
+     * dang dung mot cach tinh co vi FE chi cho chon calibration round, nhung chi can loc theo
+     * event hoac category la so lieu lan ngay. Doi xung voi getVarianceReport (IsCalibration = 0).
+     */
     public List<ReliabilityMetricResponse> getReliabilityMetrics(UUID eventId, UUID roundId, UUID categoryId) {
         String sql = "WITH JudgeSubmissionScores AS (" + applyFilters("""
                     SELECT
@@ -142,6 +152,7 @@ public class ResearchDashboardServiceImpl {
                              JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                              JOIN Users u ON u.UserID = rj.UserID
                     WHERE (:eventId IS NULL OR c.EventID = :eventId)
+                      AND sc.IsCalibration = 1
                 """, roundId, categoryId) + """
                     GROUP BY rj.UserID, u.FullName, sc.SubmissionID, sc.IsCalibration
                 ),
@@ -195,147 +206,204 @@ public class ResearchDashboardServiceImpl {
                         decimal(values[5]),
                         decimal(values[6]),
                         decimal(values[7]),
-                        decimal(values[8]),
-                        decimal(values[9]),
-                        decimal(values[10])
+                        // bias/AAD/RMS = null khi giam khao khong co dong nghiep nao cham cung
+                        // bai (PeerMean IS NULL o moi dong). Truoc day ra 0 nen UI bao
+                        // "do lech cua ban rat can bang" trong khi thuc te khong co gi de so.
+                        decimalOrNull(values[8]),
+                        decimalOrNull(values[9]),
+                        decimalOrNull(values[10])
                 ))
                 .toList();
     }
 
-    public List<ConsensusMatrixResponse> getConsensusMatrix(UUID roundId) {
+    /**
+     * Ma tran dong thuan cua vong hieu chuan, mot dong = mot (bai mau x tieu chi).
+     *
+     * @param viewerUserId    giam khao dang xem; null khi nguoi xem la Organizer/Admin
+     * @param revealAllSamples true = Organizer/Admin, thay het; false = giam khao, chi thay bai
+     *                         mau MA CHINH HO DA CHAM
+     *
+     * Vi sao phai chan: neu giam khao xem duoc median truoc khi cham, ho se cham theo con so do
+     * (anchoring) va he thong ghi nhan mot su "dong thuan" gia tao — dung nguoc lai muc dich
+     * cua vong hieu chuan.
+     */
+    public List<ConsensusMatrixResponse> getConsensusMatrix(UUID roundId, UUID viewerUserId, boolean revealAllSamples) {
         String sql = """
                 SELECT
+                    sc.SubmissionID,
                     rc.CriterionName,
                     rj.UserID AS JudgeUserID,
-                    sc.ScoreValue
+                    sc.ScoreValue,
+                    rc.MaxScore,
+                    s.SubmittedAt
                 FROM Judging sc
                 JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                 JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
                 JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
                 WHERE s.RoundID = :roundId AND sc.IsCalibration = 1
+                ORDER BY s.SubmittedAt, sc.SubmissionID, rc.SortOrder, rc.CriterionName
                 """;
-        
+
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery(sql)
                 .setParameter("roundId", roundId)
                 .getResultList();
-        
-        // Group by criteria name
-        Map<String, List<Object[]>> groupedByCriteria = rows.stream()
-                .collect(Collectors.groupingBy(row -> string(row[0])));
-                
-        List<ConsensusMatrixResponse> result = new ArrayList<>();
-        
-        for (Map.Entry<String, List<Object[]>> entry : groupedByCriteria.entrySet()) {
-            String criteriaName = entry.getKey();
-            List<Object[]> criteriaRows = entry.getValue();
-            
-            List<Double> scores = new ArrayList<>();
-            Map<String, BigDecimal> judgeScores = new HashMap<>();
-            
-            double min = Double.MAX_VALUE;
-            double max = Double.MIN_VALUE;
-            
-            for (Object[] row : criteriaRows) {
-                String judgeId = string(row[1]);
-                BigDecimal scoreValue = decimal(row[2]);
-                double score = scoreValue.doubleValue();
-                
-                scores.add(score);
-                judgeScores.put(judgeId, scoreValue);
-                
-                if (score < min) min = score;
-                if (score > max) max = score;
+
+        // Bai mau ma nguoi xem da cham -> quyet dinh duoc phep xem ket qua doi chieu hay chua.
+        Set<UUID> scoredByViewer = new HashSet<>();
+        if (viewerUserId != null) {
+            for (Object[] row : rows) {
+                if (viewerUserId.toString().equalsIgnoreCase(string(row[2]))) {
+                    scoredByViewer.add(uuid(row[0]));
+                }
             }
-            
-            if (min == Double.MAX_VALUE) min = 0;
-            if (max == Double.MIN_VALUE) max = 0;
-            
-            double median = StatisticsUtils.calculateMedian(scores);
+        }
+
+        // Nhan "Sample 1..n" theo thu tu nop, on dinh giua cac lan goi (ORDER BY o tren).
+        Map<UUID, String> sampleLabels = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            UUID submissionId = uuid(row[0]);
+            if (!sampleLabels.containsKey(submissionId)) {
+                sampleLabels.put(submissionId, "Sample " + (sampleLabels.size() + 1));
+            }
+        }
+
+        // Gom theo CA submission LAN tieu chi. Truoc day chi gom theo tieu chi nen nhieu bai mau
+        // bi tron diem vao nhau va judgeScores bi ghi de chi con bai cuoi.
+        Map<String, List<Object[]>> grouped = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String key = string(row[0]) + "||" + string(row[1]);
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
+        }
+
+        List<ConsensusMatrixResponse> result = new ArrayList<>();
+
+        for (List<Object[]> groupRows : grouped.values()) {
+            UUID submissionId = uuid(groupRows.get(0)[0]);
+            if (!revealAllSamples && !scoredByViewer.contains(submissionId)) {
+                continue; // chua cham bai mau nay -> chua duoc xem
+            }
+
+            String criteriaName = string(groupRows.get(0)[1]);
+            BigDecimal maxPossible = decimal(groupRows.get(0)[4]);
+
+            List<Double> scores = new ArrayList<>();
+            List<BigDecimal> distribution = new ArrayList<>();
+            Map<String, BigDecimal> judgeScores = new HashMap<>();
+
+            for (Object[] row : groupRows) {
+                // Mot giam khao chi co mot diem cho moi (bai, tieu chi) nen khong con ghi de.
+                BigDecimal scoreValue = decimal(row[3]);
+                scores.add(scoreValue.doubleValue());
+                distribution.add(scoreValue);
+                judgeScores.put(string(row[2]), scoreValue);
+            }
+
+            double median = StatisticsUtils.calculateMedian(new ArrayList<>(scores));
             double sd = StatisticsUtils.calculateSampleStandardDeviation(scores);
-            String status = StatisticsUtils.evaluateConsensusStatus(sd);
-            
+            double min = scores.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+            double max = scores.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+
             result.add(new ConsensusMatrixResponse(
+                    submissionId,
+                    sampleLabels.get(submissionId),
                     criteriaName,
                     BigDecimal.valueOf(median),
                     BigDecimal.valueOf(min),
                     BigDecimal.valueOf(max),
                     BigDecimal.valueOf(sd),
-                    status,
+                    maxPossible,
+                    // Chuan hoa theo thang diem cua chinh tieu chi: nguong tuyet doi cu khien
+                    // tieu chi thang 100 luon DANGER con thang 5 thi luon GOOD.
+                    StatisticsUtils.evaluateConsensusStatus(sd, maxPossible),
+                    distribution,
                     judgeScores
             ));
         }
         return result;
     }
 
+    /**
+     * Xuat du lieu cham diem hieu chuan da AN DANH, dang DAI (long format):
+     * mot dong = mot luot cham = (bai mau x tieu chi x giam khao).
+     *
+     * Vi sao khong dung dang rong (pivot) nhu truoc: de tinh do tin cay lien danh gia vien
+     * (ICC, Krippendorff alpha) can ma tran DOI TUONG x NGUOI CHAM, trong do doi tuong la
+     * tung BAI NOP. Ban cu lay tieu chi lam dong va lam mat chieu bai nop (nhieu bai mau bi
+     * ghi de len nhau), nen khong chay duoc IRR. Dang dai nap thang vao R/Python roi pivot
+     * lai tuy phan tich.
+     *
+     * Ma an danh gan theo thu tu UserID da sap xep nen ON DINH giua cac lan xuat (ban cu gan
+     * theo thu tu duyet ket qua nen doi moi lan, khong ghep duoc 2 file), va dung so thu tu
+     * co dem 0 thay vi ky tu A..Z (ban cu vuot qua 26 giam khao se sinh ky tu rac).
+     */
     public String exportCalibrationCsv(UUID roundId) {
         String sql = """
                 SELECT
+                    sc.SubmissionID,
                     rc.CriterionName,
                     rj.UserID AS JudgeUserID,
-                    sc.ScoreValue
+                    sc.ScoreValue,
+                    rc.MaxScore,
+                    s.SubmittedAt
                 FROM Judging sc
                 JOIN RoundJudges rj ON rj.RoundJudgeID = sc.RoundJudgeID
                 JOIN RoundCriteria rc ON rc.RoundCriterionID = sc.RoundCriterionID
                 JOIN Submissions s ON s.SubmissionID = sc.SubmissionID
                 WHERE s.RoundID = :roundId AND sc.IsCalibration = 1
-                ORDER BY rc.CriterionName, rj.UserID
+                ORDER BY s.SubmittedAt, sc.SubmissionID, rc.SortOrder, rc.CriterionName, rj.UserID
                 """;
-                
+
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery(sql)
                 .setParameter("roundId", roundId)
                 .getResultList();
-                
-        // Extract unique judges
-        Set<String> judgeIds = new LinkedHashSet<>();
+
+        // Ma an danh on dinh: sap xep UserID roi danh so.
+        List<String> sortedJudgeIds = rows.stream()
+                .map(row -> string(row[2]))
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+        Map<String, String> judgeAlias = new HashMap<>();
+        for (int i = 0; i < sortedJudgeIds.size(); i++) {
+            judgeAlias.put(sortedJudgeIds.get(i), String.format("Judge_%02d", i + 1));
+        }
+
+        // Nhan bai mau theo thu tu nop, khop voi nhan tren man hinh Consensus Matrix.
+        Map<UUID, String> sampleLabels = new LinkedHashMap<>();
         for (Object[] row : rows) {
-            judgeIds.add(string(row[1]));
-        }
-        
-        // Map JudgeId to Anonymized Name
-        Map<String, String> judgeAnonymizedMap = new HashMap<>();
-        char judgeChar = 'A';
-        for (String judgeId : judgeIds) {
-            judgeAnonymizedMap.put(judgeId, "Judge_" + judgeChar);
-            judgeChar++;
-        }
-        
-        // Group by criteria
-        Map<String, Map<String, BigDecimal>> criteriaScores = new LinkedHashMap<>();
-        for (Object[] row : rows) {
-            String criteriaName = string(row[0]);
-            String judgeId = string(row[1]);
-            BigDecimal score = decimal(row[2]);
-            
-            criteriaScores.putIfAbsent(criteriaName, new HashMap<>());
-            criteriaScores.get(criteriaName).put(judgeId, score);
-        }
-        
-        // Build CSV
-        StringBuilder csv = new StringBuilder();
-        csv.append("Submission_ID,Criteria_Name");
-        for (String judgeId : judgeIds) {
-            csv.append(",").append(judgeAnonymizedMap.get(judgeId));
-        }
-        csv.append("\\n");
-        
-        for (Map.Entry<String, Map<String, BigDecimal>> entry : criteriaScores.entrySet()) {
-            csv.append(roundId.toString()).append(",");
-            csv.append("\\\"").append(entry.getKey()).append("\\\"");
-            
-            Map<String, BigDecimal> scores = entry.getValue();
-            for (String judgeId : judgeIds) {
-                BigDecimal score = scores.get(judgeId);
-                csv.append(",");
-                if (score != null) {
-                    csv.append(score.toString());
-                }
+            UUID submissionId = uuid(row[0]);
+            if (!sampleLabels.containsKey(submissionId)) {
+                sampleLabels.put(submissionId, "Sample " + (sampleLabels.size() + 1));
             }
-            csv.append("\\n");
         }
-        
+
+        StringBuilder csv = new StringBuilder();
+        // LUU Y: phai la ky tu xuong dong that. Ban cu viet "\\n" trong string thuong nen
+        // xuat ra ky tu '\' + 'n' va toan bo file bi dinh thanh MOT dong.
+        csv.append("round_id,submission_id,sample_label,criterion,max_score,judge_anon,score\n");
+
+        for (Object[] row : rows) {
+            UUID submissionId = uuid(row[0]);
+            csv.append(roundId).append(',')
+                    .append(submissionId).append(',')
+                    .append(csvQuote(sampleLabels.get(submissionId))).append(',')
+                    .append(csvQuote(string(row[1]))).append(',')
+                    .append(row[4] == null ? "" : decimal(row[4]).toPlainString()).append(',')
+                    .append(judgeAlias.getOrDefault(string(row[2]), "Judge_00")).append(',')
+                    .append(row[3] == null ? "" : decimal(row[3]).toPlainString())
+                    .append('\n');
+        }
+
         return csv.toString();
+    }
+
+    /** Boc chuoi trong dau nhay kep va nhan doi dau nhay ben trong theo dung RFC 4180. */
+    private String csvQuote(String value) {
+        String safe = value == null ? "" : value.replace("\"", "\"\"");
+        return "\"" + safe + "\"";
     }
 
     private Query query(String sql, UUID eventId, UUID roundId, UUID categoryId) {
@@ -380,6 +448,17 @@ public class ResearchDashboardServiceImpl {
 
     private Long longValue(Object value) {
         return value == null ? 0L : ((Number) value).longValue();
+    }
+
+    /**
+     * Danh cho cac cot THONG KE (do lech chuan, phuong sai, bias...): giu nguyen null thay vi
+     * quy ve 0. SQL Server tra NULL khi khong du du lieu de tinh — vi du STDEV/VAR tren mot
+     * dong duy nhat (bai chi co 1 giam khao cham), hoac AVG cua tap rong (giam khao khong co
+     * dong nghiep nao cham cung bai). Quy ve 0 bien "khong tinh duoc" thanh "lech bang 0",
+     * tuc la bao cao mot su dong thuan hoan hao khong he ton tai.
+     */
+    private BigDecimal decimalOrNull(Object value) {
+        return value == null ? null : decimal(value);
     }
 
     private BigDecimal decimal(Object value) {

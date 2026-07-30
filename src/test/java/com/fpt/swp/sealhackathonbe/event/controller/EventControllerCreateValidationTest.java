@@ -94,6 +94,11 @@ class EventControllerCreateValidationTest {
                 .andExpect(jsonPath("$.eventName", containsString("SEAL Hackathon")));
     }
 
+    // eventStartDate/eventEndDate la LocalDateTime o CreateEventRequest, nen payload PHAI co
+    // phan gio. Truoc day gui "2030-06-30" (chi ngay) khien Jackson nem InvalidFormatException
+    // -> MOI request trong class nay tra 400 "Invalid JSON format", keo theo ca 5 test fail:
+    // cac assertion ve $.errors.* va $.error=VALIDATION_ERROR khong bao gio chay toi.
+    // Gio khai mac 18:00 de van thoa registrationEnd (09:00 cung ngay) < eventStart.
     private String validJson() {
         return """
                 {
@@ -104,8 +109,8 @@ class EventControllerCreateValidationTest {
                   "eventStatusId":"30000000-0000-0000-0000-000000000001",
                   "registrationStart":"2030-06-01T08:00:00",
                   "registrationEnd":"2030-06-30T09:00:00",
-                  "eventStartDate":"2030-06-30",
-                  "eventEndDate":"2030-07-02",
+                  "eventStartDate":"2030-06-30T18:00:00",
+                  "eventEndDate":"2030-07-02T18:00:00",
                   "minTeamSize":2,
                   "maxTeamSize":5
                 }

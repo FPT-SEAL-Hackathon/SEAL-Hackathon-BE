@@ -21,6 +21,7 @@ import com.fpt.swp.sealhackathonbe.submission.repository.SubmissionsRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +35,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -404,6 +406,74 @@ public class RoundServiceValidationTest {
 
         assertEquals("Cannot delete round because it already has calibration samples.", exception.getMessage());
         verify(roundRepository, never()).delete(any());
+    }
+
+    /**
+     * Vong hieu chuan chi cham bai mau do Organizer tao: khong doi nao nop bai, khong ai di
+     * tiep, khong ai phuc khao. Server phai TU XOA nhung field do du client co gui len — day la
+     * chot chan cho client cu hoac lenh goi API truc tiep, khong chi la chuyen an o tren form.
+     */
+    @Test
+    void createCalibrationRoundDropsSubmissionDeadlineAdvancementAndAppeal() {
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(roundStatusRepository.findById(roundStatusId)).thenReturn(Optional.of(roundStatus));
+        when(roundRepository.findMaxRoundOrderByCategory(categoryId)).thenReturn(0);
+        when(roundRepository.save(any())).thenReturn(null);
+
+        request.setIsCalibrationRound(true);
+        request.setStartDate(LocalDateTime.of(2026, 7, 25, 8, 0));
+        request.setEndDate(LocalDateTime.of(2026, 7, 25, 17, 0));
+        request.setJudgingDeadline(LocalDateTime.of(2026, 7, 25, 16, 0));
+        // Client co tinh gui len nhung field khong ap dung cho vong hieu chuan
+        request.setSubmissionDeadline(LocalDateTime.of(2026, 7, 25, 12, 0));
+        request.setAppealStartTime(LocalDateTime.of(2026, 7, 25, 16, 30));
+        request.setAppealEndTime(LocalDateTime.of(2026, 7, 25, 17, 0));
+        request.setAdvancementTopN(5);
+
+        roundService.create(categoryId, request);
+
+        ArgumentCaptor<Round> captor = ArgumentCaptor.forClass(Round.class);
+        verify(roundRepository).save(captor.capture());
+        Round saved = captor.getValue();
+
+        assertNull(saved.getSubmissionDeadline());
+        assertNull(saved.getAppealStartTime());
+        assertNull(saved.getAppealEndTime());
+        assertNull(saved.getAdvancementTopN());
+        // Nhung moc con lai van phai duoc giu: Schedule dung start/end de ve, judging deadline
+        // van hien thi cho giam khao.
+        assertEquals(LocalDateTime.of(2026, 7, 25, 8, 0), saved.getStartDate());
+        assertEquals(LocalDateTime.of(2026, 7, 25, 17, 0), saved.getEndDate());
+        assertEquals(LocalDateTime.of(2026, 7, 25, 16, 0), saved.getJudgingDeadline());
+    }
+
+    /** REGRESSION: round THUONG phai giu nguyen ca 4 field — khong duoc dinh dang den. */
+    @Test
+    void createNormalRoundKeepsSubmissionDeadlineAdvancementAndAppeal() {
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(roundStatusRepository.findById(roundStatusId)).thenReturn(Optional.of(roundStatus));
+        when(roundRepository.findMaxRoundOrderByCategory(categoryId)).thenReturn(0);
+        when(roundRepository.save(any())).thenReturn(null);
+
+        request.setIsCalibrationRound(false);
+        request.setStartDate(LocalDateTime.of(2026, 7, 25, 8, 0));
+        request.setEndDate(LocalDateTime.of(2026, 7, 25, 20, 0));
+        request.setSubmissionDeadline(LocalDateTime.of(2026, 7, 25, 12, 0));
+        request.setJudgingDeadline(LocalDateTime.of(2026, 7, 25, 15, 0));
+        request.setAppealStartTime(LocalDateTime.of(2026, 7, 25, 16, 0));
+        request.setAppealEndTime(LocalDateTime.of(2026, 7, 25, 18, 0));
+        request.setAdvancementTopN(5);
+
+        roundService.create(categoryId, request);
+
+        ArgumentCaptor<Round> captor = ArgumentCaptor.forClass(Round.class);
+        verify(roundRepository).save(captor.capture());
+        Round saved = captor.getValue();
+
+        assertEquals(LocalDateTime.of(2026, 7, 25, 12, 0), saved.getSubmissionDeadline());
+        assertEquals(LocalDateTime.of(2026, 7, 25, 16, 0), saved.getAppealStartTime());
+        assertEquals(LocalDateTime.of(2026, 7, 25, 18, 0), saved.getAppealEndTime());
+        assertEquals(5, saved.getAdvancementTopN());
     }
 
     private Round roundWithStatus(String statusName) {

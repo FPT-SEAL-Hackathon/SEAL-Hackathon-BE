@@ -61,13 +61,24 @@ public class RoundServiceImpl implements RoundService {
         int currentRound = roundRepository.findMaxRoundOrderByCategory(categoryId);
         int nextRound = currentRound + 1;
 
+        boolean calibration = Boolean.TRUE.equals(request.getIsCalibrationRound());
+
+        // Vong hieu chuan chi cham BAI MAU do Organizer tao, khong co doi thi tham gia, nen
+        // han nop bai / so doi di tiep / cua so phuc khao deu vo nghia. Ep null ngay tu day de
+        // client cu hoac lenh goi API truc tiep cung khong set duoc gia tri rac.
+        // CHI ap dung cho nhanh calibration — round thuong giu nguyen hanh vi cu.
+        LocalDateTime submissionDeadline = calibration ? null : request.getSubmissionDeadline();
+        LocalDateTime appealStartTime = calibration ? null : request.getAppealStartTime();
+        LocalDateTime appealEndTime = calibration ? null : request.getAppealEndTime();
+        Integer advancementTopN = calibration ? null : request.getAdvancementTopN();
+
         validateRoundTimeline(
                 request.getStartDate(),
                 request.getEndDate(),
-                request.getSubmissionDeadline(),
+                submissionDeadline,
                 request.getJudgingDeadline(),
-                request.getAppealStartTime(),
-                request.getAppealEndTime(),
+                appealStartTime,
+                appealEndTime,
                 category.getEvent());
 
         Round round = Round.builder()
@@ -77,13 +88,13 @@ public class RoundServiceImpl implements RoundService {
                 .description(request.getDescription())
                 .roundOrder(nextRound)
                 .roundStatus(status)
-                .submissionDeadline(request.getSubmissionDeadline())
+                .submissionDeadline(submissionDeadline)
                 .judgingDeadline(request.getJudgingDeadline())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .appealStartTime(request.getAppealStartTime())
-                .appealEndTime(request.getAppealEndTime())
-                .advancementTopN(request.getAdvancementTopN())
+                .appealStartTime(appealStartTime)
+                .appealEndTime(appealEndTime)
+                .advancementTopN(advancementTopN)
                 .isCalibrationRound(request.getIsCalibrationRound())
                 .build();
         return roundMapper.toRoundResponse(roundRepository.save(round));
@@ -126,12 +137,17 @@ public class RoundServiceImpl implements RoundService {
         round.setRoundStatus(roundStatus);
         round.setStartDate(request.getStartDate());
         round.setEndDate(request.getEndDate());
-        round.setSubmissionDeadline(request.getSubmissionDeadline());
         round.setJudgingDeadline(request.getJudgingDeadline());
-        round.setAppealStartTime(request.getAppealStartTime());
-        round.setAppealEndTime(request.getAppealEndTime());
-        round.setAdvancementTopN(request.getAdvancementTopN());
         round.setIsCalibrationRound(request.getIsCalibrationRound());
+
+        // Xem ghi chu o create(): vong hieu chuan khong co han nop bai / doi di tiep / phuc khao.
+        // Dat null KE CA khi round vua duoc doi tu round thuong sang hieu chuan, de khong con
+        // sot lai gia tri cu vo nghia. Round thuong di theo nhanh else, hanh vi khong doi.
+        boolean calibration = Boolean.TRUE.equals(request.getIsCalibrationRound());
+        round.setSubmissionDeadline(calibration ? null : request.getSubmissionDeadline());
+        round.setAppealStartTime(calibration ? null : request.getAppealStartTime());
+        round.setAppealEndTime(calibration ? null : request.getAppealEndTime());
+        round.setAdvancementTopN(calibration ? null : request.getAdvancementTopN());
 
         validateRoundTimeline(
                 round.getStartDate(),

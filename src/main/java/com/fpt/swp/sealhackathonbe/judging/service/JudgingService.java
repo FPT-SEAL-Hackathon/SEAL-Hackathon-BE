@@ -26,4 +26,13 @@ public interface JudgingService {
     SubmissionResponse approveScore(UUID submissionId, boolean approve);
     void rejectSubmissionScoreForJudge(UUID submissionId, UUID judgeId, String reason);
     void rejectJudgeScoresInRound(UUID roundId, UUID judgeId, String reason);
+
+    /** Tinh trang cham bai mau cua tung giam khao duoc phan cong vao vong hieu chuan. */
+    List<com.fpt.swp.sealhackathonbe.judging.dto.CalibrationJudgeStatusResponse> getCalibrationStatus(UUID roundId);
+
+    /**
+     * Nhac nhung giam khao CHUA hoan thanh vong hieu chuan.
+     * @return so giam khao da duoc nhac (0 = tat ca deu da cham xong)
+     */
+    int remindPendingCalibrationJudges(UUID roundId, UUID actorUserId);
 }
