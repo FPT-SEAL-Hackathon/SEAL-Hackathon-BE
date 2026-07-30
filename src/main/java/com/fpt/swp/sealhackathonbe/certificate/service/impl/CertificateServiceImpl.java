@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import javax.imageio.ImageIO;
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.Instant;
@@ -147,8 +151,8 @@ public class CertificateServiceImpl implements CertificateService {
                 .withZone(ZoneId.systemDefault());
         context.setVariable("issuedDate", formatter.format(Instant.now()));
 
-        String logoBase64 = getLogoTransBase64();
-        context.setVariable("logoBase64", logoBase64);
+        context.setVariable("brandLogoBase64", getLogoBase64WithAlpha(1.0f));
+        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.18f));
 
         String htmlContent = templateEngine.process("certificate", context);
         return renderPdf(htmlContent);
@@ -196,20 +200,40 @@ public class CertificateServiceImpl implements CertificateService {
                 .withZone(ZoneId.systemDefault());
         context.setVariable("issuedDate", formatter.format(certificate.getGeneratedAt()));
 
-        String logoBase64 = getLogoTransBase64();
-        context.setVariable("logoBase64", logoBase64);
+        context.setVariable("brandLogoBase64", getLogoBase64WithAlpha(1.0f));
+        context.setVariable("watermarkLogoBase64", getLogoBase64WithAlpha(0.18f));
 
         String htmlContent = templateEngine.process("certificate", context);
         return renderPdf(htmlContent);
     }
 
-    private String getLogoTransBase64() {
+    private String getLogoBase64WithAlpha(float alpha) {
         try (InputStream is = getClass().getResourceAsStream("/static/logo_trans.png")) {
             if (is != null) {
-                byte[] bytes = is.readAllBytes();
-                return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+                BufferedImage original = ImageIO.read(is);
+                if (original != null) {
+                    if (alpha >= 0.99f) {
+                        ByteArrayOutputStream os = new ByteArrayOutputStream();
+                        ImageIO.write(original, "png", os);
+                        return "data:image/png;base64," + Base64.getEncoder().encodeToString(os.toByteArray());
+                    }
+                    BufferedImage transparentImage = new BufferedImage(
+                            original.getWidth(),
+                            original.getHeight(),
+                            BufferedImage.TYPE_INT_ARGB
+                    );
+                    Graphics2D g2d = transparentImage.createGraphics();
+                    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                    g2d.drawImage(original, 0, 0, null);
+                    g2d.dispose();
+
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                    ImageIO.write(transparentImage, "png", os);
+                    return "data:image/png;base64," + Base64.getEncoder().encodeToString(os.toByteArray());
+                }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.error("Failed to generate transparent logo base64 with alpha " + alpha, e);
         }
         return "";
     }

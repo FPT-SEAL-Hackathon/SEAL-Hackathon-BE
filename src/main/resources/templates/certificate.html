@@ -282,14 +282,14 @@
     <div class="corner corner-br"></div>
 
     <!-- Watermark Logo Background -->
-    <img th:if="${logoBase64 != null and logoBase64 != ''}" th:src="${logoBase64}" class="watermark-logo" alt="Watermark Logo"/>
+    <img th:if="${watermarkLogoBase64 != null and watermarkLogoBase64 != ''}" th:src="${watermarkLogoBase64}" class="watermark-logo" alt="Watermark Logo"/>
 
     <div class="content-layer">
         <!-- Header -->
         <table class="header-table">
             <tr>
                 <td style="text-align: center;">
-                    <img th:if="${logoBase64 != null and logoBase64 != ''}" th:src="${logoBase64}" class="brand-logo" alt="SEAL Logo"/>
+                    <img th:if="${brandLogoBase64 != null and brandLogoBase64 != ''}" th:src="${brandLogoBase64}" class="brand-logo" alt="SEAL Logo"/>
                     <span class="brand-title"><span class="brand-seal">SEAL</span> HACKATHON</span>
                     <div class="brand-sub" th:text="${certMainTitle != null ? certMainTitle : 'Official Certificate of Achievement'}">Official Certificate of Achievement</div>
                 </td>
